@@ -1,0 +1,53 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+id_rsa
+id_ed25519
+config/local*.yaml
+config/local*.yml
+config/private*/
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local execution state and scientific calculation artifacts
+.workspace/
+.local/
+runs/
+work/
+calculation_output/
+project_output/
+*.wfn
+*.wfn.bak
+*.restart
+*.cube
+*.pdos
+*.out
+*.err
+*.log
+*.traj
+*.bak
+
+# Large files are excluded by default; deliberately curated small fixtures may be force-added
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.tar
+*.zip
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
