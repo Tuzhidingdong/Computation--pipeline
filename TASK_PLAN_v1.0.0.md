@@ -14,7 +14,10 @@
 > **Compute backend:** User-configured HPC systems through the existing HPC Skills  
 > **Default orchestration:** One coordinator, deterministic scripts, bounded HPC submission, resumable DAG  
 > **Default LLM role:** Orchestration and evidence-grounded writing only; no LLM-generated numerical results or scientific parameter changes  
-> **Execution tracking:** Sibling `STATUS.md`
+> **Execution tracking:** Sibling `STATUS.md`  
+> **Architecture ownership:** [docs/ARCHITECTURE_OWNERSHIP.md](docs/ARCHITECTURE_OWNERSHIP.md)  
+> **Existing Skill audit:** [docs/EXISTING_SKILL_CAPABILITY_AUDIT.md](docs/EXISTING_SKILL_CAPABILITY_AUDIT.md)  
+> **Authorized upstream prerequisite:** [docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md](docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md)
 
 ## 1. Objective
 
@@ -85,7 +88,7 @@ A figure without transferable source data and a reproducible plotting script is 
 
 ### 2.1 Existing Skills to integrate
 
-The user has identified four existing public Skill repositories:
+The user has identified four existing Skill repositories (their current visibility is recorded in the capability audit):
 
 - `Tuzhidingdong/chem-scitoolkit`
 - `Tuzhidingdong/BeiLong_HPC`
@@ -119,7 +122,7 @@ The new project must:
 - Detect incompatible or missing functionality and report it instead of pretending the integration succeeded.
 - Keep credentials, private SSH keys, host-specific paths, account names, and tokens outside the public repository.
 
-Any proposed modification to an upstream Skill must be reported separately and must not be implemented without explicit user authorization.
+The user has now explicitly authorized the bounded, backward-compatible upstream changes listed in [docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md](docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md). This authorization is limited to those requirements. Work must use a dedicated branch and a separate PR for each changed repository; do not merge. Any additional upstream modification still requires separate user authorization.
 
 ### 2.3 Initial validation project: frozen v4.1 scientific protocol
 
@@ -206,7 +209,7 @@ The task manifest must similarly derive all geometry optimizations, spin compari
 
 Development must proceed in the following order:
 
-1. Bootstrap the independent repository and record the existing Skills audit.
+1. Bootstrap the independent repository, complete the source-level audit, and execute the bounded upstream Skill remediation task in [docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md](docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md) before implementing the new workflow engine.
 2. Define the generic project manifest, schemas, task model, status model, and execution contracts.
 3. Build the model-construction and model-review gate before any production DFT work.
 4. Implement deterministic CP2K input generation, parsing, and HPC adapters.
@@ -1210,7 +1213,7 @@ The exact path is configurable and must not be hardcoded to a user-specific driv
 
 ## 9. Release and execution boundary
 
-- [x] Authorized: create a public source repository and add this development Task Plan. (Repository creation is pending.)
+- [x] Authorized and completed: create the public source repository and commit this development Task Plan.
 - [x] Authorized: develop the reusable Skill and deterministic workflow engine according to this plan after the user starts the implementation agent.
 - [ ] Publish a versioned package/container or announce a software release; wait for explicit user approval.
 - [ ] Automatically merge implementation branches into `main`; not authorized.
@@ -1266,3 +1269,4 @@ A software capability may be marked implemented after code and tests pass, but t
 23. `STATUS.md` is the execution log; this Task Plan remains the objective and acceptance baseline.
 24. Development progress must be pushed to a dedicated branch with repository, branch, commit SHA, and exact deliverable links reported to the user.
 25. No automatic merge, package publication, release announcement, or upload of private scientific data is authorized.
+26. The user has explicitly authorized only the upstream Skill gap remediation defined in `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md`; all other upstream changes remain out of scope.
