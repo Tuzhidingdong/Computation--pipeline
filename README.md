@@ -28,6 +28,10 @@ The first validation workflow is a user-frozen CO-reduction ketene-selectivity p
 3. Article-ready Results and Discussion.
 4. Supplementary numerical tables, QC reports, and provenance package.
 
+## Agent handoff
+
+Start with [`AGENT_START_HERE.md`](AGENT_START_HERE.md). The current prerequisite is to remediate the scoped gaps in the existing Skills and produce reviewable upstream PRs before beginning the workflow engine.
+
 ## Development
 
 Implementation must follow the phases and acceptance criteria in `TASK_PLAN_v1.0.0.md`. Do not treat the presence of a script as proof that its scientific function is validated.
