@@ -62,7 +62,11 @@ The reusable Skill must contain generic workflow logic, schemas, reusable softwa
 
 The initial v4.1 validation configuration may be stored in a clearly separated `validation_projects/` or external project directory. It must not be imported as a default chemistry profile by the reusable Skill.
 
-### Core principle D — provenance and reproducibility
+### Core principle D — no invisible worker orchestration
+
+The default implementation and execution path uses one coordinator and deterministic scripts. Do not silently spawn additional LLM agents/workers or switch models. If a development task genuinely requires an additional LLM worker, disclose the proposed role, model, project, and expected deliverable before starting it and obtain the user's authorization.
+
+### Core principle E — provenance and reproducibility
 
 Every result must be traceable to:
 
@@ -139,6 +143,10 @@ The first end-to-end validation target is the user's frozen protocol:
 - `ΔΔG = ΔG1 - ΔG2` compares the two adsorbed-state branches.
 - Ketene desorption, `*H2CCO -> H2CCO(g) + *`, is evaluated separately.
 - The CHE comparison is thermodynamic, not a transition-state or kinetic-barrier calculation.
+- `ΔG1 = G(*H2CCO) - G(*HCCO) - 1/2 G(H2)`.
+- `ΔG2 = G(*HCCOH) - G(*HCCO) - 1/2 G(H2)`.
+- `ΔΔG = ΔG1 - ΔG2 = G(*H2CCO) - G(*HCCOH)` when the two endpoints share the same support, atom balance, and reference state; the common potential/proton reference terms cancel in this relative difference.
+- `ΔG_des = G(*) + G(H2CCO(g)) - G(*H2CCO)` is evaluated independently.
 - No NEB, transition-state search, desorbed-ketene alkaline hydrolysis, acetate Faradaic-efficiency prediction, or microkinetic claim is authorized by the initial protocol.
 
 **Important model-construction requirements:**
@@ -148,19 +156,44 @@ The first end-to-end validation target is the user's frozen protocol:
 - Describe the Sn-containing support as an Sn(IV)-containing oxygen-coordinated polyphenol environment unless a distinct oxide phase is explicitly present in the atomistic model.
 - Preserve charge neutrality, exact atom counts, electron counts, and explicit spin-parity checks.
 
+**Exact v4.1 model compositions to be represented in the project configuration:**
+
+| | Cu-20 | SnCu-20 |
+|---|---|---|
+| Support motif | `[Cu2(C7H5O5)4]^0` | `[CuSn(C7H5O5)2(C7H4O5)2(H2O)]^0` |
+| Support atoms | 70 | 71 |
+| Complete atomistic model | `Cu15C28H20O20` (including Cu13) | `Cu14SnC28H20O21` (including Cu13) |
+| Total atoms | 83 | 84 |
+| Explicit valence electrons | 417 | 426 |
+| Total charge | 0 | 0 |
+
+The formulas above must be independently recalculated from the actual atom graph; the manifest must avoid counting the Cu13 cluster twice when recording full-model composition.
+
 **Frozen computational settings to be represented in the project configuration:**
 
 - CP2K Quickstep / GPW.
 - PBE + DFT-D3(BJ).
-- Cu GTH-q11 and Sn GTH-q14, with matching basis sets.
+- Cu: GTH-PBE-q11 with matching DZVP-MOLOPT-SR-GTH-q11; Sn: GTH-PBE-q14 with matching DZVP-MOLOPT-SR-GTH-q14; C/O/H: matching q4/q6/q1 GTH pseudopotentials and MOLOPT basis sets.
 - 500 Ry / 60 Ry cutoffs.
 - Spin-polarized UKS and 300 K Fermi-Dirac smearing.
-- Finite non-periodic cubic cells, with `PERIODIC NONE` consistently declared for the cell and Poisson solver and the Martyna-Tuckerman solver.
-- 30 Å production cell, checked against 34 Å.
+- Geometry optimization target: maximum force about 0.01 eV/Å; the exact CP2K force unit and conversion must be checked in the parser.
+- SCF threshold 1e-6 Ha for optimization/ordinary single points and 1e-8 Ha for local-Hessian force evaluations, subject to executable/version validation.
+- Finite non-periodic cubic cells, with `PERIODIC NONE` consistently declared for the cell and Poisson solver, the Martyna-Tuckerman solver, and coordinate centering (`CENTER_COORDINATES`) as configured for the CP2K version.
+- 30 Å production cell, checked against 34 Å. The boundary density target is below 1e-6 e/Bohr^3 and the total-energy difference must meet the explicit v4.1 tolerance (the run manifest must record the exact numerical threshold used, not the shorthand range “1–2 meV”).
 - ASE finite-displacement local adsorbate Hessian using ±0.01 Å displacements, with the support and Cu13 frozen for the local vibration calculation.
 - CHE at 298.15 K and U = 0 V vs. RHE for the specified branch comparison.
 - SCCS dielectric sensitivity using ε = 78.4 and TZV2P basis sensitivity on the prescribed key states.
 
+**Frozen v4.1 task quantities to encode explicitly:**
+
+- WP1: pre-screen the v4.1-configured set of 15 support/cluster docking orientations; retain 3–4 structurally distinct candidates for DFT relaxation for each catalyst. The manifest must explicitly state whether “15 orientations” applies per catalyst or across both systems before calculating the task count; do not infer this from prose. MACE is a geometry pre-screen only, with the configured `fmax < 0.05 eV/Å`, and cannot be the sole basis for discarding a chemically distinct topology.
+- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it).
+- WP2: one representative SnCu-20 model checked in 30 Å and 34 Å cells, plus matched-grid total/fragment single-point calculations for each system.
+- WP3: three `*HCCO` candidates per catalyst; optimize both protonation products per catalyst; gas-phase H2 and H2CCO references.
+- WP4: six adsorbed-state local Hessians. For the stated adsorbate atom counts (4, 5, and 5 per catalyst), central finite differences require `6N + 1` force evaluations per state, giving 174 adsorbate force evaluations in total. Generate the count from the actual selected atom indices. Also calculate the configured gas-phase vibrational references.
+- WP5: six SCCS single points and four TZV2P single points, plus at most the configured optional alternative local Sn coordination model.
+
+The executor must calculate exact task counts from the manifest and report any deviation from these values before production submission.
 The exact CP2K keyword spelling and supported options must be verified against the actual CP2K executable/version installed on the selected HPC system. A template that merely looks plausible is not acceptable.
 
 ### 2.4 Known planning checks to resolve before production
@@ -479,6 +512,7 @@ Implement deterministic, unit-tested routines for:
 - Verify atom/electron/proton bookkeeping and shared-reference cancellation.
 - Calculate `ΔΔG` independently from the two branch values and cross-check it against the algebraically simplified expression where valid.
 - Calculate desorption separately using the clean-site reference and gas-phase ketene reference.
+- Explicitly record the vibrational-correction treatment for the clean-site state `G(*)`. The v4.1 workflow does not include a full clean-catalyst Hessian by default; do not describe `ΔG_des` as fully vibrationally corrected unless the required reference contribution was actually calculated. If a frozen-support/local-mode approximation is used, state it and its limitation.
 - Preserve raw total energies and all correction terms in tables; do not report only the final ΔG.
 
 **B. Charge density and atomic charges**
@@ -527,7 +561,7 @@ Generate the required figures from validated canonical data, not directly from h
 **Figure B — charge-density difference**
 
 - Identical coordinate frame, cell, grid, isovalue, camera, and color mapping for Cu-20 and SnCu-20.
-- Use the configured positive/negative isosurface thresholds and sign convention.
+- For the initial v4.1 profile, use matched positive/negative isosurfaces at ±0.003 e/Å^3 and the configured sign convention.
 - Include a legend and the associated Bader summary.
 - Do not visually amplify or clip one model differently to create an apparent contrast.
 
@@ -542,7 +576,7 @@ Generate the required figures from validated canonical data, not directly from h
 **Figure D — PDOS**
 
 - Show the configured Cu 3d projection and spin channels where applicable.
-- Align spectra to the verified vacuum level.
+- Align spectra to the verified vacuum level and label the energy axis as `E - E_vac`.
 - Mark the defined d-band centre and its integration convention.
 - Include a compact data table or metadata sidecar.
 
@@ -1176,8 +1210,8 @@ The exact path is configurable and must not be hardcoded to a user-specific driv
 
 ## 9. Release and execution boundary
 
-- [x] Create a public source repository and add this development Task Plan when repository creation is available.
-- [x] Develop the reusable Skill and deterministic workflow engine according to this plan after the user starts the implementation agent.
+- [x] Authorized: create a public source repository and add this development Task Plan. (Repository creation is pending.)
+- [x] Authorized: develop the reusable Skill and deterministic workflow engine according to this plan after the user starts the implementation agent.
 - [ ] Publish a versioned package/container or announce a software release; wait for explicit user approval.
 - [ ] Automatically merge implementation branches into `main`; not authorized.
 - [ ] Upload private production structures, raw calculation outputs, unpublished results, or HPC configuration to the public Skill repository; not authorized unless separately approved.
