@@ -6,18 +6,21 @@
 
 - **Repository:** `Tuzhidingdong/Computation--pipeline`
 - **Repository URL:** https://github.com/Tuzhidingdong/Computation--pipeline
+- **Visibility:** Public
 - **Default branch:** `main`
 - **Plan:** `TASK_PLAN_v1.0.0.md`
+- **Plan version:** v1.0.0; 1,268 lines
+- **Task Plan commit:** `c4ccbecbc2d6450aae579c75787613dd48033396`
 - **Current phase:** Phase 0 — repository bootstrap and existing-Skill audit
-- **Current status:** Owner-created public repository; bootstrap commit in progress
-- **Implementation branch:** `main` for initial bootstrap only; implementation should use a dedicated development branch
-- **Latest commit:** To be recorded after bootstrap verification
+- **Current status:** Repository bootstrap files committed; existing-Skill audit remains pending
+- **Implementation branch:** Use a dedicated development branch; do not develop directly on `main`
+- **No production DFT or HPC task has been submitted.**
 
 ## Phase status
 
 | Phase | Status | Evidence / commit | Blockers |
 |---|---|---|---|
-| Phase 0 — repository bootstrap and Skill audit | IN PROGRESS | Initial repository bootstrap | Existing-Skill audit remains to be performed |
+| Phase 0 — repository bootstrap and Skill audit | IN PROGRESS | Public repository initialized; Task Plan v1.0.0 committed | Audit of the four existing Skills remains |
 | Phase 1 — contracts, schemas, workflow skeleton | NOT STARTED | — | Phase 0 |
 | Phase 2 — model builder and review gate | NOT STARTED | — | Phase 1 |
 | Phase 3 — CP2K/HPC and Stage 1 | NOT STARTED | — | Phase 2 |
@@ -29,8 +32,9 @@
 
 - The user-created public repository is `Tuzhidingdong/Computation--pipeline`; the reusable Skill identifier remains `coordination-dft-publication-pipeline`.
 - Existing Skill repositories must not be modified during bootstrap. Integration must use audited interfaces and remain backward-compatible unless a separately authorized change is approved.
-- No HPC job or production DFT calculation has been submitted.
+- The four existing Skills to audit are `chem-scitoolkit`, `BeiLong_HPC`, `UCAS_hpc`, and `Data_analysis`.
 - The CO-reduction v4.1 project is a validation project only; its chemistry and parameters must not become hardcoded production behavior in the reusable Skill.
+- No HPC credentials, private hostnames, private keys, or machine-specific secret paths may be committed to this public repository.
 
 ## Progress report format
 
