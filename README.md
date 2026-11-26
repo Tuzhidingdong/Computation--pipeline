@@ -6,6 +6,8 @@ An independent, reusable Skill and deterministic workflow engine for coordinatin
 
 The governing development baseline is [`TASK_PLAN_v1.0.0.md`](TASK_PLAN_v1.0.0.md). Execution progress belongs in [`STATUS.md`](STATUS.md).
 
+Architecture ownership is defined in [`docs/ARCHITECTURE_OWNERSHIP.md`](docs/ARCHITECTURE_OWNERSHIP.md). The current source-level findings are in [`docs/EXISTING_SKILL_CAPABILITY_AUDIT.md`](docs/EXISTING_SKILL_CAPABILITY_AUDIT.md). Before building the workflow engine, the Agent must follow [`docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md`](docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md) and track progress in [`docs/UPSTREAM_REMEDIATION_STATUS.md`](docs/UPSTREAM_REMEDIATION_STATUS.md). External tool choices are recorded in [`docs/EXTERNAL_TOOL_SELECTION.md`](docs/EXTERNAL_TOOL_SELECTION.md).
+
 The first validation workflow is a user-frozen CO-reduction ketene-selectivity protocol (v4.1). Its chemistry and numerical settings must remain in a separate validation-project configuration; they are not generic defaults of this Skill.
 
 ## Design principles
