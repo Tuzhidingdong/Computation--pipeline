@@ -998,3 +998,237 @@ Use small synthetic or non-sensitive fixtures to test:
 - Adsorption task graph generation.
 - Partial Hessian recovery when selected force evaluations are missing.
 - Stage 2 gate pass/fail behavior.
+- Density/PDOS analysis data flow.
+- Figure regeneration from saved data.
+- DOCX/Markdown report generation.
+- Final export and hash verification.
+
+Synthetic fixtures validate software behavior only; they do not establish scientific correctness or replace the initial real v4.1 calculation.
+
+### 7.3 HPC and operational tests
+
+- Verify each backend's configured software environment and CP2K feature support.
+- Confirm job submission returns a valid scheduler job ID.
+- Confirm queue/running/completed/failed states are reconciled correctly.
+- Test lost SSH connection while a remote task continues running.
+- Test controller restart without duplicate submission.
+- Test interrupted file transfer and SHA256 mismatch handling.
+- Test finite retry limits and permanent-failure classification.
+- Test storage checks and safe handling of large cube/wavefunction files.
+- Record actual wall time, peak memory where available, CPU/node allocation, and filesystem behavior.
+
+Do not extrapolate 83–84 atom production performance from tiny smoke tests. Use the first approved Stage 1 calculations as the empirical resource benchmark.
+
+### 7.4 Scientific acceptance for the initial v4.1 project
+
+The actual Stage 1 and Stage 2 calculations must pass the frozen project gates. The final package must include:
+
+- Approved starting structures and approval hashes.
+- Optimized structures and their convergence evidence.
+- Spin-state comparisons and selected multiplicities.
+- 30 Å/34 Å MT comparison and density-tail evidence.
+- Same-grid density and fragment-reference validation.
+- All required adsorption geometries and energies.
+- All finite-displacement force records and vibrational corrections.
+- CHE and desorption energy tables with correction breakdowns.
+- SCCS and TZV2P sensitivity results.
+- Charge-density, Bader, PDOS, geometry, and figure-source data.
+- A documented list of failures, exclusions, or unresolved modes.
+
+A calculation that fails a gate may still produce a diagnostic report, but cannot be represented as a passed scientific result.
+
+### 7.5 Regression and recovery tests
+
+Maintain regression cases for:
+
+1. Odd-electron and even-electron systems.
+2. Fragment and full-system spin comparisons.
+3. CP2K non-periodic MT input validation.
+4. Missing basis/pseudopotential file.
+5. SCF non-convergence.
+6. Geometry optimization non-convergence.
+7. Output truncated after scheduler completion.
+8. Duplicate HPC submission prevention.
+9. Lost connection and job reconciliation.
+10. Changed approved model hash.
+11. Missing finite-displacement force output.
+12. Wrong atom order in force assembly.
+13. Inconsistent density cube grids.
+14. Invalid vacuum reference.
+15. CHE stoichiometry/reference mismatch.
+16. Missing thermal correction.
+17. Figure data/script regeneration mismatch.
+18. Manuscript placeholder or unsupported scientific claim detection.
+19. Restart from a partially completed Stage 1.
+20. Restart from a partially completed Stage 2.
+
+## 8. Deliverables
+
+### 8.1 Public reusable repository
+
+- Independent repository `Tuzhidingdong/Computation--pipeline`.
+- Reusable Skill `coordination-dft-publication-pipeline`.
+- Installation and invocation documentation.
+- Versioned project/configuration schemas.
+- Generic templates.
+- Clear integration documentation for the four existing Skills.
+- No credentials or confidential user data.
+
+### 8.2 Source modules and workflow engine
+
+- Project loader and validator.
+- Model graph/geometry builder and structural QC.
+- Model review package generator and approval verifier.
+- Workflow DAG and task-state engine.
+- CP2K input generator and output parser.
+- UCAS and BeiLong adapters.
+- ASE local Hessian task generator and assembler.
+- Thermodynamic/CHE analysis.
+- Density, Bader, PDOS, and geometry analysis.
+- Publication figure and data exporters.
+- Manuscript/report generator.
+- Provenance, cache, resume, recovery, and final package exporter.
+
+### 8.3 Documentation and schemas
+
+- `SKILL.md`.
+- `README.md`.
+- `TASK_PLAN_v1.0.0.md`.
+- `STATUS.md`.
+- Architecture and adapter contracts.
+- Project, model, approval, task, job, result, figure, and report schemas.
+- CP2K version compatibility matrix.
+- HPC adapter compatibility matrix.
+- Scientific guardrails and supported/not-supported capability matrix.
+- CLI and troubleshooting guide.
+
+### 8.4 Model review deliverables
+
+For the initial v4.1 project:
+
+- Approved-model candidate structures.
+- Offline 3D preview and static images.
+- Explicit connectivity and coordination records.
+- Formula/atom/electron/charge/spin validation report.
+- Candidate comparison report.
+- Approval artifact and locked hashes.
+
+### 8.5 Calculation and provenance deliverables
+
+- Expanded CP2K inputs.
+- Raw CP2K outputs and restart artifacts.
+- Scheduler job records.
+- Optimized structures and energy tables.
+- Finite-displacement input/force records.
+- Frequency, ZPE, and entropy tables.
+- CHE and desorption thermodynamic table.
+- SCCS and TZV2P sensitivity tables.
+- Density, electrostatic potential, PDOS, Bader, and geometry artifacts.
+- Per-task and project-level manifests with SHA256.
+- Gate and failure reports.
+
+### 8.6 Publication visualization deliverables
+
+- Figures A–D in configured vector and high-resolution raster formats.
+- Figure data CSV/TSV/JSON.
+- Plotting scripts and style configuration.
+- Source structures/cube/PDOS/frequency data necessary to recreate the plots.
+- Figure metadata and regeneration-test report.
+
+### 8.7 Manuscript/report deliverables
+
+- `Computational_Details_EN.docx` and `.md`.
+- `Results_and_Discussion_EN.docx` and `.md`.
+- Supplementary numerical tables in XLSX and/or CSV/TSV.
+- Scientific-scope and limitation statement.
+- Run summary, QC report, and provenance manifest.
+
+### 8.8 Final project delivery structure
+
+A recommended project output layout is:
+
+```text
+<project_workspace>/
+├── config/
+├── model_review/
+├── approved_models/
+├── stage1_ground_state/
+├── stage2_adsorption/
+├── analysis/
+│   ├── energies/
+│   ├── vibrations/
+│   ├── charges/
+│   ├── pdos/
+│   └── structures/
+├── figures/
+│   ├── Fig_A/
+│   ├── Fig_B/
+│   ├── Fig_C/
+│   └── Fig_D/
+├── manuscript/
+├── supplementary_tables/
+├── provenance/
+├── reports/
+└── final_delivery/
+```
+
+The exact path is configurable and must not be hardcoded to a user-specific drive letter.
+
+## 9. Release and execution boundary
+
+- [x] Create a public source repository and add this development Task Plan when repository creation is available.
+- [x] Develop the reusable Skill and deterministic workflow engine according to this plan after the user starts the implementation agent.
+- [ ] Publish a versioned package/container or announce a software release; wait for explicit user approval.
+- [ ] Automatically merge implementation branches into `main`; not authorized.
+- [ ] Upload private production structures, raw calculation outputs, unpublished results, or HPC configuration to the public Skill repository; not authorized unless separately approved.
+- [ ] Change the frozen v4.1 science protocol, model size, DFT parameters, thresholds, or reaction scope; not authorized.
+
+The initial model review is the only planned user approval gate for the normal calculation workflow. A failed scientific gate must block the affected stage and produce a report; it must not create a new user questionnaire or silently relax the protocol.
+
+Before claiming implementation complete, report:
+
+1. Repository, branch, latest commit SHA, and exact changed-file links.
+2. Audit findings for all four existing Skills.
+3. Implemented modules and supported interfaces.
+4. Model-review package and model approval/hash status.
+5. Actual CP2K version and validated input capabilities.
+6. HPC backend selected and actual job records.
+7. Stage 1 and Stage 2 gate results.
+8. Actual task counts, including spin checks and all finite-displacement calls.
+9. Runtime/resource observations from real jobs.
+10. Numerical results and sensitivity checks.
+11. Figure files and transferable data/scripts.
+12. Computational Details and Results and Discussion documents.
+13. Unit/integration/recovery test results.
+14. Known limitations and unresolved blockers.
+15. Proof that public repository contents contain no secrets or unauthorized production data.
+
+A software capability may be marked implemented after code and tests pass, but the initial scientific workflow must not be called end-to-end validated or submission-ready until the real approved v4.1 workflow and publication deliverables pass their acceptance criteria.
+
+## 10. User decisions already made
+
+1. The new orchestration Skill is an independent public repository, not a modification or merger of the four existing Skills.
+2. Its name is `coordination-dft-publication-pipeline`.
+3. The initial target repository name is `Tuzhidingdong/Computation--pipeline`.
+4. The four existing Skills are `chem-scitoolkit`, `BeiLong_HPC`, `UCAS_hpc`, and `Data_analysis`.
+5. The four existing Skills should be reused where their actual interfaces and tests support the required work; do not reimplement their established responsibilities unnecessarily.
+6. The new Skill must coordinate the full workflow from model construction/review through HPC DFT, numerical analysis, publication figures, transferable visualization data, and manuscript-ready reports.
+7. The user wants the model presented for review before production DFT calculations.
+8. The normal workflow must require only one planned user review gate: approval of the generated model package.
+9. After model approval, routine calculations, monitoring, analysis, plotting, report generation, and quality checks should run automatically when gates pass.
+10. The implementation must stop and report genuine scientific blockers rather than repeatedly bothering the user, guessing, silently changing science settings, or presenting failed work as complete.
+11. The frozen CO-reduction ketene-selectivity v4.1 protocol is the first validation project, not the generic Skill's hardcoded scientific domain.
+12. The initial v4.1 models contain 83 and 84 total atoms, with 70- and 71-atom supports plus the same Cu13 cluster, neutral charge, and 417/426 explicit valence electrons.
+13. The support comparison is Sn(IV)-containing oxygen-coordinated polyphenol environment plus local charge compensation, not a pure single-Sn intervention.
+14. Explicit atom/bond topology and donor assignments are required; a formula alone is not a structurally complete model.
+15. A depside/ester-linked tannic-acid description is permitted only if those bonds exist in the actual atom graph and the formula is consistent.
+16. The initial reaction scope compares the adsorbed `*H2CCO` and `*HCCOH` protonation branches from `*HCCO` and calculates ketene desorption separately.
+17. CHE free energies are thermodynamic quantities; NEB, transition states, kinetics, solution hydrolysis, acetate FE, and microkinetics are outside the initial scope.
+18. The existing HPC Skills remain the preferred SSH/Slurm execution backends; their live configuration and exact interfaces must be audited.
+19. No HPC credentials, keys, hostnames, or private paths may be committed to the public repository.
+20. Deterministic code must calculate and validate numbers; LLMs must not invent or modify scientific data.
+21. Every publication figure must have transferable numerical data, plotting code, metadata, and a reproducibility check.
+22. Computational Details must describe what was actually executed; Results and Discussion must use only validated results.
+23. `STATUS.md` is the execution log; this Task Plan remains the objective and acceptance baseline.
+24. Development progress must be pushed to a dedicated branch with repository, branch, commit SHA, and exact deliverable links reported to the user.
+25. No automatic merge, package publication, release announcement, or upload of private scientific data is authorized.
