@@ -1,3 +1,5 @@
+- **Detailed Agent execution prompt:** [Upstream remediation task instructions](docs/AGENT_EXECUTION_PROMPT_UPSTREAM_REMEDIATION_v1.0.0.md)
+
 # Coordination DFT Publication Pipeline
 
 An independent, reusable Skill and deterministic workflow engine for coordinating atomistic model review, CP2K DFT calculations on HPC systems, reproducible numerical analysis, publication-quality figures, transferable visualization data, and manuscript-ready computational reports.
