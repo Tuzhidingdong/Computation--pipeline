@@ -82,6 +82,26 @@ class PlanCompilerTests(unittest.TestCase):
             manifest = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(manifest["compilation_status"], "BLOCKED")
 
+    def test_v41_resolution_cli_records_owner_decisions(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            docx = Path(tmp) / "frozen.docx"
+            make_docx(docx)
+            manifest_path = Path(tmp) / "manifest.json"
+            cli_main(["compile-v41-docx", str(docx), "--output", str(manifest_path)])
+            resolved_path = Path(tmp) / "resolved.json"
+            code = cli_main([
+                "resolve-v41-planning", str(manifest_path),
+                "--orientation-scope", "per_catalyst",
+                "--fragment-spin-resolution", "preserve_detailed_six_correct_summary",
+                "--confirmed-by", "owner", "--rationale", "Owner confirmed the detailed count.",
+                "--output", str(resolved_path),
+            ])
+            resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
+        self.assertEqual(code, 0)
+        self.assertFalse(any(x["code"].startswith("WP1_") for x in resolved["diagnostics"]))
+        self.assertEqual(resolved["confirmed_resolutions"]["wp1_orientation_scope"], "per_catalyst")
+
     def test_labelled_values_are_not_promoted_without_confirmation(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "plan.docx"
