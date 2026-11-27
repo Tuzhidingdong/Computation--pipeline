@@ -276,6 +276,13 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
             if len(sizes) >= 2:
                 _append_inline_claim(claims, block, index, context, "cell_sizes_angstrom", [f"{size} Å" for size in sizes[:2]])
 
+        if re.search(r"ΔG1\s*=\s*G\(\*H2CCO\).*?ΔG2\s*=\s*G\(\*HCCOH\)", text, re.I | re.S):
+            _append_inline_claim(claims, block, index, context, "reaction_intermediate", "*HCCO")
+            _append_inline_claim(
+                claims, block, index, context, "protonation_products",
+                ["*H2CCO", "*HCCOH"],
+            )
+
         markers = list(re.finditer(r"\b(Cu-20|SnCu-20)\s*:", text, re.I))
         for marker_index, marker in enumerate(markers):
             system_id = marker.group(1)
