@@ -52,6 +52,7 @@ def load_data_analysis_api() -> SimpleNamespace:
         provenance = importlib.import_module("data_analysis.dft_provenance")
         evidence = importlib.import_module("data_analysis.evidence")
         artifact_store = importlib.import_module("data_analysis.artifact_store")
+        registration = importlib.import_module("data_analysis.register")
     except (ImportError, ModuleNotFoundError) as exc:
         raise RuntimeError(
             "Data_analysis DFT API is unavailable. Install/expose the owner-approved "
@@ -71,6 +72,7 @@ def load_data_analysis_api() -> SimpleNamespace:
         "build_evidence_package": getattr(evidence, "build_evidence_package", None),
         "resolve_artifact_path": getattr(artifact_store, "resolve_artifact_path", None),
         "register_derived_artifact": getattr(artifact_store, "register_derived_artifact", None),
+        "register_inputs": getattr(registration, "register_inputs", None),
     }
     missing = [name for name, function in required.items() if not callable(function)]
     if missing:
