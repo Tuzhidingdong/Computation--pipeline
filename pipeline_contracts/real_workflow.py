@@ -746,9 +746,22 @@ class RealCP2KWorkflowAdapter:
                 structure_ref = self._register_retrieved("optimized_structure", by_role["optimized_structure"], job.job_id)
                 outputs.append({"artifact_id": structure_ref.artifact_id, "sha256": structure_ref.sha256, "kind": "optimized_structure"})
                 converged = True
+            remote_workdir = str(prepared.get("remote_workdir") or "")
+            if self.backend_id == "beilong":
+                log_root = str(self.backend_config["allowed_workspace_root"]).rstrip("/") + "/hpc/logs"
+                stdout_remote = log_root + "/wcl-" + job.job_id + ".out"
+                stderr_remote = log_root + "/wcl-" + job.job_id + ".err"
+            else:
+                stdout_remote = remote_workdir.rstrip("/") + "/slurm-" + job.job_id + ".out"
+                stderr_remote = remote_workdir.rstrip("/") + "/slurm-" + job.job_id + ".err"
+            local_result_files = []
+            for ref in staged_refs:
+                parsed_ref = urlparse(ref.uri or "")
+                if parsed_ref.scheme == "file":
+                    local_result_files.append(unquote(parsed_ref.path))
             self.hpc.update_application_record(
                 job.job_id, success=True, marker="PROGRAM ENDED AT; CST OUTPUT CHECK PASSED",
-                result_files=[str(Path(ref.uri.removeprefix("file://"))) for ref in staged_refs],
+                result_files=local_result_files, stdout_path=stdout_remote, stderr_path=stderr_remote,
             )
             return ExecutionResult(
                 status="COMPLETED", job_id=job.job_id, scheduler_state=record.scheduler_state,
