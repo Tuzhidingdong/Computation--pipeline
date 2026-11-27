@@ -480,8 +480,8 @@ class RealCP2KWorkflowAdapter:
                 input_name=input_name, output_name=str(output_files["cp2k_output"]),
                 cp2k_executable=str(profile.get("cp2k_executable", "cp2k.psmp")),
                 cp2k_data_dir=(
-                    str(profile.get("remote_cp2k_data_dir"))
-                    if profile.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
+                    "__WORKDIR__" if runtime_files.get("basis") else
+                    str(profile.get("remote_cp2k_data_dir")) if profile.get("remote_cp2k_data_dir") else None
                 ),
             )
         else:
@@ -490,8 +490,8 @@ class RealCP2KWorkflowAdapter:
                 template, resources=self.resources, input_name=input_name,
                 output_name=str(output_files["cp2k_output"]),
                 cp2k_data_dir=(
-                    str(self.backend_config.get("remote_cp2k_data_dir"))
-                    if self.backend_config.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
+                    "__WORKDIR__" if runtime_files.get("basis") else
+                    str(self.backend_config.get("remote_cp2k_data_dir")) if self.backend_config.get("remote_cp2k_data_dir") else None
                 ),
             )
         _atomic_new_file(script_path, script.encode("utf-8"))
