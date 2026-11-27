@@ -33,7 +33,8 @@ def main(argv=None):
     p=sub.add_parser("resolve-v41-planning")
     p.add_argument("manifest_file")
     p.add_argument("--orientation-scope", choices=["per_catalyst","across_both_systems"], required=True)
-    p.add_argument("--fragment-spin-resolution", choices=["preserve_detailed_six_correct_summary"], required=True)
+    p.add_argument("--fragment-spin-resolution", choices=["retain_all_six","select_four_explicitly"], required=True)
+    p.add_argument("--fragment-spin-candidate", action="append", default=[])
     p.add_argument("--confirmed-by", required=True); p.add_argument("--rationale", required=True)
     p.add_argument("--output", required=True)
     p=sub.add_parser("compile-calculation-plan")
@@ -83,6 +84,7 @@ def main(argv=None):
         resolved = confirm_v41_resolutions(
             manifest, orientation_scope=args.orientation_scope,
             fragment_spin_resolution=args.fragment_spin_resolution,
+            selected_fragment_spin_candidates=args.fragment_spin_candidate,
             confirmed_by=args.confirmed_by, rationale=args.rationale,
         )
         write_manifest(resolved, args.output)
