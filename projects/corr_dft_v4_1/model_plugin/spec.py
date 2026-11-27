@@ -48,6 +48,10 @@ class ModelSpec:
                 raise ValueError("bond.kind must be covalent or coordination")
             if bond.get("kind") == "covalent" and bond.get("order") not in {1, 1.5, 2, 3}:
                 raise ValueError("covalent bond.order must be 1, 1.5, 2 or 3")
+        if int(expected["atom_count"]) != len(atoms):
+            raise ValueError("expected.atom_count differs from explicit atom graph")
+        if int(expected["candidate_count"]) < 1:
+            raise ValueError("expected.candidate_count must be >= 1")
         if not isinstance(raw["build_constraints"], Mapping):
             raise ValueError("build_constraints must be an object")
         return cls("1.0.0", str(raw["project_id"]), str(raw["model_id"]), atoms, bonds,
