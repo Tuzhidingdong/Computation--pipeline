@@ -176,6 +176,8 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             structure = root / "input.xyz"
             structure.write_text("2\nfixture\nH 0 0 0\nH 0.7 0 0\n", encoding="utf-8")
             runtime = make_runtime(root, active, skill_root)
+            runtime["active_project_root"] = str(active)
+            runtime["data_analysis"]["project_root"] = str(da_project)
             plan = CalculationPlan.load(
                 Path(__file__).parents[1] / "examples" / "cp2k_geo_opt_energy_plan.json"
             )
@@ -222,11 +224,13 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             digest = hashlib.sha256(output.read_bytes()).hexdigest()
             paths = {"ART-OUTPUT-2": output}
             api = FakeDataAnalysisAPI(paths, events)
+            api.intake_index = 1
             da = FakeDAAdapter(da_project, paths, events)
             plan = CalculationPlan.load(Path(__file__).parents[1] / "examples" / "cp2k_geo_opt_energy_plan.json")
             adapter = RealCP2KWorkflowAdapter.__new__(RealCP2KWorkflowAdapter)
             adapter.plan = plan
             adapter.da_project_root = da_project
+            adapter.backend_id = "ucas"
             adapter.register_inputs = api.register_inputs
             adapter.da_api = api
             adapter.da = da
