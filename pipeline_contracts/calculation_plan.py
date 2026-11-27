@@ -9,8 +9,8 @@ PLAN_SCHEMA_VERSION = "1.0"
 ALLOWED_OPERATIONS = {"cp2k.geo_opt", "cp2k.energy", "dft.artifact.read"}
 REQUIRED_METHOD = {
     "xc", "basis_set", "pseudopotential", "cutoff_ry", "scf", "charge", "multiplicity",
-    "kind_definitions", "basis_file_name", "potential_file_name",
-    "cell_periodicity", "poisson_periodicity",
+    "kind_definitions", "basis_file_name", "potential_file_name", "rel_cutoff_ry",
+    "poisson_solver", "cell_periodicity", "poisson_periodicity", "uks", "center_coordinates",
 }
 
 class PlanValidationError(ValueError):
@@ -95,15 +95,38 @@ class CalculationPlan:
                 if not isinstance(definition, Mapping) or any(not definition.get(k) for k in ("element", "basis_set", "potential")):
                     issues.append(f"method.kind_definitions.{label} requires element, basis_set and potential")
         cell = self.structure.get("cell")
-        if not isinstance(cell, Mapping) or any(cell.get(k) is None for k in ("a", "b", "c")):
-            issues.append("structure.cell must explicitly provide finite-system cell lengths a, b and c")
+        if not isinstance(cell, Mapping) or any(cell.get(k) is None for k in ("a", "b", "c", "alpha", "beta", "gamma")):
+            issues.append("structure.cell must explicitly provide a, b, c, alpha, beta and gamma")
         for key in ("cell_periodicity", "poisson_periodicity"):
             if str(self.method.get(key, "")).upper() not in {"NONE", "X", "Y", "Z", "XY", "XZ", "YZ", "XYZ"}:
                 issues.append(f"method.{key} must explicitly declare CP2K periodicity")
         try:
-            if float(self.method.get("cutoff_ry", 1)) <= 0: issues.append("method.cutoff_ry must be positive")
-            if int(self.method.get("multiplicity", 1)) < 1: issues.append("method.multiplicity must be >= 1")
-        except (TypeError, ValueError): issues.append("method.cutoff_ry and multiplicity must be numeric")
+            if float(self.method.get("cutoff_ry", 0)) <= 0:
+                issues.append("method.cutoff_ry must be positive")
+            if float(self.method.get("rel_cutoff_ry", 0)) <= 0:
+                issues.append("method.rel_cutoff_ry must be positive")
+            if int(self.method.get("charge")) != self.method.get("charge"):
+                issues.append("method.charge must be an integer")
+            if int(self.method.get("multiplicity", 0)) < 1:
+                issues.append("method.multiplicity must be >= 1")
+        except (TypeError, ValueError, OverflowError):
+            issues.append("method.cutoff_ry, rel_cutoff_ry, charge and multiplicity must be numeric")
+        if not isinstance(self.method.get("uks"), bool):
+            issues.append("method.uks must be explicitly true or false")
+        if not isinstance(self.method.get("center_coordinates"), bool):
+            issues.append("method.center_coordinates must be explicitly true or false")
+        if str(self.method.get("poisson_solver", "")).upper() not in {"MT", "WAVELET", "ANALYTIC"}:
+            issues.append("method.poisson_solver must explicitly be MT, WAVELET or ANALYTIC")
+        if isinstance(self.method.get("scf"), Mapping):
+            try:
+                if float(self.method["scf"].get("eps_scf", 0)) <= 0:
+                    issues.append("method.scf.eps_scf must be positive")
+                if int(self.method["scf"].get("max_scf", 0)) < 1:
+                    issues.append("method.scf.max_scf must be >= 1")
+                if str(self.method["scf"].get("method", "")).upper() not in {"OT", "DIAGONALIZATION"}:
+                    issues.append("method.scf.method must be OT or DIAGONALIZATION")
+            except (TypeError, ValueError, OverflowError):
+                issues.append("method.scf eps_scf/max_scf must be numeric")
         if not self.calculations: issues.append("at least one calculation stage is required")
         names = [str(x.get("id", "")) for x in self.calculations]
         if len(set(names)) != len(names) or any(not x for x in names):
