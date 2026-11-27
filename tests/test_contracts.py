@@ -61,9 +61,13 @@ class AdapterContractTests(unittest.TestCase):
             MockCSTAdapter("not-a-status")
 
     def test_mock_adapters_implement_pipeline_protocols(self):
-        self.assertTrue(all(hasattr(MockCSTAdapter(), name) for name in CSTAdapter.__protocol_attrs__))
-        self.assertTrue(all(hasattr(MockDataAnalysisAdapter(), name) for name in DataAnalysisAdapter.__protocol_attrs__))
-        self.assertTrue(all(hasattr(MockHpcAdapter(), name) for name in HpcAdapter.__protocol_attrs__))
+        self.assertTrue(callable(getattr(MockCSTAdapter(), "execute", None)))
+        self.assertTrue(callable(getattr(MockDataAnalysisAdapter(), "analyze", None)))
+        expected_hpc = ("preflight", "stage_inputs", "submit", "get_status", "get_record", "retrieve_selected_outputs", "verify_hashes")
+        self.assertTrue(all(callable(getattr(MockHpcAdapter(), name, None)) for name in expected_hpc))
+        self.assertTrue(callable(getattr(CSTAdapter, "execute", None)))
+        self.assertTrue(callable(getattr(DataAnalysisAdapter, "analyze", None)))
+        self.assertTrue(all(callable(getattr(HpcAdapter, name, None)) for name in expected_hpc))
 
     def _hpc_manifest(self):
         expected = ArtifactRef("ART-HPC-OUTPUT", uri="mock://hpc/output", mock=True)
