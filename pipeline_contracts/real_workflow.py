@@ -119,6 +119,28 @@ class RealCP2KWorkflowAdapter:
             )
         except Exception as exc:
             raise RealWorkflowUnavailable(str(exc)) from exc
+        method_cfg = dict(self.plan.method)
+        local_basis = (self.runtime.get("input_files") or {}).get("basis")
+        local_potential = (self.runtime.get("input_files") or {}).get("potential")
+        if bool(local_basis) != bool(local_potential):
+            raise RealWorkflowUnavailable("runtime input_files must configure both basis and potential files, or neither")
+        if local_basis and local_potential:
+            basis_path = Path(str(local_basis)).expanduser().resolve(strict=True)
+            potential_path = Path(str(local_potential)).expanduser().resolve(strict=True)
+            if basis_path.name != str(method_cfg["basis_file_name"]):
+                raise RealWorkflowUnavailable("local basis file basename must equal method.basis_file_name")
+            if potential_path.name != str(method_cfg["potential_file_name"]):
+                raise RealWorkflowUnavailable("local pseudopotential basename must equal method.potential_file_name")
+            if not basis_path.is_file() or not potential_path.is_file():
+                raise RealWorkflowUnavailable("configured basis/pseudopotential inputs must be regular files")
+        elif not self.backend_config.get("remote_cp2k_data_dir"):
+            raise RealWorkflowUnavailable(
+                "basis/pseudopotential files are not verified: configure both local input_files.basis/potential "
+                "or backend remote_cp2k_data_dir in runtime.local.json"
+            )
+        self.backend_config["resource_profile"] = dict(self.resources)
+        self.backend_config["basis_file_name"] = str(method_cfg["basis_file_name"])
+        self.backend_config["potential_file_name"] = str(method_cfg["potential_file_name"])
         if hpc_backend is not None:
             self.hpc = hpc_backend
         else:
