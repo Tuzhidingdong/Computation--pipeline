@@ -461,7 +461,7 @@ class RealCP2KWorkflowAdapter:
         # private local Artifact source path carries the opaque task identity.
         input_name = "input.inp"
         derived_dir = self.da_project_root / "data" / "derived"
-        local_derived_name = f"input-{str(task['task_id'])}.inp"
+        local_derived_name = f"input-{str(task['task_id'])}-{uuid.uuid4().hex[:8]}.inp"
         input_path = derived_dir / local_derived_name
         _atomic_new_file(input_path, input_text.encode("utf-8"))
         api = self.da_api
