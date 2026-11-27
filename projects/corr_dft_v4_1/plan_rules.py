@@ -54,8 +54,30 @@ def apply_v41_audit(manifest: Mapping[str, Any]) -> dict:
     result = dict(manifest)
     diagnostics = list(result.get("diagnostics", [])) + audit_v41_plan(result)
     result["diagnostics"] = diagnostics
-    result["compilation_status"] = (
-        "BLOCKED" if any(item.get("blocks_execution") for item in diagnostics)
-        else result.get("compilation_status", "NEEDS_REVIEW")
+    blocking = any(item.get("blocks_execution") for item in diagnostics)
+    unresolved = bool(result.get("unresolved_definitions"))
+    result["compilation_status"] = "BLOCKED" if blocking else (
+        "NEEDS_REVIEW" if unresolved else "READY_FOR_APPROVAL"
     )
     return result
+
+
+def confirm_v41_resolutions(manifest: Mapping[str, Any], *, orientation_scope: str,
+                            fragment_spin_resolution: str, confirmed_by: str,
+                            rationale: str) -> dict:
+    if orientation_scope not in {"per_catalyst", "across_both_systems"}:
+        raise ValueError("orientation_scope must be per_catalyst or across_both_systems")
+    if fragment_spin_resolution != "preserve_detailed_six_correct_summary":
+        raise ValueError("fragment spin resolution must preserve all six detailed candidates and correct the summary")
+    if not confirmed_by.strip() or not rationale.strip():
+        raise ValueError("confirmed_by and rationale are required")
+    result = dict(manifest)
+    result["confirmed_resolutions"] = {
+        "wp1_orientation_scope": orientation_scope,
+        "wp1_fragment_spin_count_resolution": fragment_spin_resolution,
+    }
+    result.setdefault("project_decision_records", []).append({
+        "confirmed_by": confirmed_by, "rationale": rationale,
+        "resolutions": dict(result["confirmed_resolutions"]),
+    })
+    return apply_v41_audit(result)
