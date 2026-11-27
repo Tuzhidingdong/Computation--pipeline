@@ -133,6 +133,12 @@ def render_ucas_cp2k_script(
         f'OUTPUT="{output_name}"' if re.match(r"^OUTPUT=", line) else line
         for line in lines
     ]
+    if cp2k_data_dir:
+        data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory")
+        insertion = next((i + 1 for i, line in enumerate(lines) if line.startswith("module load ")), None)
+        if insertion is None:
+            raise ContractError("UCAS template lacks a CP2K module load line")
+        lines.insert(insertion, f"export CP2K_DATA_DIR={shlex.quote(data_dir)}")
     script = "\n".join(lines).rstrip() + "\n"
     if "#SBATCH --job-name=cp2k" not in script:
         raise ContractError("UCAS batch template did not retain a generic job name")
