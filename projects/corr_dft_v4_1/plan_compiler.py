@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 import json
+import re
 
 from pipeline_contracts.plan_compiler import CompilationResult, compile_docx
 from pipeline_contracts.plan_compiler.manifest import _normalise_field_value, _normalise_label
