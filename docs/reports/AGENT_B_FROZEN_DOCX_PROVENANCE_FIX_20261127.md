@@ -1,3 +1,5 @@
+> **Historical report notice (2026-11-28):** This report describes the earlier pre-run_04-evidence state and is superseded for current conflict classification, Profile reconciliation, ADDED_MOS extraction and CI results by [AGENT_B_RUN04_EVIDENCE_DRIVEN_PR3_FIX_20261128.md](AGENT_B_RUN04_EVIDENCE_DRIVEN_PR3_FIX_20261128.md) and the 104-row reconciliation CSV.
+
 # Agent B Development Report — Frozen DOCX Conflict and Provenance Fix
 
 Date: 2026-11-27  
