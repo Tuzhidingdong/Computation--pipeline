@@ -267,9 +267,10 @@ class SkillSlurmBackend:
                 capabilities=("stage_inputs", "submit", "get_status", "get_record", "selective_retrieve", "sha256"),
             )
         except Exception as exc:
+            from .models import Diagnostic, DiagnosticSeverity
             return HpcPreflight(
                 backend_id=self.backend_id, ready=False,
-                diagnostics=(),
+                diagnostics=(Diagnostic("HPC_PREFLIGHT_UNAVAILABLE", str(exc)[:1200], DiagnosticSeverity.ERROR),),
             )
 
     def _read_only_preflight(self) -> None:
@@ -315,7 +316,8 @@ class SkillSlurmBackend:
         if self.backend_id == "beilong":
             allowed = str(self.config["allowed_workspace_root"]).rstrip("/")
             remote_directories.append(allowed + "/hpc/logs")
-        self._ssh(["umask", "077", ";", "mkdir", "-p", "--", *remote_directories, "&&", "chmod", "700", *remote_directories])
+        mkdir_script = "umask 077 && mkdir -p -- " + " ".join(shlex.quote(x) for x in remote_directories) + " && chmod 700 " + " ".join(shlex.quote(x) for x in remote_directories)
+        self._ssh(["bash", "-lc", mkdir_script])
         for item in local_files:
             source = str(Path(str(item["path"])).expanduser().resolve(strict=True))
             name = _safe_token(str(item.get("name") or Path(source).name), "staged filename")
@@ -350,7 +352,7 @@ class SkillSlurmBackend:
         }
         if on_submission_intent:
             on_submission_intent(details)
-        command = ["cd", workdir, "&&", "umask", "077", "&&", "sbatch", "--parsable", job_script]
+        command = ["bash", "-lc", "cd " + shlex.quote(workdir) + " && umask 077 && sbatch --parsable " + shlex.quote(job_script)]
         try:
             output = self._ssh(command).stdout
             job_id = _parse_job_id(output)
@@ -402,6 +404,8 @@ class SkillSlurmBackend:
             (str(x["path"]) for x in local_files if x.get("name") == payload.get("job_script_name")),
             "",
         )
+        if not local_script:
+            raise HpcRuntimeError("local staged job script was not supplied; refusing incomplete Skill Job Record")
         argv = [
             str(payload.get("python_executable") or sys.executable), str(self.job_record_script), "create",
             "--project-root", str(self.local_project_root), "--job-id", job_id,
@@ -450,6 +454,8 @@ class SkillSlurmBackend:
             "CONFIGURING": HpcState.QUEUED,
             "RUNNING": HpcState.RUNNING,
             "COMPLETING": HpcState.RUNNING,
+            "RESV_DEL_HOLD": HpcState.QUEUED,
+            "REQUEUED": HpcState.QUEUED,
             "SUSPENDED": HpcState.RUNNING,
             "COMPLETED": HpcState.AWAITING_VALIDATION,
             "FAILED": HpcState.FAILED,
