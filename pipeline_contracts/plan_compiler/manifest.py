@@ -174,8 +174,11 @@ def _append_inline_claim(claims: list[dict], block: ExtractedBlock, index: int,
                          unit: str | None = None) -> None:
     evidence_id = f"docx-block-{index:06d}"
     for existing in claims:
+        existing_context = existing.get("context") or {}
         if (existing.get("field") == field
                 and evidence_id in _claim_evidence_ids(existing)
+                and str(existing_context.get("system_id") or "") == str(context.get("system_id") or "")
+                and str(existing_context.get("work_package") or "") == str(context.get("work_package") or "")
                 and _normalise_field_value(existing.get("value", "")) == _normalise_field_value(value)):
             return
     claims.append({
@@ -240,7 +243,7 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
         if re.search(r"\d+(?:\.\d+)?\s*Å\s*vs\.?\s*\d+(?:\.\d+)?\s*Å", text, re.I) or re.search(r"(?:双盒子|cell|box|超胞).{0,100}(?:vs\.?|与|and)", text, re.I | re.S):
             sizes = list(dict.fromkeys(re.findall(r"(\d+(?:\.\d+)?)\s*Å", text, re.I)))
             if len(sizes) >= 2:
-                _append_inline_claim(claims, block, index, context, "cell_sizes_angstrom", sizes[:2])
+                _append_inline_claim(claims, block, index, context, "cell_sizes_angstrom", [f"{size} Å" for size in sizes[:2]])
 
         markers = list(re.finditer(r"\b(Cu-20|SnCu-20)\s*:", text, re.I))
         for marker_index, marker in enumerate(markers):
