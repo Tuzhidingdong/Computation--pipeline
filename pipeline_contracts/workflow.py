@@ -7,7 +7,7 @@ from typing import Any, Mapping, Protocol
 from .calculation_plan import CalculationPlan, compile_initial_tasks, compile_energy_task
 from .hpc_runtime import SubmissionUnknown
 
-TASK_STATES={"PENDING","READY","SUBMITTING","SUBMITTED","QUEUED","RUNNING","POSTPROCESSING","QC_PASSED","COMPLETED","RETRY_WAIT","BLOCKED","FAILED_PERMANENT","CANCELLED","INTERRUPTED_RECOVERY","SUBMISSION_UNKNOWN","UNAVAILABLE"}
+TASK_STATES={"PENDING","READY","SUBMITTING","SUBMITTED","QUEUED","RUNNING","POSTPROCESSING","QC_PASSED","COMPLETED","RETRY_WAIT","BLOCKED","FAILED_PERMANENT","FAILED_INFRASTRUCTURE","CANCELLED","INTERRUPTED_RECOVERY","SUBMISSION_UNKNOWN","UNAVAILABLE"}
 
 @dataclass(frozen=True)
 class ExecutionResult:
@@ -167,8 +167,12 @@ class WorkflowController:
                 row=next((x for x in self.store.tasks(rid) if x["status"]!="COMPLETED" and x["task_id"] not in processed),None)
                 if row is None: break
                 tid=row["task_id"]; processed.add(tid); state=row["status"]
-                if state in {"FAILED_PERMANENT","CANCELLED"}:
-                    final="FAILED" if state=="FAILED_PERMANENT" else "CANCELLED"
+                if state in {"FAILED_PERMANENT","FAILED_INFRASTRUCTURE","CANCELLED"}:
+                    final = {
+                        "FAILED_PERMANENT": "FAILED",
+                        "FAILED_INFRASTRUCTURE": "FAILED_INFRASTRUCTURE",
+                        "CANCELLED": "CANCELLED",
+                    }[state]
                     self.store.set_run_status(rid,final); return final
                 task=json.loads(row["task_json"]); deps=json.loads(row["dependencies_json"])
                 if any(self.store.task(rid,d)["status"]!="COMPLETED" for d in deps):
@@ -195,7 +199,7 @@ class WorkflowController:
                         "evidence_package_id":result.evidence_package_id,"diagnostics":list(result.diagnostics),
                         "execution_mode":result.execution_mode,**dict(result.runtime)}
                     if result.job_id and not existing: on_job(result.job_id,payload)
-                    if result.status in {"SUBMITTED","QUEUED","RUNNING","SUBMISSION_UNKNOWN","INTERRUPTED_RECOVERY","RETRY_WAIT","BLOCKED","UNAVAILABLE"}:
+                    if result.status in {"SUBMITTED","QUEUED","RUNNING","SUBMISSION_UNKNOWN","INTERRUPTED_RECOVERY","RETRY_WAIT","BLOCKED","UNAVAILABLE","FAILED_INFRASTRUCTURE","CANCELLED"}:
                         self.store.update_task(rid,tid,result.status,job_id=result.job_id,result=payload,error="; ".join(result.diagnostics) or None,merge_result=True)
                         self.store.attempt_finish(rid,tid,aid,result.status,result.job_id,result.diagnostics)
                         self.store.set_run_status(rid,result.status); return result.status
