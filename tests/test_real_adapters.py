@@ -269,6 +269,20 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
             self.assertLess(call_names.index("create_dft_analysis_run_from_project"), call_names.index("run_dft_operation"))
             self.assertLess(call_names.index("run_dft_operation"), call_names.index("build_evidence_package"))
 
+    def test_validated_only_reader_result_is_registered_as_partial_parse(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, request = self._setup(root)
+            api.reader_status = "validated"
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
+            self.assertEqual(outcome.status, TaskStatus.SUCCEEDED, outcome.error)
+            self.assertEqual(outcome.output_artifacts[0].artifact_id, "ART-DERIVED-TEST")
+            registration = next(call for call in api.calls if call[0] == "register_derived_artifact")
+            self.assertEqual(registration[2]["parse_status"], "partial")
+            self.assertEqual(registration[2]["quality_status"], "not_assessed")
+            self.assertEqual(outcome.qc_status, "not_assessed")
+
     def test_official_resolver_rejects_registered_input_hash_mismatch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
