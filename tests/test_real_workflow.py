@@ -7,9 +7,9 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from pipeline_contracts.calculation_plan import CalculationPlan, compile_initial_tasks
