@@ -113,7 +113,7 @@ class PipelineTaskResult:
 
     @property
     def succeeded(self) -> bool:
-        return self.status in {TaskStatus.SUCCEEDED, TaskStatus.WARNING}
+        return self.status == TaskStatus.SUCCEEDED
 
 
 class PipelineRunner:
