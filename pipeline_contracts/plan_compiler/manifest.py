@@ -363,10 +363,10 @@ def _normalise_wp(value: str) -> str:
 
 def _numbered_section(text: str) -> tuple[int, str] | None:
     """Recognise explicit Chinese or decimal section numbering, not ordinary lists."""
-    chinese = re.match(r"^\\s*([一二三四五六七八九十]+)、\\s*(\\S.*)$", text)
+    chinese = re.match(r"^\s*([一二三四五六七八九十]+)、\s*(\S.*)$", text)
     if chinese:
         return 1, chinese.group(2).strip()
-    decimal = re.match(r"^\\s*(\\d+(?:\\.\\d+)+)\\s+(\\S.*)$", text)
+    decimal = re.match(r"^\s*(\d+(?:\.\d+)+)\s+(\S.*)$", text)
     if decimal:
         return decimal.group(1).count(".") + 1, decimal.group(2).strip()
     return None
@@ -427,7 +427,7 @@ def _build_block_contexts(blocks: list[ExtractedBlock]) -> dict[str, dict]:
         cells.sort(key=lambda pair: int(pair[1].location.get("column", 0)))
         if not cells:
             continue
-        match = re.search(r"\\bWP\\s*(\\d+)\\b", cells[0][1].text, re.I)
+        match = re.search(r"\bWP\s*(\d+)\b", cells[0][1].text, re.I)
         if match:
             work_package = f"WP{int(match.group(1))}"
             for index, _block in cells:
