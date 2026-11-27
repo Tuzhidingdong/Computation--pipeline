@@ -59,6 +59,15 @@ class ModelSpec:
                 raise ValueError("bond.kind must be covalent or coordination")
             if bond.get("kind") == "covalent" and bond.get("order") not in {1, 1.5, 2, 3}:
                 raise ValueError("covalent bond.order must be 1, 1.5, 2 or 3")
+            distance_range = bond.get("distance_range_angstrom")
+            if not isinstance(distance_range, list) or len(distance_range) != 2:
+                raise ValueError("every covalent/coordination bond requires distance_range_angstrom [min, max]")
+            try:
+                lower, upper = (float(value) for value in distance_range)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError("bond distance range must be numeric") from exc
+            if not math.isfinite(lower) or not math.isfinite(upper) or lower <= 0 or upper <= lower:
+                raise ValueError("bond distance range must be finite, positive and increasing")
         if int(expected["atom_count"]) != len(atoms):
             raise ValueError("expected.atom_count differs from explicit atom graph")
         if int(expected["candidate_count"]) < 1:
@@ -77,15 +86,7 @@ class ModelSpec:
             if bond["kind"] == "coordination":
                 if not (bond["atom1"] in donor_atoms or bond["atom2"] in donor_atoms):
                     raise ValueError("each coordination bond must reference an explicit donor atom")
-                distance_range = bond.get("distance_range_angstrom")
-                if not isinstance(distance_range, list) or len(distance_range) != 2:
-                    raise ValueError("each coordination bond requires an explicit distance_range_angstrom [min, max]")
-                try:
-                    lower, upper = (float(value) for value in distance_range)
-                except (TypeError, ValueError, OverflowError) as exc:
-                    raise ValueError("coordination distance range must be numeric") from exc
-                if not math.isfinite(lower) or not math.isfinite(upper) or lower <= 0 or upper <= lower:
-                    raise ValueError("coordination distance range must be finite, positive and increasing")
+
         return cls("1.0.0", str(raw["project_id"]), str(raw["model_id"]), atoms, bonds,
                    dict(raw["fragments"]), expected,
                    dict(raw["build_constraints"]), tuple(dict(x) for x in raw["evidence"]))
