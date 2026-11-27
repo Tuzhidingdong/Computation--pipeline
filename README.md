@@ -36,9 +36,15 @@ Start with [`AGENT_START_HERE.md`](AGENT_START_HERE.md). The current prerequisit
 
 ## Parallel adapter preparation
 
-The Pipeline-side provisional interface and synthetic-only adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). The package under `pipeline_contracts/` is limited to typed contracts, mocks and a small handoff test; it is not the workflow engine and does not assert that provisional upstream API names already exist. Real binding steps are tracked in [`docs/REAL_SKILLS_INTEGRATION_TODO.md`](docs/REAL_SKILLS_INTEGRATION_TODO.md).
+The Pipeline-side contract and Mock adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). Optional real adapter classes now bind the exact Agent A Data_analysis and chem-scitoolkit branch APIs inspected on 2026-11-27. The real modules are imported lazily; no private branch is installed or added as a mandatory dependency. Data_analysis remains the Artifact/Analysis Run/Evidence owner, and the current no-derived-Artifact limitation is represented as a partial Analysis Run and Pipeline warning rather than a fabricated output reference.
 
-Run the standard-library contract suite with:
+- `RealDataAnalysisAdapter`: DFT reader discovery/read, operation discovery/dispatch, project-backed Analysis Run creation, normalized-result packaging and DFT Evidence Package.
+- `RealCSTAdapter`: finite CP2K builder, task-aware output validation, charge/PDOS/Cube/vacuum/ASE helpers and figure-profile functions.
+- `MockCSTAdapter`, `MockDataAnalysisAdapter` and `MockHpcAdapter` remain available and unchanged for contract tests.
+
+Real Data_analysis use requires a registered DA Artifact, a matching SHA-256, a local Artifact URI or an injected owner-provided resolver, and the DA project root. No Pipeline Artifact Store or direct DA registry parsing is introduced. Optional live source tests require explicitly supplied `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT`; public CI does not check out private source branches.
+
+Run the standard-library test suite with:
 
 ```bash
 python -m unittest discover -s tests -v
