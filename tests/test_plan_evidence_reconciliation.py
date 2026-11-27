@@ -102,7 +102,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_duplicate_same_field_value_is_supported_not_conflict(self):
         profile = {"method": {"cutoff": 500}}
         manifest = make_manifest(
-            [claim("cutoff", "500.0", "ev-1"), claim("cutoff", 500, "ev-2")],
+            [claim("cutoff", "500.0", "ev-1", source_text="Cutoff: 500.0"), claim("cutoff", 500, "ev-2", source_text="cutoff: 500")],
             [evidence("ev-1", "Cutoff: 500.0", 1), evidence("ev-2", "cutoff: 500", 2)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
@@ -114,7 +114,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_two_distinct_values_for_same_field_are_conflict(self):
         profile = {"method": {"cutoff": 500}}
         manifest = make_manifest(
-            [claim("cutoff", "500 Ry", "ev-1"), claim("cutoff", "600 Ry", "ev-2")],
+            [claim("cutoff", "500 Ry", "ev-1", source_text="Cutoff: 500 Ry"), claim("cutoff", "600 Ry", "ev-2", source_text="Cutoff: 600 Ry")],
             [evidence("ev-1", "Cutoff: 500 Ry", 1), evidence("ev-2", "Cutoff: 600 Ry", 2)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
@@ -152,8 +152,8 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
 
     def test_explicit_aliases_can_disambiguate_duplicate_system_leaf_names(self):
         profile = {"systems": {"Cu": {"charge": 0}, "SnCu": {"charge": 0}}}
-        cu = claim("cu_charge", 0, "ev-1", context={"system_id": "Cu"})
-        sncu = claim("sncu_charge", 0, "ev-2", context={"system_id": "SnCu"})
+        cu = claim("cu_charge", 0, "ev-1", source_text="Cu charge: 0", context={"system_id": "Cu"})
+        sncu = claim("sncu_charge", 0, "ev-2", source_text="SnCu charge: 0", context={"system_id": "SnCu"})
         manifest = make_manifest(
             [cu, sncu],
             [evidence("ev-1", "Cu charge: 0", 1), evidence("ev-2", "SnCu charge: 0", 2)],
@@ -217,7 +217,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_key_equals_value_numeric_format_is_normalised_but_unit_is_not_inferred(self):
         profile = {"method": {"cutoff": 500}}
         manifest = make_manifest(
-            [claim("cutoff", "Cutoff = 5.00e2 Ry", "ev-1")],
+            [claim("cutoff", "Cutoff = 5.00e2 Ry", "ev-1", "Cutoff", source_text="Cutoff = 5.00e2 Ry")],
             [evidence("ev-1", "Cutoff = 5.00e2 Ry", 1)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
@@ -226,7 +226,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_explicit_manifest_unit_field_is_compared_without_unit_inference(self):
         profile = {"method": {"cutoff": {"value": 500, "unit": "Ry"}}}
         manifest = make_manifest(
-            [{**claim("cutoff", 500, "ev-1"), "unit": "Ry"}],
+            [{**claim("cutoff", 500, "ev-1", source_text="Cutoff: 500 Ry"), "unit": "Ry"}],
             [evidence("ev-1", "Cutoff: 500 Ry", 1)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
@@ -235,7 +235,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_declared_same_unit_quantity_normalises_number_and_unit_alias(self):
         profile = {"method": {"cutoff": "500 eV/Å"}}
         manifest = make_manifest(
-            [claim("cutoff", "500.0 eV/Angstrom", "ev-1")],
+            [claim("cutoff", "500.0 eV/Angstrom", "ev-1", source_text="Cutoff: 500.0 eV/Angstrom")],
             [evidence("ev-1", "Cutoff: 500.0 eV/Angstrom", 1)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
@@ -348,10 +348,10 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
             },
         }
         claims = [
-            claim("atom_count", 83, "ev-cu", context={"system_id": "Cu-20"}),
-            claim("atom_count", 84, "ev-sncu", context={"system_id": "SnCu-20"}),
-            claim("candidate_count", 2, "ev-wp1", context={"work_package": "WP1"}),
-            claim("candidate_count", 1, "ev-wp2", context={"work_package": "WP2"}),
+            claim("atom_count", 83, "ev-cu", source_text="Atom count: 83", context={"system_id": "Cu-20"}),
+            claim("atom_count", 84, "ev-sncu", source_text="Atom count: 84", source={"part": "word/document.xml", "paragraph": 2}, context={"system_id": "SnCu-20"}),
+            claim("candidate_count", 2, "ev-wp1", source_text="Candidate count: 2", source={"part": "word/document.xml", "paragraph": 3}, context={"work_package": "WP1"}),
+            claim("candidate_count", 1, "ev-wp2", source_text="Candidate count: 1", source={"part": "word/document.xml", "paragraph": 4}, context={"work_package": "WP2"}),
         ]
         records = [
             evidence("ev-cu", "Atom count: 83", 1),
