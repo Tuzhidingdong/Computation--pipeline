@@ -49,7 +49,7 @@ Implemented in `pipeline_contracts/runner.py` and exported from the package:
 - Original 10 Mock contract tests are retained.
 - Runner tests cover a complete Mock end-to-end chain, optional CST warning, Reader failure, Artifact hash error, derived registration failure, missing/unavailable adapters, optional validator skip and non-terminal stage state.
 - Real Data_analysis boundary tests cover Artifact-ID-only resolver access, SHA rejection, derived JSON persistence/registration, Analysis Run output ID/hash and Evidence ordering.
-- Latest verified CI at time of this edit: run [45935827801](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45935827801), code commit `c71fc064aa32591c65cf8c3f557419cb759e58fd`: 35 tests run, 33 passed, 2 optional live upstream source tests skipped; compileall passed. Later small status/error-mapping edits must receive their own CI check before final handoff.
+- Latest verified CI: run [45936035658](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45936035658), implementation/test commit `4453d1d51526eae70f92dd3b04bf4f64f81a7326`: 37 tests run, 35 passed, 2 optional live upstream source tests skipped; `python -m compileall -q pipeline_contracts tests examples` passed.
 - Mock tests validate orchestration and reference propagation only, not CP2K, scientific algorithms or scientific QC.
 
 ## Remaining boundaries
