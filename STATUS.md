@@ -54,7 +54,7 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 
 ## Verification
 
-Latest successful Actions run before the final docs/runtime-config test commit: 72 tests, 70 passed, 2 optional upstream tests skipped; compileall passed.
+Latest successful Actions run before the final docs/runtime-config test commit: 74 tests, 72 passed, 2 optional upstream tests skipped; compileall passed.
 
 The suite uses injected command runners and fake HPC/CST/Data_analysis implementations. Tests cover:
 - BeiLong/UCAS command construction and SSH config differences;
