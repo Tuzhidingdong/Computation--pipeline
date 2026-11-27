@@ -64,6 +64,9 @@ def _run04_blocks() -> list[ExtractedBlock]:
     put(157, "7.3 论文《Results and Discussion》无预设英文结果报告模板（v4.1 基线冻结版）",
         location={"part": "word/document.xml", "paragraph": 44})
 
+    put(144, "1. 局域结构自洽与 EXAFS 键长 trend 互验：对比优化后 Cu-20 与 SnCu-20 基底平均 Cu–O 键长。",
+        location={"part": "word/document.xml", "paragraph": 33}, style="ListBullet")
+
     # Real table 4 row 4: one row assertion with three independent cell sources.
     put(50, "ASE Vibrations\n+ CP2K 力接口", kind="table_cell",
         location={"part": "word/document.xml", "table": 4, "row": 4, "column": 1})
@@ -248,7 +251,7 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "systems.SnCu-20.complete_atom_count",
             "systems.SnCu-20.explicit_valence_electrons",
             "systems.SnCu-20.charge",
-                        "systems.SnCu-20.support_motif",
+            "systems.SnCu-20.support_motif",
             "method.xc", "method.dispersion", "method.cutoff_ry",
             "method.rel_cutoff_ry", "method.spin_polarized",
             "method.smearing_temperature_K", "method.periodicity",
@@ -281,11 +284,14 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "tasks.WP1.isolated_fragment_spin_candidates.Cu20_support[0]",
             "tasks.WP1.isolated_fragment_spin_candidates.SnCu20_support[0]",
             "tasks.WP1.retained_structurally_distinct_candidates_per_catalyst.min",
+            "tasks.WP1.retained_structurally_distinct_candidates_per_catalyst.max",
             "tasks.WP2.representative_sncu20_models",
             "tasks.WP3.hcco_candidates_per_catalyst",
             "tasks.WP3.protonation_products_per_catalyst",
-            "tasks.WP3.gas_references[0]",
+            "tasks.WP3.gas_references[0]", "tasks.WP3.gas_references[1]",
             "tasks.WP4.adsorbate_atom_counts_per_catalyst[0]",
+            "tasks.WP4.adsorbate_atom_counts_per_catalyst[1]",
+            "tasks.WP4.adsorbate_atom_counts_per_catalyst[2]",
             "tasks.WP5.sccs_single_points",
             "tasks.WP5.tzv2p_single_points",
             "scientific_scope.thermodynamic_only",
