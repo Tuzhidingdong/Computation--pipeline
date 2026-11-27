@@ -52,7 +52,9 @@ def audit_v41_plan(manifest: Mapping[str, Any], profile: Mapping[str, Any] | Non
 
 def apply_v41_audit(manifest: Mapping[str, Any]) -> dict:
     result = dict(manifest)
-    diagnostics = list(result.get("diagnostics", [])) + audit_v41_plan(result)
+    known_codes = {"WP1_ORIENTATION_SCOPE_UNRESOLVED", "WP1_FRAGMENT_SPIN_COUNT_MISMATCH"}
+    diagnostics = [item for item in result.get("diagnostics", [])
+                   if item.get("code") not in known_codes] + audit_v41_plan(result)
     result["diagnostics"] = diagnostics
     blocking = any(item.get("blocks_execution") for item in diagnostics)
     unresolved = bool(result.get("unresolved_definitions"))
