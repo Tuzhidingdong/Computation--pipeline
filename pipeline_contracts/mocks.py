@@ -152,12 +152,7 @@ class MockDataAnalysisAdapter:
                 for item in request.input_artifacts
                 if item.sha256 is not None
             }
-            source_ids = tuple(
-                dict.fromkeys(
-                    [item.artifact_id for item in request.input_artifacts]
-                    + [item.artifact_id for item in output]
-                )
-            )
+            source_ids = tuple(item.artifact_id for item in request.input_artifacts)
             evidence_id = f"mock-evidence-{request.task_id}"
             evidence = (
                 EvidenceRef(
