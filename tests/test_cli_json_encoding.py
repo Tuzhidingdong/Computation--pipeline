@@ -42,7 +42,7 @@ class CliJsonEncodingTests(unittest.TestCase):
         for encoding in ("gbk", "ascii"):
             with self.subTest(encoding=encoding):
                 rendered, restored = self._render_with_encoding(payload, encoding)
-                self.assertIn(r"\\u00b2", rendered)
+                self.assertIn(r"\u00b2", rendered)
                 self.assertEqual(restored, payload)
 
     def test_manifest_utf8_retains_unicode_and_stdout_matches_its_json_semantics(self):
