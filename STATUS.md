@@ -16,7 +16,7 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 
 | Capability | Status | Evidence / limitation |
 |---|---|---|
-| DOCX package parsing | IMPLEMENTED — synthetic DOCX CI-tested | Standard-library extraction of document body paragraphs, paragraph style, numbering IDs/levels, table cells and source locations. |
+| DOCX package parsing | IMPLEMENTED — synthetic DOCX CI-tested | Standard-library extraction of document body paragraphs, heading hierarchy, numbering IDs/levels, table cells and source locations; two-column table rows are promoted to labelled claims. |
 | Evidence-backed claims | IMPLEMENTED — synthetic DOCX CI-tested | Labelled values remain unconfirmed claims; numeric/unit mentions remain source-linked evidence. |
 | Conflict diagnostics | IMPLEMENTED — synthetic DOCX CI-tested | Conflicting values for the same normalized label are preserved and block execution. |
 | Versioned Project Manifest | IMPLEMENTED — schema added | Generic schema v1.0.0; actual Frozen DOCX has not yet been supplied/located for real-input validation. |
@@ -28,8 +28,8 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 | ASE structure output | IMPLEMENTED — dependency-gated | Production writer requires ASE and emits non-periodic extxyz. CI uses an explicitly test-only writer for contract tests. |
 | RDKit topology validation | PARTIAL — optional and explicit | Declared organic fragments are checked when RDKit is installed and formal charges are supplied; no complete v4.1 graph has been validated. |
 | Model validation | PARTIAL — API implemented | Checks composition, formula, atom count, pseudopotential valence electron count, spin parity, periodicity, overlaps, donor/bond mapping, coordination ranges and readback. No real candidate run because source graph/coordinates are unavailable. |
-| Artifact registration | IMPLEMENTED — adapter bridge | Calls Data_analysis `register_derived_artifact` and official resolver; format ID must be explicitly supplied. Not yet exercised against Agent A's live source checkout. |
-| Model review package | PARTIAL — API implemented | Produces structured candidate review index; 3D preview requires an injected real renderer and has not been produced. |
+| Artifact registration | IMPLEMENTED — adapter bridge and CI fake | Registers structure, topology, metadata and validation report through Data_analysis `register_derived_artifact`, then re-resolves and re-hashes every file; format IDs are explicit. Not yet exercised against Agent A's live source checkout. |
+| Model review package | PARTIAL — API implemented | Produces structured candidate review index; package remains blocked unless an injected real renderer creates a preview for every candidate. No real preview has been produced. |
 | Approval freeze | IMPLEMENTED — CI-tested | Requires explicit approval, registered Artifact ID, passing report and matching SHA-256; approval record is write-once. |
 | Project lifecycle DAG | IMPLEMENTED — CI-tested | Pre-model stages persisted in the existing WorkflowStore database; stage order enforced; approved model is handed to existing CalculationPlan workflow. |
 
@@ -44,7 +44,7 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 ## CI verification
 
 Latest successful Actions run observed on this branch:
-- 83 tests passed, 2 optional upstream integration tests skipped.
+- 94 tests passed, 2 optional upstream integration tests skipped.
 - `python -m compileall -q pipeline_contracts tests examples` passed.
 - This evidence is software-only; the suite uses synthetic DOCX and test-only structure writers. It does not establish actual v4.1 chemistry or a real Artifact Registry integration.
 
