@@ -125,8 +125,12 @@ class RealCP2KWorkflowAdapter:
         if bool(local_basis) != bool(local_potential):
             raise RealWorkflowUnavailable("runtime input_files must configure both basis and potential files, or neither")
         if local_basis and local_potential:
-            basis_path = Path(str(local_basis)).expanduser().resolve(strict=True)
-            potential_path = Path(str(local_potential)).expanduser().resolve(strict=True)
+            basis_input = Path(str(local_basis)).expanduser()
+            potential_input = Path(str(local_potential)).expanduser()
+            if basis_input.is_symlink() or potential_input.is_symlink():
+                raise RealWorkflowUnavailable("basis/pseudopotential runtime files must not be symlinks")
+            basis_path = basis_input.resolve(strict=True)
+            potential_path = potential_input.resolve(strict=True)
             if basis_path.name != str(method_cfg["basis_file_name"]):
                 raise RealWorkflowUnavailable("local basis file basename must equal method.basis_file_name")
             if potential_path.name != str(method_cfg["potential_file_name"]):
