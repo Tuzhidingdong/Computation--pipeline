@@ -129,8 +129,8 @@ python -m pipeline_contracts.cli resume WORKFLOW_RUN_ID --state-db STATE_DB_PATH
 - A known Job ID is queried again on resume; it is never resubmitted by ordinary resume.
 - If the sbatch response is lost, the adapter uses the backend's permitted Slurm work-directory reconciliation. If it cannot establish whether the job exists, it records SUBMISSION_UNKNOWN and stops. It does not issue another sbatch.
 - Slurm COMPLETED is not sufficient. Allocation exit code 0, CP2K normal termination, SCF convergence, matching CP2K version and task-specific GEO_OPT completion are checked separately.
-- FAILED_PERMANENT, FAILED_INFRASTRUCTURE and CANCELLED are terminal for ordinary resume. No scientific parameter is automatically changed.
-- No automatic retry loop is implemented in this MVP.
+- FAILED_PERMANENT, FAILED_INFRASTRUCTURE and CANCELLED are terminal for ordinary resume. RETRY_WAIT also remains idle on ordinary resume. No scientific parameter is automatically changed.
+- No automatic retry loop or explicit retry CLI operation is implemented in this MVP. RETRY_WAIT is not re-executed by ordinary resume.
 
 ## Artifact custody and known Data_analysis API boundary
 
@@ -143,7 +143,7 @@ python -m pipeline_contracts.cli resume WORKFLOW_RUN_ID --state-db STATE_DB_PATH
 
 ## Verification and limitations
 
-Current GitHub Actions evidence: 69 tests, 67 passed, 2 optional live upstream source tests skipped; compileall passed. The suite injects command runners and fake upstream APIs. It does not authenticate to either real cluster.
+Current GitHub Actions evidence: 72 tests, 70 passed, 2 optional live upstream source tests skipped; compileall passed. The suite injects command runners and fake upstream APIs. It does not authenticate to either real cluster.
 
 Not live-verified in this phase:
 - the user's Windows paths, SSH aliases/configuration and credentials;
