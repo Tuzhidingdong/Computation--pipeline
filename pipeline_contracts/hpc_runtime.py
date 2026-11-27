@@ -633,14 +633,26 @@ class BeiLongHPCAdapter(SkillSlurmBackend):
         module_init = str(self.config.get("module_init_path") or "")
         if not module_init:
             raise HpcRuntimeError("BeiLong runtime config must supply module_init_path")
-        work = (
-            f"test -d {shlex.quote(self.allowed_workspace_root)} && "
-            f"test -r {shlex.quote(module_init)} && "
-            f"source {shlex.quote(module_init)} >/dev/null 2>&1 && "
-            "command -v sbatch >/dev/null && command -v squeue >/dev/null && "
-            "command -v sacct >/dev/null"
-        )
-        self._ssh(["bash", "-lc", work])
+        resources = dict(self.config.get("resource_profile") or {})
+        module_name = str(resources.get("module") or "")
+        executable = str(self.config.get("cp2k_executable") or "cp2k.psmp")
+        work_parts = [
+            f"test -d {shlex.quote(self.allowed_workspace_root)}",
+            f"test -r {shlex.quote(module_init)}",
+            f"source {shlex.quote(module_init)} >/dev/null 2>&1",
+            f"module load {shlex.quote(module_name)} >/dev/null 2>&1",
+            "command -v sbatch >/dev/null",
+            "command -v squeue >/dev/null",
+            "command -v sacct >/dev/null",
+            f"command -v {shlex.quote(executable)} >/dev/null",
+        ]
+        data_dir = str(self.config.get("remote_cp2k_data_dir") or "")
+        if data_dir:
+            data_dir = _remote_path(data_dir, "remote_cp2k_data_dir")
+            for key in ("basis_file_name", "potential_file_name"):
+                filename = _safe_token(str(self.config[key]), key)
+                work_parts.append(f"test -r {shlex.quote(data_dir + '/' + filename)}")
+        self._ssh(["bash", "-lc", " && ".join(work_parts)])
 
     def _append_sync_options(self, argv: list[str]) -> None:
         argv.extend(["--ssh-config", str(self.ssh_config), "--ssh-executable", self.ssh_executable])
@@ -651,11 +663,26 @@ class UCASHPCAdapter(SkillSlurmBackend):
     job_name = "cp2k"
 
     def _read_only_preflight(self) -> None:
-        self._ssh([
-            "bash", "-lc",
-            "command -v sbatch >/dev/null && command -v squeue >/dev/null && command -v sacct >/dev/null "
-            "&& test -r /etc/profile.d/modules.sh",
-        ])
+        resources = dict(self.config.get("resource_profile") or {})
+        module_name = str(resources.get("module") or "")
+        executable = str(self.config.get("cp2k_executable") or "cp2k.psmp")
+        work_parts = [
+            "source /etc/profile.d/modules.sh",
+            "module use /public/env/modules/apps",
+            "module use /public/env/modules/tools",
+            f"module load {shlex.quote(module_name)}",
+            "command -v sbatch >/dev/null",
+            "command -v squeue >/dev/null",
+            "command -v sacct >/dev/null",
+            f"command -v {shlex.quote(executable)} >/dev/null",
+        ]
+        data_dir = str(self.config.get("remote_cp2k_data_dir") or "")
+        if data_dir:
+            data_dir = _remote_path(data_dir, "remote_cp2k_data_dir")
+            for key in ("basis_file_name", "potential_file_name"):
+                filename = _safe_token(str(self.config[key]), key)
+                work_parts.append(f"test -r {shlex.quote(data_dir + '/' + filename)}")
+        self._ssh(["bash", "-lc", " && ".join(work_parts)])
 
     def _append_sync_options(self, argv: list[str]) -> None:
         return None
