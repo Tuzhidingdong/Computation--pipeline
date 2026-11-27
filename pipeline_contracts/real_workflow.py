@@ -461,6 +461,8 @@ class RealCP2KWorkflowAdapter:
         output_files = dict(stage.get("output_files") or {})
         if "cp2k_output" not in output_files:
             output_files["cp2k_output"] = "cp2k.out"
+        output_files.setdefault("slurm_stdout", "slurm-JOB_ID.out")
+        output_files.setdefault("slurm_stderr", "slurm-JOB_ID.err")
         if task["operation"] == "cp2k.geo_opt" and "optimized_structure" not in output_files:
             output_files["optimized_structure"] = "optimized_structure.xyz"
         script_name = "job.slurm"
@@ -474,7 +476,15 @@ class RealCP2KWorkflowAdapter:
                 remote_workdir=str((runtime_state or {}).get("remote_workdir") or self.hpc._new_remote_workdir(str(task["task_id"]))),
                 resources=self.resources, module_init_path=str(profile["module_init_path"]),
                 input_name=input_name, output_name=str(output_files["cp2k_output"]),
+                cp2k_data_dir=(
+                    str(self.backend_config.get("remote_cp2k_data_dir"))
+                    if self.backend_config.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
+                ),
                 cp2k_executable=str(profile.get("cp2k_executable", "cp2k.psmp")),
+                cp2k_data_dir=(
+                    str(profile.get("remote_cp2k_data_dir"))
+                    if profile.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
+                ),
             )
         else:
             template = Path(str(self.backend_config["slurm_template"])).read_text(encoding="utf-8")
@@ -551,7 +561,7 @@ class RealCP2KWorkflowAdapter:
             raise RealWorkflowUnavailable(f"registered {role} Artifact SHA does not match retrieved bytes")
         return ArtifactRef(
             artifact_id=artifact_id, sha256=actual_hash,
-            format_id="cp2k_output" if role == "cp2k_output" else "extxyz",
+            format_id=("cp2k_output" if role == "cp2k_output" else "extxyz" if role == "optimized_structure" else "slurm_log"),
             uri=resolved.as_uri(), source_system="Data_analysis",
         )
 
@@ -662,6 +672,11 @@ class RealCP2KWorkflowAdapter:
             if "cp2k_output" not in by_role:
                 raise RealWorkflowUnavailable("CalculationPlan output_files must declare cp2k_output")
             output_ref = self._register_retrieved("cp2k_output", by_role["cp2k_output"], job.job_id)
+            outputs = [{"artifact_id": output_ref.artifact_id, "sha256": output_ref.sha256, "kind": "cp2k_output"}]
+            for log_role in ("slurm_stdout", "slurm_stderr"):
+                if log_role in by_role:
+                    log_ref = self._register_retrieved(log_role, by_role[log_role], job.job_id)
+                    outputs.append({"artifact_id": log_ref.artifact_id, "sha256": log_ref.sha256, "kind": log_role})
             cst = self.cst.execute(CSTTaskRequest(
                 task_id=str(task["task_id"]) + "-output-qc",
                 operation="cp2k.validate_output",
@@ -686,7 +701,6 @@ class RealCP2KWorkflowAdapter:
                     output_artifacts=({"artifact_id": output_ref.artifact_id, "sha256": output_ref.sha256, "kind": "cp2k_output"},),
                     diagnostics=("CP2K normal termination or SCF convergence was not confirmed",), execution_mode="real",
                 )
-            outputs = [{"artifact_id": output_ref.artifact_id, "sha256": output_ref.sha256, "kind": "cp2k_output"}]
             converged = True
             if task["operation"] == "cp2k.geo_opt":
                 if validation.get("geometry_optimization_completed") is not True:
