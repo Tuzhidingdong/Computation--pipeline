@@ -134,11 +134,15 @@ def render_ucas_cp2k_script(
         for line in lines
     ]
     if cp2k_data_dir:
-        data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory")
+        if cp2k_data_dir == "__WORKDIR__":
+            export_line = 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
+        else:
+            data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory")
+            export_line = f"export CP2K_DATA_DIR={shlex.quote(data_dir)}"
         insertion = next((i + 1 for i, line in enumerate(lines) if line.startswith("module load ")), None)
         if insertion is None:
             raise ContractError("UCAS template lacks a CP2K module load line")
-        lines.insert(insertion, f"export CP2K_DATA_DIR={shlex.quote(data_dir)}")
+        lines.insert(insertion, export_line)
     script = "\n".join(lines).rstrip() + "\n"
     if "#SBATCH --job-name=cp2k" not in script:
         raise ContractError("UCAS batch template did not retain a generic job name")
@@ -194,7 +198,10 @@ def render_beilong_cp2k_script(
     if resources.get("qos"):
         directives.append(f"#SBATCH --qos={resources['qos']}")
     data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory") if cp2k_data_dir else None
-    cp2k_data_export = f"export CP2K_DATA_DIR={shlex.quote(data_dir)}" if data_dir else 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
+    if cp2k_data_dir == "__WORKDIR__":
+        cp2k_data_export = 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
+    else:
+        cp2k_data_export = f"export CP2K_DATA_DIR={shlex.quote(data_dir)}" if data_dir else 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
     body = f"""
 set -euo pipefail
 umask 077
