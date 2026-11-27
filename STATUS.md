@@ -5,75 +5,55 @@
 ## Repository and baseline
 
 - **Repository:** `Tuzhidingdong/Computation--pipeline`
-- **Repository URL:** https://github.com/Tuzhidingdong/Computation--pipeline
-- **Visibility:** Public
 - **Default branch:** `main`
-- **Governing plan:** `TASK_PLAN_v1.0.0.md`
-- **Architecture:** `docs/ARCHITECTURE_OWNERSHIP.md`
-- **Capability audit:** `docs/EXISTING_SKILL_CAPABILITY_AUDIT.md`
-- **Authorized prerequisite:** `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md`
-- **External tools:** `docs/EXTERNAL_TOOL_SELECTION.md`
-- **Remediation tracker:** `docs/UPSTREAM_REMEDIATION_STATUS.md`
-- **Current state:** Upstream Skill work is being handled by Agent A. Agent B has prepared a provisional Pipeline-side adapter contract, mock adapters and synthetic contract tests. The workflow engine has not started.
-- **Current phase:** Parallel prerequisite — upstream Skill remediation (Agent A) and mock adapter contract preparation (Agent B)
-- **Implementation policy:** Use dedicated branches and PRs; do not work directly on upstream default branches and do not merge automatically.
+- **Agent B branch:** `agent-b/pipeline-mock-contracts-20261127`
+- **Agent B PR:** https://github.com/Tuzhidingdong/Computation--pipeline/pull/1 (Open / Draft; do not auto-merge)
+- **Upstream Data_analysis inspected branch:** `cp2k-dft-artifact-and-evidence-support` at `22ad1290e0d78c6a98fbd6d2d194d3ad8e1c689a`
+- **Upstream chem-scitoolkit inspected branch:** `dft-finite-cluster-production-interfaces` at `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba`
 - **No production DFT or HPC task has been submitted.**
 
-## Preparation baseline
+## Agent B work — real Skill adapter phase
 
-| Item | Status | Evidence |
-|---|---|---|
-| Responsibility split across the new pipeline and four Skills | COMPLETE | `docs/ARCHITECTURE_OWNERSHIP.md` |
-| Source-level audit of all four Skills | COMPLETE | `docs/EXISTING_SKILL_CAPABILITY_AUDIT.md` |
-| Scoped upstream remediation instruction | COMPLETE | `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md` |
-| External tool selection baseline | COMPLETE — version/license confirmation pending | `docs/EXTERNAL_TOOL_SELECTION.md` |
-| Mock adapter interface contract | COMPLETE — provisional, mock-tested only | `docs/SKILLS_ADAPTER_CONTRACT_V0.1.md` |
-| CST / Data_analysis / HPC mock adapters | COMPLETE — no real upstream calls | `pipeline_contracts/` |
-| Cross-component mock integration | COMPLETE — synthetic references only | `tests/test_mock_integration.py` |
+The original provisional contracts and 10 Mock tests are retained. This phase adds optional real adapter classes in `pipeline_contracts/real_adapters.py`:
 
-## Agent B — Pipeline-side contract preparation (2026-11-27)
+- `RealDataAnalysisAdapter`: lazily binds the actual Data_analysis DFT reader, operation registry/dispatcher, project-backed Analysis Run creator and Evidence Package builder.
+- `RealCSTAdapter`: lazily binds the actual finite-system builder, task-aware CP2K output validator, charge helpers, PDOS/Cube/vacuum utilities, ASE thermochemistry and figure-profile functions.
+- `load_data_analysis_api()`: imports upstream modules only on demand. No private dependency is installed by default.
+- `AnalysisOutcome`: extended to retain returned reader data, persisted Analysis Run record, Evidence Package and detailed diagnostics. Missing Analysis Run IDs are represented as `None` on failure, never invented.
 
-- **Branch:** `agent-b/pipeline-mock-contracts-20261127`
-- **Scope:** `Computation--pipeline` only. No upstream Skill repository was modified.
-- **Implementation:** typed request/response models, `ArtifactRef` / provenance references, CST and Data_analysis adapter Protocols, normalized HPC Protocol and deterministic mock implementations.
-- **Contract tests:** 10 standard-library `unittest` cases passed in the isolated validation workspace; `compileall` passed. The workspace was a scratch test directory, not a local repository clone, and no Git CLI was used.
-- **GitHub Actions:** minimal contract-test workflow added because the repository had no existing workflow. Hosted-run status is reported separately in the PR after the push.
-- **Important boundary:** passing mock tests verifies interface handoff/control flow only; it is not scientific validation or real HPC validation.
+## Data_analysis adapter boundary
 
-## Upstream Skill status
+The current Agent A Data_analysis branch has no public Artifact resolver module. Pipeline therefore requires either a caller-supplied local URI/file URI or an injected resolver. It requires Artifact SHA-256 and checks the reader result hash. Data_analysis itself verifies the registered Artifact and creates the Analysis Run. Pipeline does not read DA registry JSON or create another Artifact Store.
 
-| Repository | Work required | Current status |
-|---|---|---|
-| chem-scitoolkit | CST-1 through CST-7 | Agent A implementation in progress; real callable API not yet bound here |
-| Data_analysis | DA-1 through DA-3 | Agent A implementation in progress; real DFT registry/API not yet bound here |
-| BeiLong_HPC | Reuse existing scheduler/job record/transfer tools; adapter mapping | Pipeline-side contract/mock ready; per-Skill binding remains read-only follow-up |
-| UCAS_hpc | Reuse existing scheduler/job record/transfer tools; adapter mapping | Pipeline-side contract/mock ready; per-Skill binding remains read-only follow-up |
+The current `read_dft_file` result is in-memory; there is no derived-output Artifact registration API in the inspected branch. The real adapter therefore creates a `partial` Analysis Run, no synthetic output Artifact, `qc_status=not_assessed`, and a Pipeline warning. Once Agent A provides a supported derived Artifact registration API, the adapter can be extended narrowly.
 
-## Computation--pipeline implementation phases
+## CST adapter boundary
 
-| Phase | Status | Blocker / prerequisite |
-|---|---|---|
-| Upstream Skill remediation | IN PROGRESS — Agent A | Upstream PRs require owner review |
-| Phase 1 — contracts, schemas, workflow skeleton | NOT STARTED — only the narrow adapter contract/mock prerequisite is prepared | Complete prerequisite and review/merge necessary upstream PRs before engine work |
-| Phase 2 — model builder and review gate | NOT STARTED | Phase 1 |
-| Phase 3 — CP2K/HPC and Stage 1 | NOT STARTED | Phase 2 |
-| Phase 4 — Stage 2 adsorption/vibration/CHE | NOT STARTED | Phase 3 |
-| Phase 5 — analysis and publication visualization | NOT STARTED | Phase 4 |
-| Phase 6 — reports, integration acceptance, delivery | NOT STARTED | Phase 5 |
+The real CST adapter uses exact functions observed on the supplied Agent A branch. It returns upstream metadata/result objects only. It does not create Artifact Store entries or run CP2K. Missing `cp2klint`, `cp2k_pdos`, ASE or other optional runtime dependencies are surfaced as explicit unavailable/failure outcomes.
 
-## Decisions / blockers
+## Tests
 
-- `Computation--pipeline` owns orchestration, state/DAG, model approval and immutability, scientific gates, cross-backend routing, report assembly and final delivery.
-- `chem-scitoolkit` owns reusable chemistry/DFT utilities, CP2K support, electronic-structure post-processing, thermochemistry wrappers and plotting primitives.
-- `Data_analysis` owns generic artifact/data schemas, inventory, hashes, cache, parse/evidence/provenance records.
-- `BeiLong_HPC` and `UCAS_hpc` continue to own their cluster-specific operational behavior. No wholesale HPC rewrite is planned.
-- The pipeline adapter contract is provisional where upstream implementations are not yet available. In particular, no CST or DA function names are claimed to exist.
-- Data_analysis PR #4 is open and unmerged at the time of this preparation; its Artifact resolver and evidence-export changes are not copied or treated as a merged dependency.
-- No duplicate Artifact Store, database, cache, HPC ledger, scientific parser, or workflow server is introduced by this preparation.
-- No project-specific test chemistry or results are embedded in the generic adapter package.
-- No private HPC configuration or credentials are committed to the public repository.
-- No production DFT/HPC work is authorized during prerequisite remediation.
+- Existing Mock contract tests: 10 (retained).
+- New real adapter boundary tests: tests injected Data_analysis API double, CST builder/validator doubles, missing resolver/hash, unsupported format and reader-unavailable cases.
+- Optional live tests are skipped unless `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT` are explicitly set. They use temporary synthetic artifacts only.
+- Exact GitHub Actions results will be recorded after the branch update runs.
+- Passing adapter tests validate interface wiring and status/provenance flow only, not scientific algorithms or scientific QC.
 
-## Required progress report
+## Remaining blockers / follow-up
 
-Every Agent update must identify requirement IDs, repository, branch, commit SHA, changed-file links, PR URL, exact tests/results, implementation vs. scientific-validation status, blockers, and confirmation that no production DFT/HPC tasks were submitted.
+1. Data_analysis must expose a public Artifact path resolver for cases where ArtifactRef has no local URI; Pipeline supports injected resolver and will not duplicate the registry logic.
+2. Data_analysis currently has no public derived-output Artifact registration function for this DFT read/normalization flow; run status remains partial until that capability is available.
+3. Live upstream source tests require an approved environment with both branch source trees and optional runtime packages available; public CI will not install or checkout private upstream source.
+4. Real HPC adapter binding remains deferred; Mock HPC stays in place and no scheduler calls are made.
+
+## Pipeline engine phases
+
+The full workflow DAG/controller/model-review/production DFT engine has not started. This task only implements the narrow specialist adapters and tests required for the upstream integration handoff.
+
+## Safety
+
+- Only `Computation--pipeline` is modified by Agent B.
+- Agent A repositories are read-only.
+- BeiLong_HPC and UCAS_hpc remain read-only.
+- No production DFT, AIMD, SSH/SCP, Slurm or HPC task has been submitted.
+- PR #1 remains Open / Draft and unmerged.
