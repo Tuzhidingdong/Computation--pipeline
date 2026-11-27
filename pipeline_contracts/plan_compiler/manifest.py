@@ -744,6 +744,24 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "evidence_ids": [item["evidence_id"] for item in spin_cells],
                 "source_text": " | ".join(item.get("text", "") for item in spin_cells),
             },
+            {
+                "field": "tasks.isolated_fragment_spin_candidates.Cu13", "status": "unresolved",
+                "reason": "Cu13 multiplicity candidates are listed, but their WP1 task ownership remains unconfirmed.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+            {
+                "field": "tasks.isolated_fragment_spin_candidates.Cu20_support", "status": "unresolved",
+                "reason": "Neutral Cu support multiplicities are listed, but the table column-to-system mapping and WP1 ownership are unconfirmed.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+            {
+                "field": "tasks.isolated_fragment_spin_candidates.SnCu20_support", "status": "unresolved",
+                "reason": "Sn-containing support multiplicities are listed, but the table column-to-system mapping and WP1 ownership are unconfirmed.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
         ])
 
 
@@ -757,7 +775,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "reason": "Adsorbate atom counts are explicit, but this paragraph does not identify a WP or per-catalyst mapping.",
                 "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
             })
-        if eid == "docx-block-000087" and re.search(r"representative.*SnCu-20.*model", text, re.I):
+        if eid == "docx-block-000087" and re.search(r"representative.*model.*SnCu-20", text, re.I):
             unresolved_structured_fields.append({
                 "field": "tasks.representative_sncu20_models", "status": "unresolved",
                 "reason": "A representative SnCu-20 model is named in the WP2 gate, but the source does not state a numeric model count.",
