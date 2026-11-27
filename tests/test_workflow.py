@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json, tempfile, unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from pipeline_contracts.calculation_plan import CalculationPlan, compile_initial_tasks
 from pipeline_contracts.workflow import MockCP2KWorkflowAdapter, WorkflowController, WorkflowStore
+from pipeline_contracts.cli import main as cli_main
 
 def example_plan():
     return CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
@@ -59,6 +62,18 @@ class WorkflowTests(unittest.TestCase):
             plan=example_plan(); ctl=WorkflowController(store,BadApplication()); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"FAILED")
             self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
+
+    def test_cli_plan_validate_run_status_resume_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan_file=str(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            state_db=str(Path(tmp)/"cli.sqlite")
+            for command in (["plan",plan_file],["validate",plan_file]):
+                with redirect_stdout(StringIO()): self.assertEqual(cli_main(command),0)
+            output=StringIO()
+            with redirect_stdout(output): self.assertEqual(cli_main(["run",plan_file,"--mock","--state-db",state_db]),0)
+            run_id=json.loads(output.getvalue())["workflow_run_id"]
+            for command in (["status",run_id,"--state-db",state_db],["resume",run_id,"--state-db",state_db,"--mock"],["report",run_id,"--state-db",state_db]):
+                with redirect_stdout(StringIO()): self.assertEqual(cli_main(command),0)
 
     def test_input_change_changes_deterministic_task_identity(self):
         plan=example_plan(); first=compile_initial_tasks(plan)[0]
