@@ -242,13 +242,24 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
                 _append_inline_claim(claims, block, index, context, field, render(match))
 
         if re.search(r"\bEPS_SCF\b", text, re.I):
-            for field, pattern in (
-                ("eps_scf_geometry_optimization", r"(1\.0E-\d+)\s*\((?:优化/静态|geometry\s*optimization)\)"),
-                ("eps_scf_local_hessian_force", r"(1\.0E-\d+)\s*\((?:力计算|force\s*calculation)\)"),
-            ):
-                match = re.search(pattern, text, re.I)
-                if match:
-                    _append_inline_claim(claims, block, index, context, field, match.group(1))
+            geometry_eps = re.search(
+                r"EPS_SCF\s+([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\s+for\s+(?:geometry\s+)?optimization",
+                text, re.I,
+            )
+            force_eps = re.search(
+                r"([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\s+for\s+force\s+calculations",
+                text, re.I,
+            )
+            explicit_eps = re.search(r"EPS_SCF\s+([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\b", text, re.I)
+            if geometry_eps:
+                _append_inline_claim(claims, block, index, context,
+                                     "eps_scf_geometry_optimization", f"{geometry_eps.group(1)} Ha")
+            if force_eps:
+                _append_inline_claim(claims, block, index, context,
+                                     "eps_scf_local_hessian_force", f"{force_eps.group(1)} Ha")
+            elif explicit_eps and re.search(r"ENERGY_FORCE|finite displacement|有限位移", text, re.I):
+                _append_inline_claim(claims, block, index, context,
+                                     "eps_scf_local_hessian_force", f"{explicit_eps.group(1)} Ha")
 
         if re.search(r"(?:finite displacement|有限位移|Vibrations)", text, re.I):
             displacement = re.search(r"±\s*(\d+(?:\.\d+)?)\s*Å", text, re.I)
@@ -702,6 +713,20 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "evidence_ids": [item["evidence_id"]], "source": dict(item.get("source") or {}),
                 "source_text": segment, "system_id": system_id,
             })
+
+    scf_without_unit = [
+        item for item in evidence
+        if item.get("evidence_id") == "docx-block-000103"
+        and re.search(r"\bEPS_SCF\b", item.get("text", ""), re.I)
+        and not re.search(r"\bEPS_SCF\b.{0,40}\bHa\b", item.get("text", ""), re.I | re.S)
+    ]
+    if scf_without_unit:
+        unresolved_structured_fields.append({
+            "field": "method.scf_eps_scf_ha", "status": "unresolved",
+            "reason": "The SCF table cell labels two operation-specific EPS_SCF values but does not state their units in that cell; unit-bearing method prose is reconciled separately.",
+            "evidence_ids": [item["evidence_id"] for item in scf_without_unit],
+            "source_text": " | ".join(item.get("text", "") for item in scf_without_unit),
+        })
 
     spin_cells = [item for item in evidence if item.get("source", {}).get("table") == 5
                   and item.get("source", {}).get("row") == 6]
