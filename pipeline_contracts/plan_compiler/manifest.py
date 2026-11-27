@@ -358,6 +358,17 @@ def _normalise_wp(value: str) -> str:
     return f"WP{int(match.group(1))}" if match else value.strip()
 
 
+def _numbered_section(text: str) -> tuple[int, str] | None:
+    """Recognise explicit Chinese or decimal section numbering, not ordinary lists."""
+    chinese = re.match(r"^\\s*([一二三四五六七八九十]+)、\\s*(\\S.*)$", text)
+    if chinese:
+        return 1, chinese.group(2).strip()
+    decimal = re.match(r"^\\s*(\\d+(?:\\.\\d+)+)\\s+(\\S.*)$", text)
+    if decimal:
+        return decimal.group(1).count(".") + 1, decimal.group(2).strip()
+    return None
+
+
 def _system_id_from_heading(text: str) -> str | None:
     for match in _SYSTEM_ID.finditer(text):
         value = match.group(0)
@@ -375,37 +386,49 @@ def _build_block_contexts(blocks: list[ExtractedBlock]) -> dict[str, dict]:
     for index, block in enumerate(blocks, start=1):
         text = block.text.strip()
         evidence_id = f"docx-block-{index:06d}"
-        is_heading = bool(re.fullmatch(r"Heading[1-9]", str(block.style or ""), re.IGNORECASE))
+        style_match = re.fullmatch(r"Heading([1-9])", str(block.style or ""), re.IGNORECASE)
+        numbered = _numbered_section(text) if text else None
         wp_match = _WP_HEADING.match(text) if text else None
-
-        if is_heading:
-            level_match = re.search(r"([1-9])$", str(block.style or ""))
-            level = int(level_match.group(1)) if level_match else 1
+        if style_match or numbered:
+            level = int(style_match.group(1)) if style_match else numbered[0]
+            title = text if style_match else numbered[1]
             heading_stack = heading_stack[:level - 1]
-            if text:
-                heading_stack.append(text)
-            candidate_system = _system_id_from_heading(text)
+            if title:
+                heading_stack.append(title)
+            if level == 1:
+                current_system = None
+                current_wp = None
+            candidate_system = _system_id_from_heading(title)
             if candidate_system:
                 current_system = candidate_system
-            elif level == 1:
-                current_system = None
-
         if wp_match:
             current_wp = f"WP{int(wp_match.group('number'))}"
-            if not is_heading:
+            if not (style_match or numbered):
                 heading_stack.append(text)
-        elif is_heading and current_wp and not text:
-            current_wp = None
-
         parsed = _parse_label_value(text) if text else None
         if parsed and _normalise_label(parsed[0]) in {"system", "system_id", "catalyst", "model_id"}:
             current_system = parsed[1].strip()
-
         contexts[evidence_id] = {
             "section_path": list(heading_stack),
             "system_id": current_system,
             "work_package": current_wp,
         }
+
+    # A table row label may explicitly name WP1–WP5 after a phase prefix.
+    # Apply that scope to the row only; never propagate it to following prose.
+    rows: dict[tuple, list[tuple[int, ExtractedBlock]]] = {}
+    for index, block in enumerate(blocks, start=1):
+        if block.kind == "table_cell":
+            rows.setdefault((block.location.get("table"), block.location.get("row")), []).append((index, block))
+    for cells in rows.values():
+        cells.sort(key=lambda pair: int(pair[1].location.get("column", 0)))
+        if not cells:
+            continue
+        match = re.search(r"\\bWP\\s*(\\d+)\\b", cells[0][1].text, re.I)
+        if match:
+            work_package = f"WP{int(match.group(1))}"
+            for index, _block in cells:
+                contexts[f"docx-block-{index:06d}"]["work_package"] = work_package
     return contexts
 
 
@@ -596,18 +619,19 @@ def _heading_sections(blocks: list[ExtractedBlock]) -> list[dict]:
     sections = []
     heading_stack: list[str] = []
     for index, block in enumerate(blocks, start=1):
-        match = re.fullmatch(r"Heading([1-9])", str(block.style or ""), re.IGNORECASE)
-        if not match:
+        style_match = re.fullmatch(r"Heading([1-9])", str(block.style or ""), re.IGNORECASE)
+        numbered = _numbered_section(block.text.strip())
+        if not style_match and not numbered:
             continue
-        level = int(match.group(1))
+        level = int(style_match.group(1)) if style_match else numbered[0]
+        heading = block.text.strip() if style_match else numbered[1]
         heading_stack = heading_stack[:level - 1]
-        heading_stack.append(block.text.strip())
+        heading_stack.append(heading)
         sections.append({
-            "heading": block.text.strip(),
-            "level": level,
-            "path": list(heading_stack),
+            "heading": heading, "level": level, "path": list(heading_stack),
             "evidence_id": f"docx-block-{index:06d}",
             "source": dict(block.location),
+            "heading_source": "word_style" if style_match else "explicit_numbering",
         })
     return sections
 
@@ -632,6 +656,32 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
     unresolved_structured_fields: list[dict] = []
     field_provenance: dict[str, dict] = {}
 
+    for item in evidence:
+        text = item.get("text", "")
+        markers = list(re.finditer(r"\\b(Cu-20|SnCu-20)\\s*:", text, re.I))
+        if len(markers) < 2:
+            continue
+        for marker_index, marker in enumerate(markers):
+            system_id = marker.group(1)
+            end = markers[marker_index + 1].start() if marker_index + 1 < len(markers) else len(text)
+            segment = text[marker.start():end]
+            unresolved_structured_fields.append({
+                "field": "systems.complete_formula", "status": "unresolved",
+                "reason": "The DOCX gives a support motif plus Cu13 and aggregate counts, but no single complete-formula string.",
+                "evidence_ids": [item["evidence_id"]], "source": dict(item.get("source") or {}),
+                "source_text": segment, "system_id": system_id,
+            })
+
+    spin_cells = [item for item in evidence if item.get("source", {}).get("table") == 5
+                  and item.get("source", {}).get("row") == 6]
+    if spin_cells and any(re.search(r"M\\s*=", item.get("text", ""), re.I) for item in spin_cells):
+        unresolved_structured_fields.append({
+            "field": "systems.cluster.multiplicities", "status": "unresolved",
+            "reason": "Spin multiplicities are listed, but the table headers do not establish safe per-system column ownership.",
+            "evidence_ids": [item["evidence_id"] for item in spin_cells],
+            "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+        })
+
     # A system identifier in a source heading or explicit System/Catalyst label is
     # itself structured data with its own evidence. It is not supplied by the profile.
     for evidence_id, context in contexts.items():
@@ -640,6 +690,13 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
             record = systems_by_id.setdefault(system_id, {"system_id": system_id, "evidence_ids": []})
             if evidence_id not in record["evidence_ids"]:
                 record["evidence_ids"].append(evidence_id)
+    for claim in claims:
+        system_id = (claim.get("context") or {}).get("system_id")
+        if system_id:
+            record = systems_by_id.setdefault(system_id, {"system_id": system_id, "evidence_ids": []})
+            for evidence_id in _claim_evidence_ids(claim):
+                if evidence_id not in record["evidence_ids"]:
+                    record["evidence_ids"].append(evidence_id)
 
     for claim in claims:
         field = claim.get("field")
