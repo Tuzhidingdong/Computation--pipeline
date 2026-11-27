@@ -173,7 +173,7 @@ class FakeHPC:
         refs = []
         for role in output_selection:
             if role in self.missing_roles:
-                continue
+                raise FileNotFoundError(f"declared output missing: {role}")
             declared = str(manifest.payload["output_files"][role]).replace("JOB_ID", reference.job_id)
             path = directory / declared
             if role == "cp2k_output":
@@ -367,7 +367,7 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
                 run_id = controller.create(plan)
                 with _install_fake_ase():
                     final = controller.run(run_id, plan)
-                self.assertEqual(final, "COMPLETED")
+                self.assertEqual(final, "COMPLETED", json.dumps(controller.report(run_id)["tasks"], default=str))
                 tasks = store.tasks(run_id)
                 self.assertEqual([item["operation"] for item in tasks], ["cp2k.geo_opt", "cp2k.energy"])
                 self.assertTrue(all(item["status"] == "COMPLETED" for item in tasks))
@@ -406,7 +406,7 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
                     first=store.tasks(run_id)[0]
                     saved_job=first["job_id"]
                     self.assertTrue(saved_job)
-                    self.assertEqual(ctl.resume(run_id,plan),"COMPLETED")
+                    self.assertEqual(ctl.resume(run_id,plan),"COMPLETED", json.dumps(ctl.report(run_id)["tasks"], default=str))
                 self.assertEqual(len(hpc.submissions),2)  # GEO_OPT and ENERGY, one each
                 self.assertEqual(hpc.submissions[0][1],saved_job)
                 self.assertEqual(hpc.status_calls,3)  # first running; resumed GEO_OPT + ENERGY terminal
