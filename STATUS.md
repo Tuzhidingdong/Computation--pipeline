@@ -65,3 +65,28 @@ In particular, the actual source claims for ase_vibrations__cp2k and copyready_e
 5. Complete real model source/topology, live Artifact registration and approval integration only under their separately authorized gates.
 
 No production HPC calculation is authorized or performed.
+
+
+## Current Agent B follow-up — Windows CLI and Agent C interface review (2026-11-27)
+
+- Current development HEAD before this status update: `0d992d6de6142309428e88ec1ea92124741ab3c1`.
+- P0 Windows CLI: all 11 JSON stdout paths use the shared `_emit_json()` helper with `ensure_ascii=True`. JSON strings therefore stay ASCII-encodable on a default GBK console while `json.loads()` restores the original Unicode values.
+- Manifest and report file output remains UTF-8 with `ensure_ascii=False`; the Manifest file writer was not changed.
+- New tests: `tests/test_cli_json_encoding.py` exercises strict GBK and ASCII text streams, superscript ², JSON round-trip, and UTF-8 Manifest preservation.
+- Actions run #423 on code/test HEAD `c32b7e794144d89053911d2ecbb753b8dfd38611`: **119 total, 117 passed, 2 optional skipped, 0 failures/errors; compileall passed**. Both new encoding regressions passed.
+- Actions run #425 on the subsequent report-only HEAD `0d992d6de6142309428e88ec1ea92124741ab3c1`: **119 total, 117 passed, 2 optional skipped, 0 failures/errors; compileall passed**. Run: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46022917161
+- PR #4 read-only interface review: `docs/reports/AGENT_B_PR4_INTERFACE_REVIEW_20261127.md`. Recommendation **C**: keep both PRs Draft and separate pending actual Frozen DOCX comparison and focused fixes for duplicate raw `evidence_ids` references and scope-insensitive `MENTION_ONLY`.
+- This environment did not contain the run_04 root-cause evidence, conflict detail JSON, Profile source-binding CSV, style inventory or ADDED_MOS trace. Therefore the three real conflicts have not been classified, Profile values have not been bound to real DOCX evidence IDs, and the reported real Manifest structure gaps have not been modified or claimed fixed.
+- Real Frozen DOCX acceptance remains **NOT VERIFIED**. No claim is made that this branch ran against the exact owner-side DOCX.
+- PR #3 remains Draft and unmerged. PR #4 remains Draft and unmerged. No Agent C files were changed.
+- Both WP1 blockers remain active. No owner scientific choices, `resolve-v41-planning`, topology/model build, CP2K, HPC, Slurm or production DFT execution occurred.
+
+### Evidence required to resume P1/P2
+
+Provide these run_04 artifacts unchanged:
+1. `PR3_REAL_DOCX_ROOT_CAUSE_EVIDENCE.md`
+2. `PR3_CONFLICT_CLAIMS_DETAIL.json`
+3. `PR3_PROFILE_SOURCE_BINDING_DETAIL.csv)
+4. Paragraph style inventory and the ADDED_MOS 80 trace.
+
+Until these source materials are available, P1 conflict classification and profile bindings, and P2 real structural extraction changes remain blocked rather than guessed.
