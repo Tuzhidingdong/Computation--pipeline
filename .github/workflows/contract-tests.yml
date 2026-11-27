@@ -1,0 +1,30 @@
+name: Mock adapter contract tests
+
+on:
+  push:
+    branches:
+      - "agent-b/**"
+  pull_request:
+    paths:
+      - "pipeline_contracts/**"
+      - "tests/**"
+      - "docs/SKILLS_ADAPTER_CONTRACT_V0.1.md"
+      - ".github/workflows/contract-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run mock contract tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile contract modules
+        run: python -m compileall -q pipeline_contracts tests
