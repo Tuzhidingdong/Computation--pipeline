@@ -172,14 +172,32 @@ class RealCP2KWorkflowAdapter:
                 raise RealWorkflowUnavailable(
                     f"Active local HPC project root does not exist: {self.active_project_root}"
                 )
+            # Validate exact public upstream callables without creating Artifacts or submitting jobs.
+            builder_cls, workflows, _style = self.cst._load_components()
+            if not callable(getattr(builder_cls, "build_finite_system", None)):
+                raise RealWorkflowUnavailable("chem-scitoolkit CP2KInputBuilder.build_finite_system is unavailable")
+            for function_name in ("validate_cp2k_input", "validate_cp2k_output"):
+                if not callable(getattr(workflows, function_name, None)):
+                    raise RealWorkflowUnavailable(f"chem-scitoolkit missing callable {function_name}")
+            if task.get("operation") not in {"cp2k.geo_opt", "cp2k.energy"}:
+                raise RealWorkflowUnavailable(f"no real CP2K executor is registered for {task.get('operation')!r}")
+            structure_cfg = dict(self.plan.structure)
+            if structure_cfg.get("artifact_id"):
+                self.da.resolve_artifact_path(ArtifactRef(artifact_id=str(structure_cfg["artifact_id"])))
+            else:
+                raw_input = Path(str(structure_cfg.get("path") or "")).expanduser()
+                local_input = raw_input if raw_input.is_absolute() else self.project_root / raw_input
+                if local_input.is_symlink() or not local_input.is_file():
+                    raise RealWorkflowUnavailable(f"structure input is unavailable or symlinked: {local_input}")
             hpc = self.hpc.preflight()
             if not hpc.ready:
                 detail = "; ".join(x.message for x in hpc.diagnostics) or "HPC read-only preflight did not pass"
                 raise RealWorkflowUnavailable(detail)
-            # Fail early when the declared stage is not part of this bounded MVP.
-            if task.get("operation") not in {"cp2k.geo_opt", "cp2k.energy"}:
-                raise RealWorkflowUnavailable(f"no real CP2K executor is registered for {task.get('operation')!r}")
-            return {"ready": True, "backend": self.backend_id, "execution_mode": "real"}
+            return {
+                "ready": True, "backend": self.backend_id, "execution_mode": "real",
+                "capabilities": list(hpc.capabilities),
+                "structure_reference": structure_cfg.get("artifact_id") or str(structure_cfg.get("path")),
+            }
         except Exception as exc:
             self._preflight_error = str(exc)
             return {"ready": False, "status": "UNAVAILABLE", "reason": str(exc)}
