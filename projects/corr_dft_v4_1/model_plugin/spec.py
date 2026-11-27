@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
+import math
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,12 @@ class ModelSpec:
                 raise ValueError(f"{atom.get('atom_id')}: explicit 3D position is required")
             if len(atom["position"]) != 3:
                 raise ValueError(f"{atom.get('atom_id')}: position must contain x,y,z")
+            try:
+                coordinates = [float(value) for value in atom["position"]]
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError(f"{atom.get('atom_id')}: position must be numeric") from exc
+            if not all(math.isfinite(value) for value in coordinates):
+                raise ValueError(f"{atom.get('atom_id')}: position must contain only finite values")
         for bond in bonds:
             if bond.get("atom1") not in known or bond.get("atom2") not in known:
                 raise ValueError("bond references an unknown atom_id")
@@ -67,10 +74,18 @@ class ModelSpec:
         if not isinstance(donor_atoms, list) or any(item not in known for item in donor_atoms):
             raise ValueError("build_constraints.donor_atoms must list valid atom IDs (or an empty list)")
         for bond in bonds:
-            if bond["kind"] == "coordination" and not (
-                bond["atom1"] in donor_atoms or bond["atom2"] in donor_atoms
-            ):
-                raise ValueError("each coordination bond must reference an explicit donor atom")
+            if bond["kind"] == "coordination":
+                if not (bond["atom1"] in donor_atoms or bond["atom2"] in donor_atoms):
+                    raise ValueError("each coordination bond must reference an explicit donor atom")
+                distance_range = bond.get("distance_range_angstrom")
+                if not isinstance(distance_range, list) or len(distance_range) != 2:
+                    raise ValueError("each coordination bond requires an explicit distance_range_angstrom [min, max]")
+                try:
+                    lower, upper = (float(value) for value in distance_range)
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise ValueError("coordination distance range must be numeric") from exc
+                if not math.isfinite(lower) or not math.isfinite(upper) or lower <= 0 or upper <= lower:
+                    raise ValueError("coordination distance range must be finite, positive and increasing")
         return cls("1.0.0", str(raw["project_id"]), str(raw["model_id"]), atoms, bonds,
                    dict(raw["fragments"]), expected,
                    dict(raw["build_constraints"]), tuple(dict(x) for x in raw["evidence"]))
