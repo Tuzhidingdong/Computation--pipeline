@@ -18,7 +18,7 @@ def _emit_json(payload, *, indent=2):
     """
     import sys
 
-    sys.stdout.write(json.dumps(payload, ensure_ascii=True, indent=indent) + "\\n")
+    sys.stdout.write(json.dumps(payload, ensure_ascii=True, indent=indent) + "\n")
 
 
 def _state_path(plan):
