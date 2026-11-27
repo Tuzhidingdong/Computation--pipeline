@@ -199,6 +199,7 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
         ("rel_cutoff_ry", re.compile(r"\b(?:REL_CUTOFF|relative cutoff of)\s*(\d+(?:\.\d+)?)\s*Ry\b", re.I), lambda m: f"{m.group(1)} Ry"),
         ("spin_polarized", re.compile(r"\bUKS\s+\.TRUE\.", re.I), lambda m: "true"),
         ("smearing_temperature_K", re.compile(r"\bELECTRONIC_TEMP\s+(\d+(?:\.\d+)?)\b", re.I), lambda m: f"{m.group(1)} K"),
+        ("smearing_temperature_K", re.compile(r"Fermi-Dirac\s+smearing\s*\((\d+(?:\.\d+)?)\s*K\)", re.I), lambda m: f"{m.group(1)} K"),
         ("added_mos", re.compile(r"\bADDED_MOS\s+(\d+)\b", re.I), lambda m: m.group(1)),
         ("periodicity", re.compile(r"\bPERIODIC\s+NONE\b", re.I), lambda m: "NONE"),
         ("poisson_solver", re.compile(r"\bMartyna[- ]Tuckerman\b", re.I), lambda m: "MT"),
