@@ -726,6 +726,17 @@ class RealCP2KWorkflowAdapter:
                     diagnostics=(cst.error or "CST CP2K output validation failed",), execution_mode="real",
                 )
             validation = cst.structured_result
+            expected_version = str(task.get("tool_version") or "")
+            observed_version = str(validation.get("cp2k_version") or "")
+            if not observed_version or (expected_version and expected_version not in observed_version):
+                self.hpc.update_application_record(job.job_id, success=False, marker="CP2K_VERSION_MISMATCH")
+                return ExecutionResult(
+                    status="FAILED_PERMANENT", job_id=job.job_id,
+                    scheduler_state=record.scheduler_state, application_exit_code=record.application_exit_code,
+                    output_artifacts=({"artifact_id": output_ref.artifact_id, "sha256": output_ref.sha256, "kind": "cp2k_output"},),
+                    diagnostics=(f"CP2K output version {observed_version or 'missing'} does not match required {expected_version or 'unspecified'}",),
+                    execution_mode="real",
+                )
             if validation.get("program_normal_termination") is not True or validation.get("scf_converged") is not True:
                 self.hpc.update_application_record(job.job_id, success=False, marker="CP2K_NORMAL_TERMINATION_OR_SCF_FAILED")
                 return ExecutionResult(
