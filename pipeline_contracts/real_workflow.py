@@ -311,7 +311,7 @@ class RealCP2KWorkflowAdapter:
             uri=resolved.as_uri(), source_system="Data_analysis",
         )
 
-    def _read_structure(self, artifact: ArtifactRef) -> tuple[list[tuple[str, float, float, float]], dict[str, float]]:
+    def _read_structure(self, artifact: ArtifactRef, *, read_index: int | str = 0) -> tuple[list[tuple[str, float, float, float]], dict[str, float]]:
         path = Path(self.da.resolve_artifact_path(artifact))
         try:
             from ase.io import read
@@ -319,7 +319,7 @@ class RealCP2KWorkflowAdapter:
             raise RealWorkflowUnavailable(
                 "ASE is required to read the supplied structure file; install the already-approved ASE dependency"
             ) from exc
-        atoms = read(str(path))
+        atoms = read(str(path), index=read_index)
         symbols = list(atoms.get_chemical_symbols())
         positions = atoms.get_positions()
         structure_cfg = dict(self.plan.structure)
@@ -381,7 +381,7 @@ class RealCP2KWorkflowAdapter:
         else:
             structure = self._register_structure()
         structure_path = Path(self.da.resolve_artifact_path(structure))
-        atoms, cell = self._read_structure(structure)
+        atoms, cell = self._read_structure(structure, read_index=-1 if task["operation"] == "cp2k.energy" else 0)
         method = dict(self.plan.method)
         kind_defs = dict(method["kind_definitions"])
         stage_type = "GEO_OPT" if task["operation"] == "cp2k.geo_opt" else "ENERGY"
