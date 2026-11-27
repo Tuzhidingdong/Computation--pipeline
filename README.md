@@ -1,59 +1,68 @@
 # Coordination DFT Publication Pipeline
 
-An independent, reusable Skill and deterministic workflow engine for coordinating atomistic model review, CP2K DFT calculations on existing HPC Skills, reproducible numerical analysis, publication-quality figures and manuscript-ready computational reports.
+Reusable scientific-computing orchestration for approved atomistic structures and deterministic CP2K calculation protocols.
 
 ## Governing objective
 
-TASK_PLAN_v1.0.0.md remains the authoritative and unchanged project baseline. The intended lifecycle is:
+TASK_PLAN_v1.0.0.md remains unchanged and authoritative. The intended lifecycle is:
 
-Calculation plan → compiled task DAG → real calculation execution → monitoring/retrieval → CST validation → Data_analysis → result-driven next tasks → complete report.
+**CalculationPlan → task DAG → CP2K input generation → existing HPC Skill → monitoring/retrieval → CST validation → Data_analysis → result-driven next tasks → complete report.**
 
-The existing synchronous PipelineRunner is the foundational post-processing MVP only. It is one node in the larger workflow and is not the final workflow engine.
+The original synchronous PipelineRunner is the foundational post-processing node, not the workflow engine itself.
 
 ## Current implementation
 
-See docs/WORKFLOW_ENGINE_MVP.md:
-- Versioned JSON CalculationPlan v1.0; optional YAML when PyYAML is installed.
-- Deterministic validation and initial GEO_OPT task compilation.
-- SQLite Workflow Run/task/attempt/event persistence.
-- Result-driven ENERGY expansion only after convergence QC and an optimized-structure Artifact hash.
-- Resume with the persisted Job ID; no duplicate submission on the recovery path.
-- CLI: plan, validate, run, status, resume, report.
-- Mock lifecycle tests; Mock mode does not run CP2K or validate science.
+The current Agent B branch contains:
 
-Real HPC is not enabled. Both HPC Skills have job-record scripts, but the scripts start after a Slurm Job ID exists and do not expose complete machine-callable stage/submit/poll/retrieve APIs. Pipeline will not reimplement SSH/SCP/Slurm or pretend this gap is solved.
+- Versioned CalculationPlan v1.0 JSON input and schema-level required-parameter validation.
+- Stable GEO_OPT task identity including the resolved source Artifact SHA256.
+- SQLite Workflow Run, task, attempt, Job ID, submission-intent, event and recovery state.
+- Dynamic ENERGY task creation only after GEO_OPT CST convergence and a registered optimized-structure Artifact with SHA256.
+- Real adapter factory, local-only runtime configuration and backend-specific HPC Skill wrappers for BeiLong_HPC and UCAS_hpc.
+- Official Data_analysis register_inputs, resolve_artifact_path, register_derived_artifact, Analysis Run and Evidence interfaces.
+- CLI: plan, validate, preflight, run, status, resume, report.
+- Explicit Mock execution remains available only via --mock.
+
+The real adapter code path is implemented, but no live cluster execution has been performed or validated. Fake subprocess/HPC/Data_analysis integration tests do not certify the owner's local installation, credentials, cluster or scientific result.
+
+Detailed setup, backend behavior, read-only checks, recovery semantics and known limitations: docs/REAL_CP2K_HPC_INTEGRATION.md.
 
 ## Quick start
 
-    python -m pipeline_contracts.cli plan examples/cp2k_geo_opt_energy_plan.json
-    python -m pipeline_contracts.cli validate examples/cp2k_geo_opt_energy_plan.json
-    python -m pipeline_contracts.cli run examples/cp2k_geo_opt_energy_plan.json --mock
-    python -m pipeline_contracts.cli run examples/cp2k_geo_opt_energy_plan.json
+    python -m pipeline_contracts.cli plan .\calculation-plan.json
+    python -m pipeline_contracts.cli validate .\calculation-plan.json
+    python -m pipeline_contracts.cli preflight .\calculation-plan.json --runtime-config .\.pipeline\runtime.local.json
+    python -m pipeline_contracts.cli run .\calculation-plan.json --mock
+    python -m pipeline_contracts.cli run .\calculation-plan.json --runtime-config .\.pipeline\runtime.local.json
 
-The example plan contains demonstration method/resource values only. Replace them with the approved scientific configuration and existing backend resource-profile alias before use. Validation does not certify scientific appropriateness.
+Copy .pipeline/runtime.local.example.json to .pipeline/runtime.local.json inside the Data_analysis project root. Fill in the local Skill paths, SSH/SCP executable paths, active project root, backend alias, resource-profile values, and local basis/pseudopotential file paths. The populated file is Git-ignored and must not be committed.
 
-SQLite defaults to <project_root>/.pipeline/workflow.sqlite. Use --state-db to choose another path. Do not place secrets or private HPC configuration in the plan or repository.
+The CalculationPlan project_root must match data_analysis.project_root in the runtime config. The plan must supply complete, approved CP2K parameters and output requirements. The example file is illustrative only.
 
-## Existing post-processing MVP
+## Resume and reporting
 
-PipelineRunner remains available for already registered CP2K outputs:
-input Artifact → optional CST validation → Data_analysis Reader → derived Artifact → Analysis Run / Evidence.
+    python -m pipeline_contracts.cli status WORKFLOW_RUN_ID --state-db STATE_DB_PATH
+    python -m pipeline_contracts.cli resume WORKFLOW_RUN_ID --state-db STATE_DB_PATH --runtime-config .\.pipeline\runtime.local.json
+    python -m pipeline_contracts.cli report WORKFLOW_RUN_ID --state-db STATE_DB_PATH --output workflow_report.json
 
-See examples/postprocess_existing_cp2k_output.py. It is not a substitute for the workflow controller.
+Resume queries known Job IDs and reconciles a lost submission response by the saved opaque remote work directory. If submission cannot be proven either way, the workflow stays SUBMISSION_UNKNOWN; it does not issue a second sbatch. FAILED_PERMANENT and CANCELLED tasks are not restarted by ordinary resume.
 
-## Architecture and safety
+## Architecture and ownership
 
-- Computation--pipeline owns plan validation, task DAG, task identity, workflow state, routing, QC gates and report assembly.
-- chem-scitoolkit owns CP2K construction/validation and specialist scientific utilities.
-- Data_analysis owns Artifact registration/storage, Analysis Runs, provenance and Evidence.
-- BeiLong_HPC and UCAS_hpc own their respective authentication, transfer, Slurm and job-record procedures.
-- Scientific parameters are never modified automatically without an explicit authorized recovery rule.
-- One coordinator; no hidden worker orchestration.
-- Public CI runs no production calculations.
+- Computation--pipeline: CalculationPlan interpreter, DAG identity, workflow control state, execution routing, report and resume.
+- chem-scitoolkit: CP2K input generation and task-aware input/output validation.
+- BeiLong_HPC / UCAS_hpc: cluster-specific SSH/SCP/Slurm, templates, paths, job-record lifecycle and operating rules.
+- Data_analysis: Artifact intake/resolution, derived Artifact registration, Analysis Runs, provenance and Evidence.
 
-## Development
+No second Artifact Store, CP2K parser, SSH/SCP implementation or Slurm scheduler is introduced. Only supported upstream Skill scripts/templates and documented commands are invoked.
+
+## External workflow library decision
+
+jobflow was evaluated for dynamic Flow expansion. It was not adopted because persistent storage and remote execution would introduce a separate store/manager stack without directly binding the existing HPC Skills. The narrow controller uses SQLite for workflow-control state only. See docs/WORKFLOW_ENGINE_MVP.md.
+
+## Development and validation
 
     python -m unittest discover -s tests -v
     python -m compileall -q pipeline_contracts tests examples
 
-STATUS.md records implementation and real-integration gaps. Mock tests are not scientific validation.
+No production DFT/AIMD/Slurm job is run by GitHub Actions. A successful Mock or fake-adapter test does not represent scientific validation or live HPC verification. See STATUS.md for current evidence.
