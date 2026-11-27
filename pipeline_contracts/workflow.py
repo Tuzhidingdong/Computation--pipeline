@@ -119,7 +119,11 @@ class WorkflowController:
     def create(self,plan):
         plan.require_valid(); mode=getattr(self.adapter,"execution_mode","real") if self.adapter else "real"
         rid=self.store.create_run(plan,mode)
-        for task in compile_initial_tasks(plan): self.store.add_task(rid,task)
+        input_identity = None
+        resolver = getattr(self.adapter, "resolve_plan_input", None)
+        if callable(resolver):
+            input_identity = resolver()
+        for task in compile_initial_tasks(plan, input_identity=input_identity): self.store.add_task(rid,task)
         self.store.event(rid,None,"PLAN_COMPILED",{"plan_hash":plan.sha256}); return rid
     @staticmethod
     def _decode_runtime(row):
