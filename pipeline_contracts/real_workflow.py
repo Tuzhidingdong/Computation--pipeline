@@ -595,6 +595,7 @@ class RealCP2KWorkflowAdapter:
                     prepared["remote_workdir"] = staged.stage_reference
                     self._prepared[str(task["task_id"])] = prepared
                     details = {
+                        **prepared,
                         "remote_workdir": staged.stage_reference,
                         "submission_time": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
                         "input_hashes": {
@@ -602,12 +603,6 @@ class RealCP2KWorkflowAdapter:
                             for item in prepared["local_files"]
                         },
                         "backend_id": self.backend_id,
-                        "registered_input_artifacts": prepared["registered_input_artifacts"],
-                        "local_files": prepared["local_files"],
-                        "output_files": prepared["output_files"],
-                        "input_filename": prepared["input_filename"],
-                        "job_script_name": prepared["job_script_name"],
-                        "resources": prepared["resources"],
                     }
                     if on_submission_intent:
                         on_submission_intent(details)
