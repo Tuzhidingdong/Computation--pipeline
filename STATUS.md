@@ -18,7 +18,7 @@ Governing objective: TASK_PLAN_v1.0.0.md (preserved unchanged). This status sepa
 | Scientific parameter validation | IMPLEMENTED — schema-level | Required method fields checked; scientific appropriateness is not certified |
 | Deterministic initial DAG | IMPLEMENTED — CP2K GEO_OPT | Stable task key includes plan/structure/method hash |
 | Dynamic GEO_OPT → ENERGY | IMPLEMENTED — Mock tested | ENERGY created only after convergence gate and hashed optimized-structure Artifact |
-| SQLite Workflow Run/task/attempt/event ledger | IMPLEMENTED | workflow-control state only, not Artifact/Evidence |
+| SQLite Workflow Run/task/attempt/event ledger | IMPLEMENTED | workflow-control state only, not Artifact/Evidence; cross-process run lock not yet implemented |
 | Resume without duplicate submit | IMPLEMENTED — Mock tested | Persisted Job ID passed to adapter after simulated network interruption |
 | CLI plan/validate/run/status/resume/report | IMPLEMENTED | python -m pipeline_contracts.cli |
 | Mock scheduler/application/QC lifecycle | IMPLEMENTED — synthetic | No CP2K binary, HPC or scientific data |
@@ -38,7 +38,7 @@ jobflow is not added. It supports dynamic Response/Flow expansion, but default M
 - Job-record tools are useful for records/status sync after a Job ID exists. Skill-level staging/submission/retrieval procedures are not exposed as a complete programmatic API. No new SSH/SCP/Slurm implementation was added.
 
 ## Tests
-Previous baseline CI run 45936035658 tested the earlier 37-test version only. New workflow tests are in tests/test_workflow.py; current increment CI verification is pending.
+Latest CI run 45946430159 on commit 5d99ff17bf56b58f6b9199b4252bd548a811625d passed. The full suite now runs 46 tests: 44 passed and 2 optional live upstream tests skipped; compileall passed. New workflow tests cover plan compilation, parameter rejection, dynamic GEO_OPT→ENERGY branching, non-convergence stop, durable Job ID recovery, scheduler/application exit-code separation, deterministic task identity and all CLI commands.
 
 ## Workflow states
 PENDING, READY, SUBMITTED, QUEUED, RUNNING, POSTPROCESSING, QC_PASSED, COMPLETED, RETRY_WAIT, BLOCKED, FAILED_PERMANENT, CANCELLED and INTERRUPTED_RECOVERY. COMPLETED requires scheduler completion, application exit code 0, output references and applicable result/QC gate. Scheduler COMPLETED alone is insufficient.
