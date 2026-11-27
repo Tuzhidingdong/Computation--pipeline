@@ -136,26 +136,25 @@ class RealCP2KWorkflowAdapter:
         method_cfg = dict(self.plan.method)
         local_basis = (self.runtime.get("input_files") or {}).get("basis")
         local_potential = (self.runtime.get("input_files") or {}).get("potential")
-        if bool(local_basis) != bool(local_potential):
-            raise RealWorkflowUnavailable("runtime input_files must configure both basis and potential files, or neither")
-        if local_basis and local_potential:
-            basis_input = Path(str(local_basis)).expanduser()
-            potential_input = Path(str(local_potential)).expanduser()
-            if basis_input.is_symlink() or potential_input.is_symlink():
-                raise RealWorkflowUnavailable("basis/pseudopotential runtime files must not be symlinks")
-            basis_path = basis_input.resolve(strict=True)
-            potential_path = potential_input.resolve(strict=True)
-            if basis_path.name != str(method_cfg["basis_file_name"]):
-                raise RealWorkflowUnavailable("local basis file basename must equal method.basis_file_name")
-            if potential_path.name != str(method_cfg["potential_file_name"]):
-                raise RealWorkflowUnavailable("local pseudopotential basename must equal method.potential_file_name")
-            if not basis_path.is_file() or not potential_path.is_file():
-                raise RealWorkflowUnavailable("configured basis/pseudopotential inputs must be regular files")
-        elif not self.backend_config.get("remote_cp2k_data_dir"):
+        if not local_basis or not local_potential:
             raise RealWorkflowUnavailable(
-                "basis/pseudopotential files are not verified: configure both local input_files.basis/potential "
-                "or backend remote_cp2k_data_dir in runtime.local.json"
+                "Real CP2K preflight requires both local input_files.basis and input_files.potential. "
+                "The selected files are staged to HPC and also provide the local cp2klint lookup directory."
             )
+        basis_input = Path(str(local_basis)).expanduser()
+        potential_input = Path(str(local_potential)).expanduser()
+        if basis_input.is_symlink() or potential_input.is_symlink():
+            raise RealWorkflowUnavailable("basis/pseudopotential runtime files must not be symlinks")
+        basis_path = basis_input.resolve(strict=True)
+        potential_path = potential_input.resolve(strict=True)
+        if basis_path.name != str(method_cfg["basis_file_name"]):
+            raise RealWorkflowUnavailable("local basis file basename must equal method.basis_file_name")
+        if potential_path.name != str(method_cfg["potential_file_name"]):
+            raise RealWorkflowUnavailable("local pseudopotential basename must equal method.potential_file_name")
+        if not basis_path.is_file() or not potential_path.is_file():
+            raise RealWorkflowUnavailable("configured basis/pseudopotential inputs must be regular files")
+        if basis_path.parent != potential_path.parent:
+            raise RealWorkflowUnavailable("basis and pseudopotential files must be in the same local directory for cp2klint")
         self.backend_config["resource_profile"] = dict(self.resources)
         self.backend_config["basis_file_name"] = str(method_cfg["basis_file_name"])
         geo_opt_stage = next(x for x in self.plan.calculations if x.get("operation") == "cp2k.geo_opt")
@@ -479,7 +478,7 @@ class RealCP2KWorkflowAdapter:
             task_id=str(task["task_id"]) + "-input-qc",
             operation="cp2k.validate_input",
             input_artifacts=(derived_input_ref,),
-            parameters={"base_dir": str(derived_dir)},
+            parameters={"base_dir": str(Path(str(runtime_files["basis"])).expanduser().resolve().parent)},
         ))
         if input_check.status != TaskStatus.SUCCEEDED or input_check.structured_result.get("status") != "passed":
             raise RealWorkflowUnavailable(
