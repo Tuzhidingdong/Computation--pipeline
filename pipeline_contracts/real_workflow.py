@@ -461,8 +461,10 @@ class RealCP2KWorkflowAdapter:
         output_files = dict(stage.get("output_files") or {})
         if "cp2k_output" not in output_files:
             output_files["cp2k_output"] = "cp2k.out"
-        output_files.setdefault("slurm_stdout", "slurm-JOB_ID.out")
-        output_files.setdefault("slurm_stderr", "slurm-JOB_ID.err")
+        stdout_name = "wcl-JOB_ID.out" if self.backend_id == "beilong" else "slurm-JOB_ID.out"
+        stderr_name = "wcl-JOB_ID.err" if self.backend_id == "beilong" else "slurm-JOB_ID.err"
+        output_files.setdefault("slurm_stdout", stdout_name)
+        output_files.setdefault("slurm_stderr", stderr_name)
         if task["operation"] == "cp2k.geo_opt" and "optimized_structure" not in output_files:
             output_files["optimized_structure"] = "optimized_structure.xyz"
         script_name = "job.slurm"
@@ -476,10 +478,6 @@ class RealCP2KWorkflowAdapter:
                 remote_workdir=str((runtime_state or {}).get("remote_workdir") or self.hpc._new_remote_workdir(str(task["task_id"]))),
                 resources=self.resources, module_init_path=str(profile["module_init_path"]),
                 input_name=input_name, output_name=str(output_files["cp2k_output"]),
-                cp2k_data_dir=(
-                    str(self.backend_config.get("remote_cp2k_data_dir"))
-                    if self.backend_config.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
-                ),
                 cp2k_executable=str(profile.get("cp2k_executable", "cp2k.psmp")),
                 cp2k_data_dir=(
                     str(profile.get("remote_cp2k_data_dir"))
@@ -491,6 +489,10 @@ class RealCP2KWorkflowAdapter:
             script = render_ucas_cp2k_script(
                 template, resources=self.resources, input_name=input_name,
                 output_name=str(output_files["cp2k_output"]),
+                cp2k_data_dir=(
+                    str(self.backend_config.get("remote_cp2k_data_dir"))
+                    if self.backend_config.get("remote_cp2k_data_dir") and not runtime_files.get("basis") else None
+                ),
             )
         _atomic_new_file(script_path, script.encode("utf-8"))
         staged.append({"path": str(script_path), "name": script_name})
