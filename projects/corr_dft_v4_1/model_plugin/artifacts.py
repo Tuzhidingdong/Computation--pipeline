@@ -21,9 +21,10 @@ def register_candidate_structure(
 
     No local registry, direct registry JSON access or hand-created Artifact ID is used.
     """
-    path = Path(structure_path).resolve(strict=True)
-    if path.is_symlink() or not path.is_file():
+    supplied_path = Path(structure_path)
+    if supplied_path.is_symlink() or not supplied_path.is_file():
         raise ValueError("candidate structure must be a regular non-symlink file")
+    path = supplied_path.resolve(strict=True)
     before = hashlib.sha256(path.read_bytes()).hexdigest()
     result = data_analysis_api.register_derived_artifact(
         str(Path(project_root).resolve()), str(path),
