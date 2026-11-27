@@ -422,9 +422,10 @@ def _build_block_contexts(blocks: list[ExtractedBlock]) -> dict[str, dict]:
             heading_stack = heading_stack[:level - 1]
             if title:
                 heading_stack.append(title)
+            # A new numbered section ends any prior WP-specific subsection scope.
+            current_wp = None
             if level == 1:
                 current_system = None
-                current_wp = None
             candidate_system = _system_id_from_heading(title)
             if candidate_system:
                 current_system = candidate_system
@@ -432,6 +433,9 @@ def _build_block_contexts(blocks: list[ExtractedBlock]) -> dict[str, dict]:
             current_wp = f"WP{int(wp_match.group('number'))}"
             if not (style_match or numbered):
                 heading_stack.append(text)
+        explicit_gate = re.search(r"\\bWP\\s*(\\d+)\\s*(?:试算门控|gate)", text, re.I)
+        if explicit_gate:
+            current_wp = f"WP{int(explicit_gate.group(1))}"
         parsed = _parse_label_value(text) if text else None
         if parsed and _normalise_label(parsed[0]) in {"system", "system_id", "catalyst", "model_id"}:
             current_system = parsed[1].strip()
