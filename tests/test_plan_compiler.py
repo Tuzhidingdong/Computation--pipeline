@@ -31,6 +31,8 @@ class PlanCompilerTests(unittest.TestCase):
             make_docx(path)
             blocks = read_frozen_docx(path)
             result = compile_docx(path, project_id="test")
+            source_size = path.stat().st_size
+            source_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
         self.assertEqual([b.kind for b in blocks],
                          ["paragraph", "paragraph", "table_cell", "table_cell"])
         self.assertEqual(blocks[0].style, "Heading1")
@@ -38,9 +40,8 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertEqual(blocks[3].location["column"], 2)
         self.assertEqual(result.manifest["sections"][0]["heading"], "Plan")
         self.assertEqual(result.manifest["source_document"]["file_name"], "plan.docx")
-        self.assertEqual(result.manifest["source_document"]["size_bytes"], path.stat().st_size)
-        self.assertEqual(result.manifest["source_document"]["sha256"],
-                         hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertEqual(result.manifest["source_document"]["size_bytes"], source_size)
+        self.assertEqual(result.manifest["source_document"]["sha256"], source_sha256)
         table_claim = next(x for x in result.manifest["claims"] if x.get("field") == "multiplicity")
         self.assertEqual(table_claim["value"], "2")
 
