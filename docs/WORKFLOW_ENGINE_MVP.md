@@ -84,7 +84,7 @@ Official references:
 
 ## Validation evidence and limits
 
-Latest Actions run on this branch: 69 tests, 67 passed, 2 optional upstream-source tests skipped; compileall passed. Tests cover the Mock DAG, injected SSH/SCP/Slurm command construction, submission reconciliation, process locking, Data_analysis API order, fake real-adapter GEO_OPT → ENERGY execution, failure gates, hashes and Evidence handoff.
+Latest Actions run on this branch: 72 tests, 70 passed, 2 optional upstream-source tests skipped; compileall passed. Tests cover the Mock DAG, injected SSH/SCP/Slurm command construction, submission reconciliation, process locking, Data_analysis API order, fake real-adapter GEO_OPT → ENERGY execution, failure gates, hashes and Evidence handoff.
 
 GitHub Actions does not access real HPC. The actual user's SSH profile, cluster configuration, resource permissions, module availability, CP2K runtime, Data_analysis checkout and resulting scientific outputs remain unverified until a read-only local preflight and separately approved execution are performed.
 
