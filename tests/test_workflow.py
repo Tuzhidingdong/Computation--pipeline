@@ -23,6 +23,16 @@ class WorkflowTests(unittest.TestCase):
     def test_missing_scientific_parameter_is_not_guessed(self):
         raw=example_plan().as_dict(); raw["method"].pop("xc")
         self.assertTrue(any("xc" in x for x in CalculationPlan.from_mapping(raw).validate()))
+    def test_cp2k_plan_requires_explicit_non_defaulted_method_and_cell_settings(self):
+        original=example_plan().as_dict()
+        for key in ("rel_cutoff_ry","poisson_solver","uks","center_coordinates"):
+            raw=json.loads(json.dumps(original))
+            raw["method"].pop(key)
+            self.assertTrue(any(key in issue for issue in CalculationPlan.from_mapping(raw).validate()),key)
+        raw=json.loads(json.dumps(original))
+        raw["structure"]["cell"].pop("alpha")
+        self.assertTrue(any("alpha" in issue for issue in CalculationPlan.from_mapping(raw).validate()))
+
     def test_geo_opt_success_dynamically_adds_energy_then_analysis(self):
         ctl,store,adapter,plan,rid=self.setup_run()
         self.assertEqual(ctl.run(rid,plan),"COMPLETED")
