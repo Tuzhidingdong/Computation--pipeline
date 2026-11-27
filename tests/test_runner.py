@@ -1,3 +1,4 @@
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -61,6 +62,38 @@ class PipelineRunnerMockTests(unittest.TestCase):
             self.assertIn("ART-CP2K-OUTPUT-001", result.evidence_refs[0].source_artifact_ids)
             self.assertEqual(result.qc_status, "not_evaluated")
             self.assertEqual(result.analysis_outcome.qc_status, "not_evaluated")
+
+    def test_id_only_manifest_is_resolved_and_sha_is_pinned_before_reader(self):
+        class ResolverBackedMockAnalysis:
+            execution_mode = "real"
+
+            def __init__(self, project_root, source_path):
+                self.project_root = project_root
+                self.source_path = source_path
+                self.received_request = None
+
+            def resolve_artifact_path(self, artifact):
+                self.asserted_artifact_id = artifact.artifact_id
+                return self.source_path
+
+            def analyze(self, request):
+                self.received_request = request
+                return MockDataAnalysisAdapter().analyze(request)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "cp2k.out"
+            source.write_text("synthetic CP2K output", encoding="utf-8")
+            adapter = ResolverBackedMockAnalysis(root, source)
+            result = PipelineRunner(data_analysis_adapter=adapter).run(
+                self._manifest(root, cst_validation=None)
+            )
+
+            expected_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+            self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+            self.assertEqual(adapter.asserted_artifact_id, "ART-CP2K-OUTPUT-001")
+            self.assertEqual(adapter.received_request.input_artifacts[0].sha256, expected_sha)
+            self.assertIsNone(adapter.received_request.input_artifacts[0].uri)
 
     def test_cst_warning_continues_to_data_analysis_and_aggregates_warning(self):
         with tempfile.TemporaryDirectory() as temp:
