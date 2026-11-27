@@ -11,7 +11,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from pipeline_contracts.calculation_plan import CalculationPlan, compile_initial_tasks
-from pipeline_contracts.models import ArtifactRef, HpcPreflight, TaskStatus
+from pipeline_contracts.models import (
+    ArtifactRef, HashVerification, HpcJobRecord, HpcPreflight, HpcStageResult,
+    HpcState, HpcStatus, JobReference, TaskStatus,
+)
+from pipeline_contracts.workflow import WorkflowController, WorkflowStore
 from pipeline_contracts.real_workflow import RealCP2KWorkflowAdapter, build_real_workflow_adapter
 
 
@@ -20,6 +24,7 @@ class FakeDataAnalysisAPI:
         self.paths = paths
         self.events = events
         self.intake_index = 0
+        self.derived_index = 0
 
     def register_inputs(self, project_root, input_path, *, source_class, received_from=None):
         self.events.append(("register_inputs", source_class, Path(input_path).name))
@@ -31,9 +36,11 @@ class FakeDataAnalysisAPI:
     def register_derived_artifact(self, project_root, file_path, *, source_artifact_ids, format_id, provenance):
         path = Path(file_path).resolve()
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.derived_index += 1
+        artifact_id = f"ART-CP2K-INPUT-{self.derived_index}"
         self.events.append(("register_derived_artifact", tuple(source_artifact_ids), format_id))
-        self.paths["ART-CP2K-INPUT"] = path
-        return {"artifact_id": "ART-CP2K-INPUT", "sha256": digest}
+        self.paths[artifact_id] = path
+        return {"artifact_id": artifact_id, "sha256": digest}
 
 
 class FakeDAAdapter:
@@ -44,6 +51,7 @@ class FakeDAAdapter:
         self.paths = paths
         self.events = events
         self.analysis_request = None
+        self.analysis_requests = []
 
     def resolve_artifact_path(self, artifact):
         self.events.append(("resolve_artifact_path", artifact.artifact_id))
@@ -51,6 +59,7 @@ class FakeDAAdapter:
 
     def analyze(self, request):
         self.analysis_request = request
+        self.analysis_requests.append(request)
         self.events.append(("analysis_run", request.upstream_job_reference, tuple(x.artifact_id for x in request.input_artifacts)))
         return SimpleNamespace(
             status=TaskStatus.SUCCEEDED,
@@ -90,15 +99,91 @@ class FakeCSTAdapter:
                 structured_result={"status": "passed"},
                 error=None,
             )
+        if request.operation == "cp2k.validate_output":
+            return SimpleNamespace(
+                status=TaskStatus.SUCCEEDED,
+                structured_result={
+                    "status": "passed", "program_normal_termination": True,
+                    "scf_converged": True, "geometry_optimization_completed": True,
+                    "cp2k_version": "2025.2",
+                },
+                error=None,
+            )
         raise AssertionError(f"unexpected CST operation: {request.operation}")
 
 
 class FakeHPC:
+    def __init__(self, root):
+        self.root = Path(root)
+        self.manifests = {}
+        self.jobs = {}
+        self.submissions = []
+        self.updates = []
+
     def preflight(self):
         return HpcPreflight("ucas", True, ("stage_inputs", "submit", "status", "retrieve", "sha256"))
 
     def _new_remote_workdir(self, task_id):
-        return "/remote/project/pipeline-runs/opaque-id"
+        return f"/remote/project/pipeline-runs/opaque-{task_id[-8:]}"
+
+    def attach_task(self, manifest, remote_workdir):
+        self.manifests[manifest.task_id] = (manifest, remote_workdir)
+
+    def stage_inputs(self, manifest):
+        workdir = str(manifest.payload.get("remote_workdir") or self._new_remote_workdir(manifest.task_id))
+        self.attach_task(manifest, workdir)
+        return HpcStageResult(manifest.task_id, manifest.input_artifacts, workdir)
+
+    def submit(self, manifest, *, on_submission_intent=None, on_job_submitted=None):
+        _, workdir = self.manifests[manifest.task_id]
+        job_id = f"FAKE-JOB-{len(self.submissions) + 1}"
+        self.submissions.append((manifest.task_id, job_id))
+        details = {"remote_workdir": workdir, "input_hashes": {"cp2k.inp": "a" * 64}}
+        if on_submission_intent:
+            on_submission_intent(details)
+        if on_job_submitted:
+            on_job_submitted(job_id, details)
+        reference = JobReference(job_id, manifest.task_id, "ucas")
+        self.jobs[job_id] = (reference, manifest)
+        return reference
+
+    def get_status(self, reference):
+        return HpcStatus(reference, HpcState.AWAITING_VALIDATION, "COMPLETED")
+
+    def get_record(self, reference):
+        return HpcJobRecord(reference, "COMPLETED", "unknown", 0, "scheduler completed")
+
+    def retrieve_selected_outputs(self, reference, output_selection):
+        manifest = self.jobs[reference.job_id][1]
+        context = self.manifests[reference.task_id][1]
+        directory = self.root / "retrieved" / reference.job_id
+        directory.mkdir(parents=True, exist_ok=True)
+        refs = []
+        for role in output_selection:
+            declared = str(manifest.payload["output_files"][role]).replace("JOB_ID", reference.job_id)
+            path = directory / declared
+            if role == "cp2k_output":
+                path.write_text("CP2K output fixture", encoding="utf-8")
+            elif role == "optimized_structure":
+                path.write_text("2\\noptimized\\nH 0 0 0\\nH 0.7 0 0\\n", encoding="utf-8")
+            else:
+                path.write_text("SLURM log fixture", encoding="utf-8")
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            refs.append(ArtifactRef(
+                artifact_id=f"STAGED-{reference.job_id}-{role}",
+                sha256=digest, uri=path.resolve().as_uri(), source_system="HPC:ucas",
+            ))
+        return tuple(refs)
+
+    def verify_hashes(self, manifest):
+        for artifact in manifest:
+            path = Path(__import__("urllib.parse", fromlist=["urlparse"]).urlparse(artifact.uri).path)
+            if hashlib.sha256(path.read_bytes()).hexdigest() != artifact.sha256:
+                return HashVerification(False, (), ("hash mismatch",))
+        return HashVerification(True, tuple(item.artifact_id for item in manifest))
+
+    def update_application_record(self, job_id, *, success, marker, result_files=(), stdout_path=None, stderr_path=None):
+        self.updates.append((job_id, success, marker, tuple(result_files), stdout_path, stderr_path))
 
 
 class FakeCell:
@@ -209,7 +294,7 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             adapter = RealCP2KWorkflowAdapter(
                 plan, da_project, runtime,
                 cst_adapter=cst, data_analysis_adapter=da,
-                hpc_backend=FakeHPC(), data_analysis_api=api,
+                hpc_backend=FakeHPC(root), data_analysis_api=api,
             )
             with _install_fake_ase():
                 prepared = adapter._prepare_task(compile_initial_tasks(plan)[0], None)
@@ -227,12 +312,62 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             derived_event = next(x for x in events if x[0] == "register_derived_artifact")
             self.assertEqual(derived_event[1], ("ART-STRUCT",))
             self.assertEqual(prepared["structure_artifact_id"], "ART-STRUCT")
-            self.assertEqual(prepared["cp2k_input_artifact_id"], "ART-CP2K-INPUT")
+            self.assertEqual(prepared["cp2k_input_artifact_id"], "ART-CP2K-INPUT-1")
             self.assertEqual(prepared["cp2k_input_sha256"],
                              hashlib.sha256(Path(paths["ART-CP2K-INPUT"]).read_bytes()).hexdigest())
             self.assertTrue(any(item["name"] == "job.slurm" for item in prepared["local_files"]))
             input_file = next(item for item in prepared["local_files"] if item["name"] == prepared["input_filename"])
             self.assertIn("&TRAJECTORY", Path(input_file["path"]).read_text(encoding="utf-8"))
+
+    def test_fake_real_adapter_completes_geo_opt_energy_with_real_artifact_references(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            da_project = root / "da-project"
+            active = root / "active-project"
+            skill_root = root / "skills"
+            da_project.mkdir()
+            active.mkdir()
+            structure = root / "input.xyz"
+            structure.write_text("2\\nfixture\\nH 0 0 0\\nH 0.7 0 0\\n", encoding="utf-8")
+            runtime = make_runtime(root, active, skill_root)
+            runtime["data_analysis"]["project_root"] = str(da_project)
+            plan = CalculationPlan.load(Path(__file__).parents[1] / "examples" / "cp2k_geo_opt_energy_plan.json")
+            raw = plan.as_dict()
+            raw["project_root"] = str(da_project)
+            raw["structure"]["path"] = str(structure)
+            plan = CalculationPlan.from_mapping(raw)
+
+            events, paths = [], {}
+            api = FakeDataAnalysisAPI(paths, events)
+            da = FakeDAAdapter(da_project, paths, events)
+            cst = FakeCSTAdapter(events)
+            hpc = FakeHPC(root)
+            adapter = RealCP2KWorkflowAdapter(
+                plan, da_project, runtime, cst_adapter=cst, data_analysis_adapter=da,
+                hpc_backend=hpc, data_analysis_api=api,
+            )
+            store = WorkflowStore(root / "workflow.sqlite")
+            try:
+                controller = WorkflowController(store, adapter)
+                run_id = controller.create(plan)
+                with _install_fake_ase():
+                    final = controller.run(run_id, plan)
+                self.assertEqual(final, "COMPLETED")
+                tasks = store.tasks(run_id)
+                self.assertEqual([item["operation"] for item in tasks], ["cp2k.geo_opt", "cp2k.energy"])
+                self.assertTrue(all(item["status"] == "COMPLETED" for item in tasks))
+                self.assertEqual(len(hpc.submissions), 2)
+                self.assertEqual(len(da.analysis_requests), 1)
+                request = da.analysis_requests[0]
+                self.assertEqual(request.upstream_job_reference, "FAKE-JOB-2")
+                self.assertEqual(request.input_artifacts[0].artifact_id, "ART-OUTPUT-6")
+                self.assertEqual(tasks[1]["status"], "COMPLETED")
+                report = controller.report(run_id)
+                self.assertEqual(report["execution_mode"], "real")
+                self.assertEqual(len([event for event in report["events"] if event["event"] == "DYNAMIC_TASK_ADDED"]), 1)
+                self.assertTrue(all(ok for _, ok, *_ in hpc.updates))
+            finally:
+                store.close()
 
     def test_retrieved_cp2k_output_registered_and_resolved_before_analysis(self):
         with tempfile.TemporaryDirectory() as tmp:
