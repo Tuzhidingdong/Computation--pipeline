@@ -205,6 +205,27 @@ class RealCP2KWorkflowAdapter:
             for function_name in ("validate_cp2k_input", "validate_cp2k_output"):
                 if not callable(getattr(workflows, function_name, None)):
                     raise RealWorkflowUnavailable(f"chem-scitoolkit missing callable {function_name}")
+            reader_id = str(self.plan.analysis.get("reader_id") or "cp2k-output-tools")
+            readers = self.da_api.list_dft_readers("cp2k_output")
+            selected_readers = [
+                item for item in readers
+                if item.get("reader_id") == reader_id and item.get("format_id") == "cp2k_output"
+            ]
+            if not selected_readers:
+                raise RealWorkflowUnavailable(
+                    f"Data_analysis has no registered {reader_id!r} reader for cp2k_output"
+                )
+            if not selected_readers[0].get("available"):
+                raise RealWorkflowUnavailable(
+                    "Data_analysis CP2K output reader is unavailable: " +
+                    str(selected_readers[0].get("availability_reason") or reader_id)
+                )
+            for operation_id in ("dft.artifact.read", "dft.normalized_result.package"):
+                descriptor = self.da_api.get_dft_operation(operation_id)
+                if not isinstance(descriptor, Mapping) or descriptor.get("status") != "implemented":
+                    raise RealWorkflowUnavailable(
+                        f"Data_analysis DFT operation {operation_id!r} is not implemented"
+                    )
             if task.get("operation") not in {"cp2k.geo_opt", "cp2k.energy"}:
                 raise RealWorkflowUnavailable(f"no real CP2K executor is registered for {task.get('operation')!r}")
             structure_cfg = dict(self.plan.structure)
