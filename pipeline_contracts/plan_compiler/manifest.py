@@ -738,6 +738,12 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "evidence_ids": [item["evidence_id"] for item in spin_cells],
                 "source_text": " | ".join(item.get("text", "") for item in spin_cells),
             },
+            {
+                "field": "tasks.isolated_fragment_spin_candidates", "status": "unresolved",
+                "reason": "Fragment spin candidates are listed, but the source row does not establish WP1 ownership or a verified system-column mapping.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
         ])
 
 
@@ -750,6 +756,13 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "field": "tasks.adsorbate_atom_counts_per_catalyst", "status": "unresolved",
                 "reason": "Adsorbate atom counts are explicit, but this paragraph does not identify a WP or per-catalyst mapping.",
                 "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+            })
+        if eid == "docx-block-000087" and re.search(r"representative.*SnCu-20.*model", text, re.I):
+            unresolved_structured_fields.append({
+                "field": "tasks.representative_sncu20_models", "status": "unresolved",
+                "reason": "A representative SnCu-20 model is named in the WP2 gate, but the source does not state a numeric model count.",
+                "evidence_ids": [eid], "source": dict(item.get("source") or {}),
+                "source_text": text, "work_package": "WP2",
             })
         if eid == "docx-block-000155":
             if re.search(r"3[-–]4 chemically distinct candidate configurations", text, re.I):
