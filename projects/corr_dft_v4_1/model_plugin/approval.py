@@ -9,25 +9,30 @@ import os
 
 
 def create_approval_record(
-    path: str | Path, *, approver: str, candidate_id: str, artifact_id: str,
+    path: str | Path, *, approver: str, candidate_id: str, artifact_ref: Mapping,
     structure_path: str | Path, validation_report: Mapping, approved: bool,
 ) -> dict:
-    if not approver.strip() or not candidate_id.strip() or not artifact_id.strip():
-        raise ValueError("approver, candidate_id and registered artifact_id are required")
+    artifact_id = str(artifact_ref.get("artifact_id", ""))
+    if (not approver.strip() or not candidate_id.strip() or not artifact_id.strip()
+            or artifact_ref.get("source_system") != "Data_analysis"
+            or artifact_ref.get("verified") is not True):
+        raise ValueError("approval requires approver and a Data_analysis-verified ArtifactRef")
     target = Path(path)
     if target.exists():
         raise FileExistsError(target)
     structure_path = Path(structure_path)
     digest = hashlib.sha256(structure_path.read_bytes()).hexdigest()
-    if validation_report.get("status") != "PASS" or validation_report.get("structure_sha256") != digest:
-        raise ValueError("approval requires a passing validation report for the current structure bytes")
+    if (validation_report.get("status") != "PASS"
+            or validation_report.get("structure_sha256") != digest
+            or str(artifact_ref.get("sha256", "")).lower() != digest.lower()):
+        raise ValueError("approval requires a passing validation report and verified ArtifactRef for current bytes")
     if approved is not True:
         raise ValueError("approval record can only be created after explicit approval")
     record = {
         "schema_version": "1.0.0", "approver": approver,
         "approved_at": datetime.now(timezone.utc).isoformat(),
         "candidate_id": candidate_id, "artifact_id": artifact_id,
-        "structure_sha256": digest, "validation_report_sha256": hashlib.sha256(
+        "artifact_ref": dict(artifact_ref), "structure_sha256": digest, "validation_report_sha256": hashlib.sha256(
             json.dumps(dict(validation_report), sort_keys=True).encode("utf-8")
         ).hexdigest(),
         "approval_status": "APPROVED",
