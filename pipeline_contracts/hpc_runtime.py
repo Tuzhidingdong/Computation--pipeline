@@ -673,7 +673,14 @@ class BeiLongHPCAdapter(SkillSlurmBackend):
             for key in ("basis_file_name", "potential_file_name"):
                 filename = _safe_token(str(self.config[key]), key)
                 work_parts.append(f"test -r {shlex.quote(data_dir + '/' + filename)}")
-        self._ssh(["bash", "-lc", " && ".join(work_parts)])
+        version_check = " && ".join(work_parts) + " && " + shlex.quote(executable) + " --version"
+        result = self._ssh(["bash", "-lc", version_check])
+        required = str(self.config.get("required_cp2k_version") or "")
+        if required and required not in (result.stdout + result.stderr):
+            raise HpcRuntimeError(
+                f"CP2K version mismatch on {self.backend_id}: required {required}, "
+                f"observed {(result.stdout + result.stderr).strip()[:500] or 'no version output'}"
+            )
 
     def _append_sync_options(self, argv: list[str]) -> None:
         argv.extend(["--ssh-config", str(self.ssh_config), "--ssh-executable", self.ssh_executable])
