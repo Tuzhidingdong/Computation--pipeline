@@ -93,7 +93,7 @@ class PlanCompilerTests(unittest.TestCase):
             code = cli_main([
                 "resolve-v41-planning", str(manifest_path),
                 "--orientation-scope", "per_catalyst",
-                "--fragment-spin-resolution", "preserve_detailed_six_correct_summary",
+                "--fragment-spin-resolution", "retain_all_six",
                 "--confirmed-by", "owner", "--rationale", "Owner confirmed the detailed count.",
                 "--output", str(resolved_path),
             ])
@@ -101,6 +101,8 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertFalse(any(x["code"].startswith("WP1_") for x in resolved["diagnostics"]))
         self.assertEqual(resolved["confirmed_resolutions"]["wp1_orientation_scope"], "per_catalyst")
+        self.assertEqual(resolved["confirmed_resolutions"]["wp1_fragment_spin_count_resolution"], "retain_all_six")
+        self.assertEqual(len(resolved["confirmed_resolutions"]["wp1_selected_fragment_spin_candidates"]), 6)
 
     def test_labelled_values_are_not_promoted_without_confirmation(self):
         with tempfile.TemporaryDirectory() as tmp:
