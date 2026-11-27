@@ -11,7 +11,7 @@
 - **Upstream Data_analysis inspected branch:** `cp2k-dft-artifact-and-evidence-support` at `b71c9e90e65af0f8a7a377ab37159dc60fed3a97`
 - **Upstream chem-scitoolkit inspected branch:** `dft-finite-cluster-production-interfaces` at `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba`
 - **No production DFT or HPC task has been submitted.**
-- **Follow-up CI for the Artifact resolver/derived-output change:** pending on the new Pipeline commit; earlier adapter-only CI does not validate this follow-up.
+- **Follow-up PR Actions:** [run 45934337185](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45934337185), on the resolver/derived-output implementation commit `ec3a0ccbc592cda7d1205d245a145014693c7b5d`: 23 tests run, 21 passed and 2 opt-in live upstream source tests skipped; `compileall` passed.
 
 ## Agent B work — real Skill adapter phase
 
