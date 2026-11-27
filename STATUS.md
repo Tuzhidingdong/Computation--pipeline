@@ -17,7 +17,7 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 |---|---|---|
 | Real adapter factory | IMPLEMENTED | build_real_workflow_adapter(plan, project_root, runtime_config); explicit UNAVAILABLE reason; no Mock fallback |
 | Local-only runtime config | IMPLEMENTED | .pipeline/runtime.local.example.json; private runtime.local.json is Git-ignored; relative local paths resolved from config location |
-| Real CST CP2K input generation | IMPLEMENTED — fake API tested | Reuses RealCSTAdapter and chem-scitoolkit CP2KInputBuilder.build_finite_system() |
+| Real CST CP2K input generation | IMPLEMENTED — fake API tested | Reuses RealCSTAdapter and chem-scitoolkit CP2KInputBuilder.build_finite_system(); CalculationPlan now requires relative cutoff, Poisson solver, UKS/centering and full cell angles instead of accepting builder defaults. |
 | CST input lint | IMPLEMENTED — fake API tested | Calls upstream validate_cp2k_input(); local ASE and cp2klint are required |
 | BeiLong_HPC backend | IMPLEMENTED — injected subprocess tested | Dedicated SSH config for both SSH/SCP, wcl privacy header/job name, opaque workspace, external Skill log directory, upstream Job Record script |
 | UCAS_hpc backend | IMPLEMENTED — injected subprocess tested | Existing hpc alias, CP2K Slurm template/module setup, configured account/resources, upstream Job Record script |
