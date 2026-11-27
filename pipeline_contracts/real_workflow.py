@@ -681,11 +681,18 @@ class RealCP2KWorkflowAdapter:
                 )
             record = self.hpc.get_record(job)
             if record.scheduler_state != "COMPLETED":
+                scheduler_state = str(record.scheduler_state).upper()
+                if scheduler_state == "CANCELLED":
+                    outcome_status = "CANCELLED"
+                elif scheduler_state == "FAILED" and record.application_exit_code not in (None, 0):
+                    outcome_status = "FAILED_PERMANENT"
+                else:
+                    outcome_status = "FAILED_INFRASTRUCTURE"
                 return ExecutionResult(
-                    status="FAILED_PERMANENT", job_id=job.job_id,
-                    scheduler_state=record.scheduler_state,
+                    status=outcome_status, job_id=job.job_id,
+                    scheduler_state=scheduler_state,
                     application_exit_code=record.application_exit_code,
-                    diagnostics=("Slurm terminated without COMPLETED state",),
+                    diagnostics=(f"Slurm terminal state is {scheduler_state}; no automatic resubmission is permitted.",),
                     execution_mode="real",
                 )
             if record.application_exit_code is None:
