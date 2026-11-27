@@ -4,7 +4,8 @@
 
 - Repository: Tuzhidingdong/Computation--pipeline
 - Branch: agent-b/plan-compiler-v41-model-plugin-20261127
-- This compiler/provenance change is based on PR #3 HEAD dccebf72403aa3b20139507ca2350a9504cbcb6c.
+- This compiler/provenance change started from PR #3 HEAD dccebf72403aa3b20139507ca2350a9504cbcb6c.
+- Latest compiler/test commit: 9d23895d5d568a1dfec2e4bc868fa737ff6efa66.
 - PR #3 remains Draft and unmerged. Its base branch is unchanged.
 - main, PR #1, PR #2 and all upstream Skill repositories are out of scope and remain untouched.
 - No resolve-v41-planning command was run. No CP2K, HPC, Slurm or production DFT task was started.
@@ -48,9 +49,10 @@ In particular, the actual source claims for ase_vibrations__cp2k and copyready_e
 
 ## Automated verification
 
-- Fresh CI for the compiler/provenance revision: pending.
-- A test count, skipped count and failure count will be recorded here only after the Actions run for the new branch HEAD completes.
-- Existing CI before this revision had 100 passed, 2 optional upstream tests skipped and compileall passed. That result is historical and is not evidence for this revision.
+- Actions run #405: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46015653652
+- Tested code/test commit: 9d23895d5d568a1dfec2e4bc868fa737ff6efa66
+- Result: 117 tests passed, 2 optional upstream integration tests skipped, 0 failures / 0 errors; compileall passed.
+- The first CI run on the initial code draft exposed a Manifest evidence-aggregation error and an overly broad test expectation. Both were corrected before the final passing run.
 - All test fixtures in this revision are synthetic. Software regression success must not be represented as real Frozen DOCX acceptance.
 
 ## Required next gates
