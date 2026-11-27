@@ -20,6 +20,7 @@ class ExecutionResult:
     analysis_run_id: str | None = None
     evidence_package_id: str | None = None
     diagnostics: tuple[str, ...] = ()
+    state_trace: tuple[str, ...] = ()
     execution_mode: str = "mock"
 
 class JobSubmissionInterrupted(ConnectionError):
@@ -98,6 +99,9 @@ class WorkflowController:
             self.store.update_task(rid,tid,"INTERRUPTED_RECOVERY" if existing else "READY",job_id=existing)
             try:
                 result=self.adapter.execute(task,existing_job_id=existing)
+                for observed_state in result.state_trace:
+                    if observed_state in {"SUBMITTED", "QUEUED", "RUNNING"}:
+                        self.store.update_task(rid,tid,observed_state,job_id=result.job_id)
                 payload={"status":result.status,"job_id":result.job_id,"scheduler_state":result.scheduler_state,
                     "application_exit_code":result.application_exit_code,"output_artifacts":[dict(x) for x in result.output_artifacts],
                     "converged":result.converged,"qc":dict(result.qc),"analysis_run_id":result.analysis_run_id,
@@ -175,7 +179,7 @@ class MockCP2KWorkflowAdapter:
             arts=({"artifact_id":"mock-"+tid+"-output","sha256":"a"*64,"kind":"cp2k_output"},
                   {"artifact_id":"mock-"+tid+"-structure","sha256":"b"*64,"kind":"optimized_structure"})
         else: arts=({"artifact_id":"mock-"+tid+"-energy","sha256":"c"*64,"kind":"cp2k_output"},)
-        return ExecutionResult("COMPLETED",job,"COMPLETED",0,arts,converged,{"converged":converged},execution_mode="mock")
+        return ExecutionResult("COMPLETED",job,"COMPLETED",0,arts,converged,{"converged":converged},state_trace=("SUBMITTED","QUEUED","RUNNING","COMPLETED"),execution_mode="mock")
     def analyze(self,task,artifacts):
         return ExecutionResult("COMPLETED",scheduler_state="NOT_APPLICABLE",application_exit_code=0,
             output_artifacts=({"artifact_id":"mock-derived-"+task["task_id"],"sha256":"d"*64,"kind":"derived"},),
