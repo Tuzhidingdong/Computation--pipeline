@@ -56,6 +56,11 @@ def _aliases(profile_path: str) -> set[str]:
         },
     }
     aliases.update(explicit.get(leaf, set()))
+    path_key = profile_path.casefold()
+    if ".cluster.formula" in path_key:
+        aliases.add("cluster_formula")
+    if ".cluster.atom_count" in path_key:
+        aliases.add("cluster_atom_count")
     return aliases
 
 
