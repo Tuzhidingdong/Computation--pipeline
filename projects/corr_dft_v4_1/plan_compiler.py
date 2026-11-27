@@ -92,11 +92,6 @@ def _matching_docx_claims(manifest: dict, profile_path: str) -> list[dict]:
 def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: str) -> str:
     profile_normalised = _normalise_field_value(profile_value)
     docx_normalised = _normalise_field_value(docx_value)
-    if profile_normalised == docx_normalised:
-        return "consistent"
-
-    # A unit-bearing DOCX value may be compared with a unit-encoded profile key.
-    # Do not strip units: they must agree with the field's declared unit suffix.
     import re
     from decimal import Decimal, InvalidOperation
 
@@ -113,39 +108,47 @@ def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: st
         except InvalidOperation:
             return "needs_review"
         return "consistent" if actual == expected else "conflict"
-    if isinstance(profile_value, (dict, list)):
+
+    if isinstance(profile_value, dict):
         return "needs_review"
     if isinstance(profile_value, bool):
-        return "consistent" if str(docx_value).strip().casefold() in ({"true", ".true.", "yes"} if profile_value else {"false", ".false.", "no"}) else "conflict"
+        if str(docx_value).strip().casefold() in ({"true", ".true.", "yes"} if profile_value else {"false", ".false.", "no"}):
+            return "consistent"
+        return "conflict"
+
     if isinstance(profile_value, (int, float)):
         match = re.fullmatch(
             r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*([A-Za-zÅ/0-9^]+)?\s*",
             str(docx_value),
         )
-        if match:
-            try:
-                same_number = Decimal(match.group(1)) == Decimal(str(profile_value))
-            except InvalidOperation:
-                return "needs_review"
-            unit = (match.group(2) or "").casefold()
-            key = profile_path.casefold()
-            expected_units = {
-                "_ry": {"ry"}, "_ha": {"ha", "hartree"}, "_ev": {"ev"},
-                "_angstrom": {"å", "angstrom"}, "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
-                "_k": {"k"}, "_v_vs_rhe": {"v"},
-            }
-            expected = next(
-                (units for suffix, units in sorted(expected_units.items(), key=lambda pair: len(pair[0]), reverse=True)
-                 if suffix in key),
-                None,
-            )
-            if same_number and expected is not None and unit in expected:
+        if not match:
+            return "needs_review"
+        try:
+            same_number = Decimal(match.group(1)) == Decimal(str(profile_value))
+        except InvalidOperation:
+            return "needs_review"
+        unit = (match.group(2) or "").casefold()
+        key = profile_path.casefold()
+        expected_units = {
+            "_ry": {"ry"}, "_ha": {"ha", "hartree"}, "_ev": {"ev"},
+            "_angstrom": {"å", "angstrom"}, "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
+            "_k": {"k"}, "_v_vs_rhe": {"v"},
+        }
+        expected = next(
+            (units for suffix, units in sorted(expected_units.items(), key=lambda pair: len(pair[0]), reverse=True)
+             if suffix in key),
+            None,
+        )
+        if not same_number:
+            return "conflict"
+        if expected is not None:
+            if unit in expected:
                 return "consistent"
-            if same_number and expected is None and not unit:
-                return "consistent"
-            if expected is not None and unit not in expected:
-                return "needs_review" if same_number else "conflict"
-            return "conflict" if not same_number else "needs_review"
+            return "needs_review" if not unit else "conflict"
+        return "consistent" if not unit else "needs_review"
+
+    if profile_normalised == docx_normalised:
+        return "consistent"
     if profile_path.endswith("support_motif"):
         def canonical_motif(value: str) -> str:
             value = _normalise_field_value(value)
