@@ -571,7 +571,12 @@ class SkillSlurmBackend:
         for role in output_selection:
             filename = _safe_token(str(output_files[role]), "output filename")
             filename = filename.replace("JOB_ID", job_reference.job_id)
-            remote_file = workdir + "/" + filename
+            if self.backend_id == "beilong" and role == "slurm_stdout":
+                remote_file = self.allowed_workspace_root.rstrip("/") + "/hpc/logs/wcl-" + job_reference.job_id + ".out"
+            elif self.backend_id == "beilong" and role == "slurm_stderr":
+                remote_file = self.allowed_workspace_root.rstrip("/") + "/hpc/logs/wcl-" + job_reference.job_id + ".err"
+            else:
+                remote_file = workdir + "/" + filename
             remote_line = self._ssh(["sha256sum", "--", remote_file]).stdout.strip()
             expected = remote_line.split()[0].lower() if remote_line else ""
             if not re.fullmatch(r"[0-9a-f]{64}", expected):
@@ -614,13 +619,18 @@ class SkillSlurmBackend:
         return HashVerification(not failures, tuple(checked), tuple(failures), "sha256_local_and_remote")
 
     def update_application_record(
-        self, job_id: str, *, success: bool, marker: str, result_files: Sequence[str] = ()
+        self, job_id: str, *, success: bool, marker: str, result_files: Sequence[str] = (),
+        stdout_path: str | None = None, stderr_path: str | None = None,
     ) -> None:
         argv = [
             str(self.config.get("python_executable") or sys.executable), str(self.job_record_script), "update",
             "--project-root", str(self.local_project_root), "--job-id", job_id,
             "--application-ok", "yes" if success else "no", "--marker", marker,
         ]
+        if stdout_path:
+            argv.extend(["--stdout", stdout_path])
+        if stderr_path:
+            argv.extend(["--stderr", stderr_path])
         for path in result_files:
             argv.extend(["--result", str(path)])
         self._run_local(argv)
