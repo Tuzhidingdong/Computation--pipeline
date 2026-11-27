@@ -223,6 +223,10 @@ class RealDataAnalysisAdapter:
             reader_results: list[dict[str, Any]] = []
             reader_catalogues: list[dict[str, Any]] = []
             for artifact in request.input_artifacts:
+                if not artifact.sha256:
+                    raise ContractError(
+                        f"Artifact {artifact.artifact_id} must carry a verified SHA-256 before real DFT reading"
+                    )
                 path = _local_artifact_path(
                     artifact,
                     project_root=self.project_root,
@@ -269,6 +273,21 @@ class RealDataAnalysisAdapter:
                 for item in reader_results
                 if item.get("status") not in valid_reader_statuses
             ]
+            failure_codes = {
+                "reader_unavailable": "DFT_READER_UNAVAILABLE",
+                "unsupported_format": "DFT_FORMAT_UNSUPPORTED",
+                "parse_failed": "DFT_PARSE_FAILED",
+                "source_unavailable": "DFT_SOURCE_UNAVAILABLE",
+                "artifact_hash_mismatch": "DFT_ARTIFACT_HASH_MISMATCH",
+            }
+            first_failure_code = next(
+                (
+                    failure_codes.get(str(item.get("status")), "DFT_READ_FAILED")
+                    for item in reader_results
+                    if item.get("status") not in valid_reader_statuses
+                ),
+                "DFT_READ_FAILED",
+            )
             reader_warnings = [
                 str(message)
                 for item in reader_results
@@ -431,9 +450,17 @@ class RealDataAnalysisAdapter:
                 analysis_run_record=analysis_run,
                 evidence_package=dict(evidence_package),
                 diagnostics=(
-                    (Diagnostic("DFT_READ_PARTIAL", "Read completed without a registered derived Artifact.", DiagnosticSeverity.WARNING),)
-                    if read_succeeded else
-                    (Diagnostic("DFT_READ_FAILED", error or "DFT reader failed.", DiagnosticSeverity.ERROR),)
+                    Diagnostic(
+                        "DFT_READ_PARTIAL",
+                        "Read completed without a registered derived Artifact.",
+                        DiagnosticSeverity.WARNING,
+                    ),
+                ) if read_succeeded else (
+                    Diagnostic(
+                        first_failure_code,
+                        error or "DFT reader failed.",
+                        DiagnosticSeverity.ERROR,
+                    ),
                 ),
             )
         except ContractError as exc:
