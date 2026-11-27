@@ -5,6 +5,7 @@ from pathlib import Path
 
 from projects.corr_dft_v4_1.model_plugin import ModelSpec, build_candidates, create_approval_record, verify_approval_record
 from projects.corr_dft_v4_1.model_plugin.artifacts import register_candidate_structure
+from projects.corr_dft_v4_1.model_plugin.review import build_review_package
 
 
 class SimpleWriter:
@@ -79,6 +80,22 @@ class ModelPluginTests(unittest.TestCase):
             self.assertEqual(result["artifact_id"], "da-artifact-1")
             self.assertTrue(result["verified"])
             self.assertEqual(api.calls[0][0], ["source-1"])
+
+    def test_review_package_does_not_claim_ready_without_3d_preview(self):
+        import json
+        candidate = {"candidate_id":"candidate-1","validation_report":{
+            "status":"PASS","structure_sha256":"a"*64,"atom_count":2,
+            "composition":{"Cu":1,"O":1},"formula":"CuO","charge":0,
+            "pseudopotential_electron_count":17,"multiplicity":2}}
+        with tempfile.TemporaryDirectory() as tmp:
+            package_path = build_review_package([candidate], tmp)
+            package = json.loads(package_path.read_text(encoding="utf-8"))
+            self.assertEqual(package["review_status"], "BLOCKED_PREVIEW_UNAVAILABLE")
+            def renderer(item, path):
+                path.write_bytes(b"test-only preview")
+            package_path = build_review_package([candidate], tmp + "/rendered", preview_renderer=renderer)
+            package = json.loads(package_path.read_text(encoding="utf-8"))
+            self.assertEqual(package["review_status"], "AWAITING_USER_REVIEW")
 
     def test_missing_3d_position_fails_closed(self):
         raw = {
