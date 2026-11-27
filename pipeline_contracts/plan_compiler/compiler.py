@@ -1,11 +1,9 @@
 """Frozen DOCX -> Project Manifest -> existing CalculationPlan compiler."""
 from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 import json
-
 from .docx_reader import read_frozen_docx
 from .manifest import build_project_manifest
 from ..calculation_plan import CalculationPlan, PlanValidationError
@@ -24,33 +22,51 @@ class CompilationResult:
         )
 
 
-def compile_docx(
-    docx_path: str | Path, *, project_id: str, plan_version: str | None = None,
-) -> CompilationResult:
+def compile_docx(docx_path: str | Path, *, project_id: str,
+                 plan_version: str | None = None) -> CompilationResult:
     blocks = read_frozen_docx(docx_path)
     manifest = build_project_manifest(blocks, project_id=project_id, plan_version=plan_version)
-    diagnostics = tuple(manifest["diagnostics"])
-    return CompilationResult(manifest, None, diagnostics)
+    return CompilationResult(manifest, None, tuple(manifest["diagnostics"]))
 
 
-def compile_confirmed_manifest(
-    manifest: Mapping[str, Any], calculation_plan_data: Mapping[str, Any],
-) -> CalculationPlan:
-    """Convert only an explicitly confirmed manifest to the established plan model.
+def confirm_manifest_claims(manifest: Mapping[str, Any], *, evidence_ids: list[str],
+                             confirmer: str, rationale: str) -> dict:
+    """Record explicit owner confirmation without changing or deleting source evidence."""
+    if not confirmer.strip() or not rationale.strip() or not evidence_ids:
+        raise ValueError("confirmer, rationale and at least one evidence_id are required")
+    result = dict(manifest)
+    claims = [dict(item) for item in result.get("claims", [])]
+    selected = set(evidence_ids)
+    matched = set()
+    for claim in claims:
+        if claim.get("status") == "requires_confirmation" and claim.get("evidence_id") in selected:
+            claim["status"] = "user_confirmed"
+            claim["confirmation"] = {"confirmed_by": confirmer, "rationale": rationale}
+            matched.add(claim["evidence_id"])
+    missing = selected - matched
+    if missing:
+        raise ValueError("no unconfirmed labelled claims for evidence IDs: " + ", ".join(sorted(missing)))
+    result["claims"] = claims
+    result["unresolved_definitions"] = [
+        item for item in result.get("unresolved_definitions", [])
+        if item.get("evidence_id") not in selected
+    ]
+    result.setdefault("confirmations", []).append({
+        "evidence_ids": sorted(selected), "confirmed_by": confirmer, "rationale": rationale,
+    })
+    return result
 
-    The model Artifact must already be registered and approved. Pre-model inputs belong
-    to the project lifecycle DAG, not to a fabricated CalculationPlan structure.path.
-    """
+
+def compile_confirmed_manifest(manifest: Mapping[str, Any],
+                               calculation_plan_data: Mapping[str, Any]) -> CalculationPlan:
+    """Convert only a confirmed Manifest after model Artifact approval."""
     blocking = [d for d in manifest.get("diagnostics", []) if d.get("blocks_execution")]
     unresolved = manifest.get("unresolved_definitions", [])
     if blocking:
-        raise PlanValidationError([
-            f"{d.get('code')}: {d.get('message')}" for d in blocking
-        ])
+        raise PlanValidationError([f"{d.get('code')}: {d.get('message')}" for d in blocking])
     if unresolved:
         raise PlanValidationError([
-            "Manifest contains unconfirmed scientific definitions; confirm them before "
-            "CalculationPlan conversion."
+            "Manifest contains unconfirmed scientific definitions; confirm them before CalculationPlan conversion."
         ])
     plan = CalculationPlan.from_mapping(calculation_plan_data)
     plan.require_valid()
@@ -62,9 +78,10 @@ def compile_confirmed_manifest(
     return plan
 
 
-def write_manifest(result: CompilationResult, path: str | Path) -> Path:
+def write_manifest(result: CompilationResult | Mapping[str, Any], path: str | Path) -> Path:
+    manifest = result.manifest if isinstance(result, CompilationResult) else result
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(dict(result.manifest), ensure_ascii=False, indent=2) + "\n",
+    target.write_text(json.dumps(dict(manifest), ensure_ascii=False, indent=2) + "\n",
                       encoding="utf-8")
     return target
