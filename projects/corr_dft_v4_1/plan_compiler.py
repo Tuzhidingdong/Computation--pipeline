@@ -32,18 +32,23 @@ def _aliases(profile_path: str) -> set[str]:
     explicit = {
         "cutoff_ry": {"cutoff"},
         "rel_cutoff_ry": {"rel_cutoff"},
-        "xc": {"functional", "exchange_correlation"},
+        "xc": {"functional", "exchange_correlation", "xc_functional"},
         "complete_formula": {"formula"},
         "complete_atom_count": {"atom_count", "number_of_atoms"},
         "support_motif": {"motif"},
         "support_atom_count": {"atom_count", "number_of_atoms"},
+        "cluster": {"cluster_formula", "cluster_atom_count"},
+        "geometry_optimization": {"eps_scf_geometry_optimization"},
+        "local_hessian_force": {"eps_scf_local_hessian_force"},
+        "temperature_k": {"che_temperature_k"},
+        "potential_v_vs_rhe": {"potential_v_vs_rhe"},
         "support_cluster_docking_orientation_count": {
             "orientation_count", "docking_orientations", "orientations",
             "docking_orientation_count", "number_of_docking_orientations",
             "number_of_orientations",
         },
         "isolated_fragment_spin_candidate_count": {
-            "spin_candidate_count", "fragment_spin_count",
+            "spin_candidate_count", "spin_candidate", "fragment_spin_count",
             "number_of_isolated_fragment_spin_candidates",
         },
         "summary_fragment_single_point_count": {
@@ -86,36 +91,60 @@ def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: st
 
     # A unit-bearing DOCX value may be compared with a unit-encoded profile key.
     # Do not strip units: they must agree with the field's declared unit suffix.
+    import re
+    from decimal import Decimal, InvalidOperation
+
+    if isinstance(profile_value, list):
+        if not profile_value or not all(isinstance(item, (int, float)) and not isinstance(item, bool)
+                                        for item in profile_value):
+            return "needs_review"
+        raw = docx_value if isinstance(docx_value, (list, tuple)) else re.findall(
+            r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?", str(docx_value)
+        )
+        try:
+            actual = [Decimal(str(item)) for item in raw]
+            expected = [Decimal(str(item)) for item in profile_value]
+        except InvalidOperation:
+            return "needs_review"
+        return "consistent" if actual == expected else "conflict"
     if isinstance(profile_value, (dict, list)):
         return "needs_review"
-    if isinstance(profile_value, (int, float)) and not isinstance(profile_value, bool):
-        import re
+    if isinstance(profile_value, bool):
+        return "consistent" if str(docx_value).strip().casefold() in ({"true", ".true.", "yes"} if profile_value else {"false", ".false.", "no"}) else "conflict"
+    if isinstance(profile_value, (int, float)):
         match = re.fullmatch(
             r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*([A-Za-zÅ/0-9^]+)?\s*",
             str(docx_value),
         )
-        if match and float(match.group(1)) == float(profile_value):
+        if match:
+            try:
+                same_number = Decimal(match.group(1)) == Decimal(str(profile_value))
+            except InvalidOperation:
+                return "needs_review"
             unit = (match.group(2) or "").casefold()
-            key = profile_path.rsplit(".", 1)[-1].casefold()
+            key = profile_path.casefold()
             expected_units = {
-                "_ry": {"ry"},
-                "_ha": {"ha", "hartree"},
-                "_ev": {"ev"},
-                "_angstrom": {"å", "angstrom"},
-                "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
-                "_k": {"k"},
+                "_ry": {"ry"}, "_ha": {"ha", "hartree"}, "_ev": {"ev"},
+                "_angstrom": {"å", "angstrom"}, "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
+                "_k": {"k"}, "_v_vs_rhe": {"v"},
             }
-            expected = next(
-                (units for suffix, units in expected_units.items() if key.endswith(suffix)),
-                None,
-            )
-            if expected is None and not unit:
+            expected = next((units for suffix, units in expected_units.items() if suffix in key), None)
+            if same_number and expected is not None and unit in expected:
                 return "consistent"
-            if expected is not None and unit in expected:
+            if same_number and expected is None and not unit:
                 return "consistent"
-            if expected is not None or unit:
-                return "conflict"
-            return "needs_review"
+            if expected is not None and unit not in expected:
+                return "needs_review" if same_number else "conflict"
+            return "conflict" if not same_number else "needs_review"
+    if profile_path.endswith("support_motif"):
+        def canonical_motif(value: str) -> str:
+            value = _normalise_field_value(value)
+            return value.replace("]^0", "]0")
+        return "consistent" if canonical_motif(str(profile_value)) == canonical_motif(str(docx_value)) else "conflict"
+    if profile_path.endswith("basis_sensitivity"):
+        left = _normalise_field_value(profile_value)
+        right = _normalise_field_value(docx_value)
+        return "consistent" if right.startswith(left) else "conflict"
     return "conflict"
 
 
@@ -137,15 +166,22 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
         aliases = _aliases(path)
         unresolved_matches = []
         for item in manifest.get("unresolved_structured_fields", []):
-            item_scope = str(item.get("field", "")).split(".", 1)[0]
+            item_field = str(item.get("field", ""))
+            item_scope = item_field.split(".", 1)[0]
             if item_scope != root_scope:
                 continue
-            if system_id and str(item.get("system_id") or "").casefold() != system_id.casefold():
+            item_system = str(item.get("system_id") or "").casefold()
+            item_wp = str(item.get("work_package") or "").casefold()
+            if system_id and item_system and item_system != system_id.casefold():
                 continue
-            if work_package and str(item.get("work_package") or "").casefold() != work_package.casefold():
+            if work_package and item_wp and item_wp != work_package.casefold():
                 continue
+            profile_tail = ".".join(parts[2:]) if len(parts) > 2 else parts[-1]
+            profile_tail = re.sub(r"\[\d+\]", "", profile_tail)
+            item_tail = item_field.split(".", 1)[1] if "." in item_field else item_field
+            field_match = item_tail == profile_tail or item_tail.endswith("." + profile_tail)
             source_text = _normalise_label(str(item.get("source_text", "")))
-            if any(alias and alias in source_text for alias in aliases):
+            if field_match or any(alias and alias in source_text for alias in aliases):
                 unresolved_matches.append(item)
                 for evidence_id in item.get("evidence_ids", []):
                     if evidence_id and evidence_id not in evidence_ids:
