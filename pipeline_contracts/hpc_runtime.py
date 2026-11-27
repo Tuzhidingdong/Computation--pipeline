@@ -199,11 +199,11 @@ def render_beilong_cp2k_script(
 set -euo pipefail
 umask 077
 cd "$SLURM_SUBMIT_DIR"
-{cp2k_data_export}
 MODULE_INIT={shlex.quote(module_init_path)}
 test -r "$MODULE_INIT"
 source "$MODULE_INIT"
 module load {shlex.quote(str(resources['module']))}
+{cp2k_data_export}
 export OMP_NUM_THREADS="{int(resources['cpus_per_task'])}"
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close
