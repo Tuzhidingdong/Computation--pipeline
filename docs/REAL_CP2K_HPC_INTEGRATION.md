@@ -143,7 +143,7 @@ python -m pipeline_contracts.cli resume WORKFLOW_RUN_ID --state-db STATE_DB_PATH
 
 ## Verification and limitations
 
-Current GitHub Actions evidence: 72 tests, 70 passed, 2 optional live upstream source tests skipped; compileall passed. The suite injects command runners and fake upstream APIs. It does not authenticate to either real cluster.
+Current GitHub Actions evidence: 74 tests, 72 passed, 2 optional live upstream source tests skipped; compileall passed. The suite injects command runners and fake upstream APIs. It does not authenticate to either real cluster.
 
 Not live-verified in this phase:
 - the user's Windows paths, SSH aliases/configuration and credentials;
