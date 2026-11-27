@@ -117,14 +117,26 @@ class WorkflowStore:
 class WorkflowController:
     def __init__(self,store:WorkflowStore,adapter:WorkflowAdapter|None): self.store,self.adapter=store,adapter
     def create(self,plan):
-        plan.require_valid(); mode=getattr(self.adapter,"execution_mode","real") if self.adapter else "real"
-        rid=self.store.create_run(plan,mode)
-        input_identity = None
-        resolver = getattr(self.adapter, "resolve_plan_input", None)
+        plan.require_valid()
+        mode=getattr(self.adapter,"execution_mode","real") if self.adapter else "real"
+        input_identity=None
+        resolution_error=None
+        resolver=getattr(self.adapter,"resolve_plan_input",None)
         if callable(resolver):
-            input_identity = resolver()
-        for task in compile_initial_tasks(plan, input_identity=input_identity): self.store.add_task(rid,task)
-        self.store.event(rid,None,"PLAN_COMPILED",{"plan_hash":plan.sha256}); return rid
+            try:
+                input_identity=resolver()
+            except Exception as exc:
+                resolution_error=f"{type(exc).__name__}: {exc}"
+        rid=self.store.create_run(plan,mode)
+        tasks=compile_initial_tasks(plan,input_identity=input_identity)
+        for task in tasks:
+            self.store.add_task(rid,task)
+        self.store.event(rid,None,"PLAN_COMPILED",{"plan_hash":plan.sha256,"input_identity":input_identity})
+        if resolution_error:
+            self.store.update_task(rid,tasks[0]["task_id"],"UNAVAILABLE",error=resolution_error)
+            self.store.set_run_status(rid,"UNAVAILABLE")
+            self.store.event(rid,tasks[0]["task_id"],"INPUT_ARTIFACT_UNAVAILABLE",{"reason":resolution_error})
+        return rid
     @staticmethod
     def _decode_runtime(row):
         try: return json.loads(row.get("result_json") or "{}")
@@ -141,6 +153,8 @@ class WorkflowController:
             if accepts_kwargs or key in params: kwargs[key]=val
         return method(task,existing_job_id=job,**kwargs)
     def run(self,rid,plan):
+        if self.store.run_info(rid)["status"]=="UNAVAILABLE":
+            return "UNAVAILABLE"
         if self.adapter is None:
             self.store.set_run_status(rid,"UNAVAILABLE"); self.store.event(rid,None,"ADAPTER_UNAVAILABLE",{"message":"No real adapter injected; no Mock fallback."}); return "UNAVAILABLE"
         lock=self.store.acquire_run_lock(rid)
