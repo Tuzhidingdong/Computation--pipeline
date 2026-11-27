@@ -87,3 +87,12 @@ def validate_candidate(
         "bond_count": len(topology.get("bonds", [])), "donor_atoms": donor_atoms,
         "structure_sha256": digest,
     }
+
+
+def write_validation_report(report: Mapping[str, Any], path: str | Path) -> Path:
+    """Persist the exact validation report that will be registered and approved."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(dict(report), ensure_ascii=False, indent=2) + "\\n",
+                      encoding="utf-8")
+    return target
