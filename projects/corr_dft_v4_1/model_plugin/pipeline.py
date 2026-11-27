@@ -30,12 +30,16 @@ def generate_validate_review(
     lifecycle.transition(project_run_id, "MODEL_GENERATE", "RUNNING")
     generated = []
     try:
+        global_candidate_ids = set()
         for raw_spec in model_specs:
             spec = ModelSpec.from_mapping(raw_spec)
             candidates = build_candidates(
                 spec, root / spec.model_id, writer=structure_writer,
             )
             for candidate in candidates:
+                if candidate.candidate_id in global_candidate_ids:
+                    raise ValueError(f"candidate_id must be globally unique across all v4.1 model specs: {candidate.candidate_id}")
+                global_candidate_ids.add(candidate.candidate_id)
                 generated.append((spec, candidate))
         lifecycle.transition(project_run_id, "MODEL_GENERATE", "COMPLETED",
                              outputs={"candidate_ids": [c.candidate_id for _, c in generated]})
