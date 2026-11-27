@@ -867,6 +867,19 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "source_text": text, "work_package": "WP2",
             })
         if eid == "docx-block-000155":
+            if re.search(r"cluster-support orientations", text, re.I):
+                unresolved_structured_fields.extend([
+                    {
+                        "field": "tasks.support_cluster_docking_orientation_count", "status": "unresolved",
+                        "reason": "Initial cluster-support orientations are mentioned, but no numeric orientation count is stated in this source paragraph.",
+                        "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                    },
+                    {
+                        "field": "tasks.orientation_scope", "status": "unresolved",
+                        "reason": "Cluster-support orientations are mentioned, but the source does not specify whether a count is per catalyst or across both systems.",
+                        "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                    },
+                ])
             if re.search(r"3[-–]4 chemically distinct candidate configurations", text, re.I):
                 unresolved_structured_fields.append({
                     "field": "tasks.retained_structurally_distinct_candidates_per_catalyst", "status": "unresolved",
