@@ -137,6 +137,21 @@ def make_runtime(root, project_root, skill_root):
     for path in (ssh, scp, record, template):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("placeholder", encoding="utf-8")
+    template.write_text(
+        "#!/usr/bin/env bash\\n"
+        "#SBATCH --job-name=cp2k\\n#SBATCH --partition=node\\n"
+        "#SBATCH --account=research\\n#SBATCH --nodes=1\\n"
+        "#SBATCH --ntasks=4\\n#SBATCH --cpus-per-task=1\\n"
+        "#SBATCH --mem=8G\\n#SBATCH --time=01:00:00\\n"
+        "#SBATCH --output=slurm-%j.out\\n#SBATCH --error=slurm-%j.err\\n"
+        "source /etc/profile.d/modules.sh\\n"
+        "module use /public/env/modules/apps\\n"
+        "module use /public/env/modules/tools\\n"
+        "module load cp2k/2025.2-openmpi\\n"
+        "INPUT=cp2k.inp\\nOUTPUT=cp2k.out\\n"
+        "mpirun -np 4 cp2k.psmp -i $INPUT -o $OUTPUT\\n",
+        encoding="utf-8",
+    )
     basis = root / "BASIS_MOLOPT"
     potential = root / "GTH_POTENTIALS"
     basis.write_text("basis fixture", encoding="utf-8")
