@@ -158,6 +158,16 @@ def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: st
     return "conflict"
 
 
+def _claim_value_for_profile(claim: dict, profile_path: str) -> Any:
+    """Select a DOCX list element only when the Profile path explicitly indexes it."""
+    value = claim.get("value")
+    index_match = re.search(r"\[(\d+)\]$", profile_path)
+    if index_match and isinstance(value, (list, tuple)):
+        index = int(index_match.group(1))
+        return value[index] if index < len(value) else None
+    return value
+
+
 def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]]:
     field_provenance = {}
     reconciliation = []
@@ -210,13 +220,13 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
         else:
             docx_status = "docx_evidence"
             unique_docx_values = {
-                _normalise_field_value(claim.get("value", "")) for claim in matches
+                _normalise_field_value(_claim_value_for_profile(claim, path)) for claim in matches
             }
             if len(unique_docx_values) > 1:
                 reconciliation_status = "conflict"
             else:
                 comparisons = {
-                    _compare_profile_value(value, str(claim.get("value", "")), path)
+                    _compare_profile_value(value, str(_claim_value_for_profile(claim, path)), path)
                     for claim in matches
                 }
                 reconciliation_status = (
@@ -239,7 +249,7 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
             "profile_source": _PROFILE_REL_PATH,
             "docx_status": docx_status,
             "docx_evidence_ids": evidence_ids,
-            "docx_values": [claim.get("value") for claim in matches],
+            "docx_values": [_claim_value_for_profile(claim, path) for claim in matches],
             "unresolved_docx_sources": [
                 item.get("source_text", "") for item in unresolved_matches
             ],
