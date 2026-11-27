@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "active_project_root": "",
+  "python_executable": "",
+  "data_analysis": {
+    "source_root": "",
+    "project_root": ""
+  },
+  "chem_scitoolkit": {
+    "source_root": ""
+  },
+  "hpc_backends": {
+    "beilong": {
+      "enabled": false,
+      "alias": "",
+      "ssh_executable": "",
+      "scp_executable": "",
+      "ssh_config": "",
+      "skill_root": "",
+      "job_record_script": "",
+      "slurm_template": "",
+      "privacy_header_template": "",
+      "remote_root": "",
+      "allowed_workspace_root": "",
+      "module_init_path": "",
+      "cp2k_executable": "cp2k.psmp",
+      "command_timeout_seconds": 45
+    },
+    "ucas": {
+      "enabled": false,
+      "alias": "hpc",
+      "ssh_executable": "",
+      "scp_executable": "",
+      "skill_root": "",
+      "job_record_script": "",
+      "slurm_template": "",
+      "remote_root": "",
+      "account": "",
+      "command_timeout_seconds": 45
+    }
+  },
+  "resource_profiles": {
+    "beilong-cpu": {
+      "nodes": 1,
+      "ntasks": 1,
+      "cpus_per_task": 1,
+      "mem": "",
+      "time": "",
+      "partition": "",
+      "account": "",
+      "module": ""
+    },
+    "ucas-cpu": {
+      "nodes": 1,
+      "ntasks": 1,
+      "cpus_per_task": 1,
+      "mem": "",
+      "time": "",
+      "partition": "",
+      "account": "",
+      "module": "cp2k/2025.2-openmpi"
+    }
+  },
+  "input_files": {
+    "basis": "",
+    "potential": ""
+  }
+}
