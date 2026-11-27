@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Tuzhidingdong/Computation--pipeline/schemas/v41_model_spec.schema.json",
+  "title": "v4.1 Explicit Model Graph and Candidate Build Specification",
+  "type": "object",
+  "required": ["schema_version", "project_id", "model_id", "atoms", "bonds", "fragments", "expected", "build_constraints", "evidence"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "project_id": {"type": "string", "minLength": 1},
+    "model_id": {"type": "string", "minLength": 1},
+    "atoms": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "required": ["atom_id", "element", "position"],
+      "properties": {
+        "atom_id": {"type": "string"}, "element": {"type": "string"},
+        "position": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+        "formal_charge": {"type": "integer"}, "fragment_id": {"type": "string"},
+        "role": {"type": "string"}
+      }, "additionalProperties": true
+    }},
+    "bonds": {"type": "array", "items": {
+      "type": "object", "required": ["atom1", "atom2", "kind"],
+      "properties": {
+        "atom1": {"type": "string"}, "atom2": {"type": "string"},
+        "kind": {"enum": ["covalent", "coordination"]},
+        "order": {"type": ["number", "null"]}, "donor": {"type": "boolean"}
+      }, "additionalProperties": true
+    }},
+    "fragments": {"type": "object"},
+    "expected": {"type": "object", "required": ["atom_count", "charge", "multiplicity"]},
+    "build_constraints": {"type": "object", "required": ["candidate_transforms"]},
+    "evidence": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "artifact_formats": {"type": "object"}
+  },
+  "additionalProperties": true
+}
