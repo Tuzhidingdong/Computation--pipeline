@@ -5,7 +5,7 @@ import json
 from collections import Counter
 
 from pipeline_contracts.plan_compiler import ExtractedBlock, build_project_manifest, detect_conflicts
-from projects.corr_dft_v4_1.plan_compiler import _profile_provenance
+from projects.corr_dft_v4_1.plan_compiler import _compare_profile_value, _profile_provenance
 from projects.corr_dft_v4_1.plan_rules import load_v41_profile
 
 
@@ -154,6 +154,16 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
                          {"docx-block-000154", "docx-block-000158"})
         self.assertEqual(len(output_claims), 2)
 
+    def test_numeric_profile_unit_suffix_requires_explicit_docx_unit(self):
+        self.assertEqual(
+            _compare_profile_value(1.0e-6, "1.0E-6", "method.scf_eps_scf_ha.geometry_optimization"),
+            "needs_review",
+        )
+        self.assertEqual(
+            _compare_profile_value(1.0e-6, "1.0E-6 Ha", "method.scf_eps_scf_ha.geometry_optimization"),
+            "consistent",
+        )
+
     def test_numeric_formatting_normalizes_but_physical_units_do_not_merge(self):
         equivalent = detect_conflicts([
             {"field": "cutoff_ry", "label": "CUTOFF", "value": "500.0 Ry", "evidence_id": "ev-a"},
@@ -264,6 +274,13 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertEqual(by_field[field]["status"], "needs_review")
                 self.assertTrue(by_field[field]["docx_evidence_ids"])
+
+        geometry_eps = by_field["method.scf_eps_scf_ha.geometry_optimization"]
+        force_eps = by_field["method.scf_eps_scf_ha.local_hessian_force"]
+        self.assertIn("docx-block-000103", geometry_eps["docx_evidence_ids"])
+        self.assertIn("docx-block-000155", geometry_eps["docx_evidence_ids"])
+        self.assertIn("docx-block-000103", force_eps["docx_evidence_ids"])
+        self.assertIn("docx-block-000052", force_eps["docx_evidence_ids"])
 
         orientation = by_field["tasks.WP1.support_cluster_docking_orientation_count"]
         self.assertEqual(orientation["status"], "profile_only")
