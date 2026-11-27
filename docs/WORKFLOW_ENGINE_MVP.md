@@ -28,7 +28,7 @@ The GEO_OPT → ENERGY edge is tested with an injected fake HPC/CST/Data_analysi
 
 SQLite persists the Workflow Run, plan snapshot/hash, task identities, dependency edges, attempts, status transitions, remote work directory, input byte hashes, submission timestamp, Job ID, output Artifact references and diagnostics.
 
-- The workflow run is protected by a SQLite transaction-backed process lock.
+- The workflow run is protected by a SQLite transaction-backed process lock; a test launches a separate OS process and verifies that it cannot acquire a lock held by the first process.
 - A submission intent is committed before sbatch.
 - The Job ID callback commits the returned Slurm Job ID immediately, before creating or synchronizing the upstream Job Record.
 - Resume with a known Job ID queries that job and does not re-submit.
@@ -84,7 +84,7 @@ Official references:
 
 ## Validation evidence and limits
 
-Latest Actions run on this branch: 72 tests, 70 passed, 2 optional upstream-source tests skipped; compileall passed. Tests cover the Mock DAG, injected SSH/SCP/Slurm command construction, submission reconciliation, process locking, Data_analysis API order, fake real-adapter GEO_OPT → ENERGY execution, failure gates, hashes and Evidence handoff.
+Latest Actions run on this branch: 74 tests, 72 passed, 2 optional upstream-source tests skipped; compileall passed. Tests cover the Mock DAG, injected SSH/SCP/Slurm command construction, submission reconciliation, process locking, Data_analysis API order, fake real-adapter GEO_OPT → ENERGY execution, failure gates, hashes and Evidence handoff.
 
 GitHub Actions does not access real HPC. The actual user's SSH profile, cluster configuration, resource permissions, module availability, CP2K runtime, Data_analysis checkout and resulting scientific outputs remain unverified until a read-only local preflight and separately approved execution are performed.
 
