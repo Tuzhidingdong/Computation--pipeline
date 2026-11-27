@@ -378,7 +378,12 @@ class SkillSlurmBackend:
                 ) from exc
         if on_job_submitted:
             on_job_submitted(job_id, details)
-        self._create_upstream_job_record(task_manifest, job_id, context)
+        try:
+            self._create_upstream_job_record(task_manifest, job_id, context)
+        except Exception as exc:
+            # The Job ID is already durable. Record creation trouble must not
+            # cause another sbatch or be misclassified as a scientific failure.
+            context["job_record_warning"] = f"{type(exc).__name__}: {exc}"
         return JobReference(job_id, task_manifest.task_id, self.backend_id)
 
     def _reconcile_submission(self, workdir: str, submission_time: str) -> str | None:
@@ -482,12 +487,20 @@ class SkillSlurmBackend:
 
     def get_record(self, job_reference: JobReference) -> HpcJobRecord:
         self._require_backend(job_reference)
-        self._sync_upstream_job_record(job_reference.job_id)
-        record_output = self._run_local([
+        context = self._task_context.get(job_reference.task_id)
+        show_argv = [
             str(self.config.get("python_executable") or sys.executable),
             str(self.job_record_script), "show",
             "--project-root", str(self.local_project_root), "--job-id", job_reference.job_id,
-        ])
+        ]
+        # sbatch acceptance and durable Job ID persistence happen before local
+        # Job Record creation. If the process stopped in that small window,
+        # reconstruct the record from the stored task context, not by resubmitting.
+        probe = self.runner.run(show_argv, timeout=self.command_timeout)
+        if probe.returncode != 0 and context is not None:
+            self._create_upstream_job_record(context["manifest"], job_reference.job_id, context)
+        self._sync_upstream_job_record(job_reference.job_id)
+        record_output = self._run_local(show_argv)
         try:
             record = __import__("json").loads(record_output.stdout)
         except Exception as exc:
@@ -495,10 +508,16 @@ class SkillSlurmBackend:
         scheduler = str(record.get("slurm", {}).get("state", "UNKNOWN")).split()[0].upper()
         app = record.get("application", {})
         normal = app.get("normal_termination")
+        raw_exit = str(record.get("slurm", {}).get("exit_code") or "")
+        exit_code = None
+        if raw_exit:
+            first = raw_exit.split(":", 1)[0]
+            if first.isdigit():
+                exit_code = int(first)
         return HpcJobRecord(
             job_reference=job_reference, scheduler_state=scheduler,
             application_state="succeeded" if normal is True else "failed" if normal is False else "unknown",
-            application_exit_code=0 if normal is True else None,
+            application_exit_code=exit_code,
             completion_evidence=app.get("observed_marker"),
         )
 
