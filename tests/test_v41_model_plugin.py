@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from projects.corr_dft_v4_1.model_plugin import ModelSpec, build_candidates, create_approval_record, verify_approval_record
-from projects.corr_dft_v4_1.model_plugin.artifacts import register_candidate_structure
+from projects.corr_dft_v4_1.model_plugin.artifacts import register_candidate_structure, register_candidate_package
 from projects.corr_dft_v4_1.model_plugin.review import build_review_package
 
 
@@ -96,6 +96,36 @@ class ModelPluginTests(unittest.TestCase):
             package_path = build_review_package([candidate], tmp + "/rendered", preview_renderer=renderer)
             package = json.loads(package_path.read_text(encoding="utf-8"))
             self.assertEqual(package["review_status"], "AWAITING_USER_REVIEW")
+
+    def test_full_candidate_package_registers_all_required_artifacts(self):
+        import hashlib
+        class FakeDataAnalysis:
+            def __init__(self):
+                self.files = {}
+                self.calls = []
+            def register_derived_artifact(self, project_root, file_path, *, source_artifact_ids, format_id, provenance):
+                path = Path(file_path)
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                artifact_id = "da-" + str(len(self.files) + 1)
+                self.files[artifact_id] = path
+                self.calls.append((format_id, provenance["artifact_role"]))
+                return {"artifact_id":artifact_id,"sha256":digest}
+            def resolve_artifact_path(self, project_root, artifact_id):
+                return str(self.files[artifact_id])
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = build_candidates(self._spec(), tmp, writer=SimpleWriter())[0]
+            report = {"status":"PASS","structure_sha256":candidate.sha256}
+            api = FakeDataAnalysis()
+            result = register_candidate_package(
+                candidate, report, project_root=tmp, data_analysis_api=api,
+                format_ids={"structure":"extxyz","topology":"json","metadata":"json",
+                            "validation_report":"json"}, parent_artifact_ids=[],
+            )
+            self.assertEqual(set(result["artifacts"]), {
+                "structure","topology","metadata","validation_report"
+            })
+            self.assertEqual(len(api.calls), 4)
+            self.assertTrue(all(item["verified"] for item in result["artifacts"].values()))
 
     def test_missing_3d_position_fails_closed(self):
         raw = {
