@@ -93,7 +93,11 @@ class V41CompilerTests(unittest.TestCase):
         self.assertEqual(target["docx_status"], "unresolved")
         self.assertEqual(target["status"], "needs_review")
         self.assertEqual(target["docx_evidence_ids"], ["docx-block-000001"])
-        self.assertEqual(manifest["field_provenance"]["tasks"]["status"], "unresolved")
+        self.assertTrue(any(
+            item["field"] == "tasks" and item["work_package"] == "WP1"
+            and item["evidence_ids"] == ["docx-block-000001"]
+            for item in manifest["unresolved_structured_fields"]
+        ))
 
     def test_docx_profile_value_mismatch_is_reported_without_profile_override(self):
         body = """

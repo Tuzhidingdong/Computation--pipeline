@@ -405,6 +405,33 @@ def _ids_from_claims(items: list[dict]) -> list[str]:
     return result
 
 
+
+
+def _collect_evidence_ids(value: Any) -> list[str]:
+    """Collect evidence references recursively from structured manifest values."""
+    found: list[str] = []
+
+    def visit(item: Any) -> None:
+        if isinstance(item, dict):
+            evidence_ids = item.get("evidence_ids")
+            if isinstance(evidence_ids, list):
+                for evidence_id in evidence_ids:
+                    if evidence_id and str(evidence_id) not in found:
+                        found.append(str(evidence_id))
+            evidence_id = item.get("evidence_id")
+            if evidence_id and str(evidence_id) not in found:
+                found.append(str(evidence_id))
+            for key, child in item.items():
+                if key not in {"evidence_id", "evidence_ids"}:
+                    visit(child)
+        elif isinstance(item, (list, tuple)):
+            for child in item:
+                visit(child)
+
+    visit(value)
+    return found
+
+
 def _structured_value(claim: dict) -> dict:
     return {
         "value": claim.get("value"),
@@ -684,28 +711,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
         if field in field_provenance:
             continue
         if value:
-            ids = []
-            if field == "sections":
-                ids = [item["evidence_id"] for item in value]
-            elif field == "systems":
-                ids = _ids_from_claims([
-                    {"evidence_ids": item.get("evidence_ids", [])} for item in value
-                ])
-            elif field == "models":
-                ids = [evidence_id for item in value for evidence_id in item.get("evidence_ids", [])]
-            elif field == "tasks":
-                ids = [evidence_id for item in value for evidence_id in item.get("evidence_ids", [])]
-            elif field == "input_outputs":
-                ids = [eid for item in inputs + outputs for eid in item.get("evidence_ids", [])]
-            elif field == "resources":
-                ids = [eid for items in resources.values() for item in items for eid in item.get("evidence_ids", [])]
-            elif field == "dependencies":
-                ids = [eid for item in value for eid in item.get("evidence_ids", [])]
-            else:
-                ids = _ids_from_claims([
-                    {"evidence_ids": item.get("evidence_ids", [])} for item in value
-                ])
-            field_provenance[field] = _provenance("docx_evidence", list(dict.fromkeys(ids)))
+            field_provenance[field] = _provenance("docx_evidence", _collect_evidence_ids(value))
         elif field in unresolved_categories:
             field_provenance[field] = _provenance(
                 "unresolved",
