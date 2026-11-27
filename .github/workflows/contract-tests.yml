@@ -27,4 +27,4 @@ jobs:
       - name: Run mock contract tests
         run: python -m unittest discover -s tests -v
       - name: Compile contract modules
-        run: python -m compileall -q pipeline_contracts tests
+        run: python -m compileall -q pipeline_contracts tests examples
