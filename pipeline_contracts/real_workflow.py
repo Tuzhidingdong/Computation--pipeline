@@ -5,6 +5,7 @@ import hashlib
 import importlib
 import json
 import os
+import shutil
 import sys
 import uuid
 from pathlib import Path
@@ -193,6 +194,14 @@ class RealCP2KWorkflowAdapter:
             builder_cls, workflows, _style = self.cst._load_components()
             if not callable(getattr(builder_cls, "build_finite_system", None)):
                 raise RealWorkflowUnavailable("chem-scitoolkit CP2KInputBuilder.build_finite_system is unavailable")
+            try:
+                import ase  # noqa: F401
+            except ImportError as exc:
+                raise RealWorkflowUnavailable("ASE is required to read structure/optimized-geometry files") from exc
+            if isinstance(self.cst, RealCSTAdapter) and shutil.which("cp2klint") is None:
+                raise RealWorkflowUnavailable(
+                    "chem-scitoolkit input validation requires cp2k-input-tools executable 'cp2klint' on local PATH"
+                )
             for function_name in ("validate_cp2k_input", "validate_cp2k_output"):
                 if not callable(getattr(workflows, function_name, None)):
                     raise RealWorkflowUnavailable(f"chem-scitoolkit missing callable {function_name}")
@@ -417,7 +426,7 @@ class RealCP2KWorkflowAdapter:
             operation="cp2k.build_finite_system",
             input_artifacts=(structure,),
             task_config={"builder_options": {
-                "project_name": "cp2k_" + str(task["task_id"]).replace("-", "_")[:32],
+                "project_name": "calc",
                 "run_type": stage_type, "functional": str(method["xc"]),
                 "cutoff_ry": int(method["cutoff_ry"]), "rel_cutoff_ry": int(method.get("rel_cutoff_ry", 50)),
                 "periodic": str(method["cell_periodicity"]),
@@ -448,7 +457,7 @@ class RealCP2KWorkflowAdapter:
 """
             input_text = input_text[:position] + trajectory_print + input_text[position:]
         suffix = uuid.uuid4().hex[:10]
-        input_name = "cp2k_" + str(task["task_id"])[:32] + ".inp"
+        input_name = "input.inp"
         derived_dir = self.da_project_root / "data" / "derived"
         input_path = derived_dir / input_name
         _atomic_new_file(input_path, input_text.encode("utf-8"))
