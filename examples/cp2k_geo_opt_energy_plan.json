@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "cp2k-geo-opt-energy-example",
+  "title": "CP2K GEO_OPT then ENERGY",
+  "scientific_question": "Optimize the supplied structure and evaluate its single-point energy using the same declared method.",
+  "project_root": "./example-project",
+  "structure": {"path": "./structures/input.xyz", "format": "xyz"},
+  "method": {"xc": "PBE", "basis_set": "BASIS_MOLOPT", "pseudopotential": "GTH-PBE",
+    "cutoff_ry": 600, "scf": {"eps_scf": 1e-6, "max_scf": 100}, "charge": 0, "multiplicity": 1},
+  "calculations": [
+    {"id": "relax", "operation": "cp2k.geo_opt", "tool_version": "2025.2", "outputs": ["cp2k_output", "optimized_structure"]},
+    {"id": "single-point", "operation": "cp2k.energy", "tool_version": "2025.2", "outputs": ["cp2k_output", "energy"]}
+  ],
+  "execution": {"backend": "user-configured-hpc-alias", "resources": {"profile": "user-configured-cpu-profile"}},
+  "analysis": {"operation": "dft.artifact.read", "reader_id": "cp2k-output-tools"},
+  "quality_gates": {"geo_opt_converged": {"source": "cst.cp2k.validate_output", "required": true}},
+  "retry_policy": {"infrastructure_retries": 2, "scientific_parameter_changes": false},
+  "metadata": {"note": "Example schema only; method/resources must be checked against the actual project."}
+}
