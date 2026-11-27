@@ -205,7 +205,8 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
                 or profile_tail.startswith(item_tail + ".")
             )
             source_text = _normalise_label(str(item.get("source_text", "")))
-            if field_match or any(alias and alias in source_text for alias in aliases):
+            generic_scope_item = item_field == root_scope
+            if field_match or (generic_scope_item and any(alias and alias in source_text for alias in aliases)):
                 unresolved_matches.append(item)
                 for evidence_id in item.get("evidence_ids", []):
                     if evidence_id and evidence_id not in evidence_ids:
