@@ -68,7 +68,7 @@ class FakeDataAnalysisAPI:
 
     def read_dft_file(self, path, *, format_id=None, reader_id=None, **kwargs):
         self.calls.append(("read_dft_file", Path(path).resolve(), format_id, reader_id, kwargs))
-        payload = Path(path).read_text(encoding="utf-8")
+        source_bytes = Path(path).read_bytes()
         data = {"row_count": 1, "result_kind": "synthetic-fixture"}
         if self.unserializable_result:
             data["non_json_value"] = object()
@@ -79,7 +79,7 @@ class FakeDataAnalysisAPI:
             "reader_id": reader_id or "python-csv",
             "reader_version": "Python standard library",
             "source_path": str(Path(path).resolve()),
-            "source_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+            "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
             "data": data,
             "warnings": [],
             "error": "synthetic unavailable reader" if self.reader_status != "parsed" else None,

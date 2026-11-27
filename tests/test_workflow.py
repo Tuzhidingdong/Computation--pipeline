@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json, subprocess, sys, tempfile, unittest
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from pipeline_contracts.calculation_plan import CalculationPlan, compile_initial_tasks
@@ -56,8 +56,9 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(adapter.submissions[first["task_id"]],saved_job)
         self.assertEqual(len(adapter.submissions),2)
     def test_missing_real_adapter_is_not_silently_mocked(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             ctl=WorkflowController(store,None); plan=example_plan(); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"UNAVAILABLE")
             self.assertEqual(store.run_info(rid)["execution_mode"],"real")
@@ -67,8 +68,9 @@ class WorkflowTests(unittest.TestCase):
                 result=super().execute(task,existing_job_id)
                 from dataclasses import replace
                 return replace(result,application_exit_code=17)
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             plan=example_plan(); ctl=WorkflowController(store,BadApplication()); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"FAILED")
             self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
@@ -119,8 +121,9 @@ class WorkflowTests(unittest.TestCase):
                 return ExecutionResult("FAILED_PERMANENT",job_id="777",scheduler_state="FAILED",
                                        application_exit_code=1,diagnostics=("app failed",),execution_mode="real")
             def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             plan=example_plan(); adapter=FailOnce(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"FAILED")
             self.assertEqual(ctl.resume(rid,plan),"FAILED")
@@ -136,8 +139,9 @@ class WorkflowTests(unittest.TestCase):
                 return ExecutionResult("RETRY_WAIT",diagnostics=("retry requires explicit authorization",),
                                        execution_mode="real")
             def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             plan=example_plan(); adapter=RetryWait(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"RETRY_WAIT")
             self.assertEqual(ctl.resume(rid,plan),"RETRY_WAIT")
@@ -156,8 +160,9 @@ class WorkflowTests(unittest.TestCase):
                     diagnostics=("compute node failed",), execution_mode="real",
                 )
             def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             plan=example_plan(); adapter=InfraFail(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"FAILED_INFRASTRUCTURE")
             self.assertEqual(ctl.resume(rid,plan),"FAILED_INFRASTRUCTURE")
@@ -181,8 +186,9 @@ class WorkflowTests(unittest.TestCase):
                     scheduler_state="RUNNING",state_trace=("SUBMITTED","QUEUED","RUNNING"),
                     execution_mode="real",runtime={"remote_workdir":"/opaque/runs/abc123"})
             def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
-        with tempfile.TemporaryDirectory() as tmp:
-            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+        with ExitStack() as stack:
+            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); stack.callback(store.close)
             plan=example_plan(); adapter=RunningAdapter(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"RUNNING")
             first=store.tasks(rid)[0]; runtime=json.loads(first["result_json"])
