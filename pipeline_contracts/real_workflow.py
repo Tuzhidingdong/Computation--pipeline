@@ -9,6 +9,7 @@ import sys
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping
+from urllib.parse import unquote, urlparse
 
 from .hpc_runtime import (
     BeiLongHPCAdapter, UCASHPCAdapter, HpcRuntimeError, SubmissionUnknown,
@@ -135,6 +136,7 @@ class RealCP2KWorkflowAdapter:
                     f"Unsupported HPC backend {self.backend_id!r}; registered backends: beilong, ucas"
                 )
         self._prepared: dict[str, dict[str, Any]] = {}
+        self.initial_structure_ref: ArtifactRef | None = None
         self._run_context: dict[str, dict[str, Any]] = {}
         self._preflight_error: str | None = None
 
@@ -158,17 +160,30 @@ class RealCP2KWorkflowAdapter:
             self._preflight_error = str(exc)
             return {"ready": False, "status": "UNAVAILABLE", "reason": str(exc)}
 
+    def resolve_plan_input(self) -> Mapping[str, Any]:
+        """Register/resolve the source structure before DAG identity is finalized."""
+        self.initial_structure_ref = self._register_structure()
+        return {
+            "artifact_id": self.initial_structure_ref.artifact_id,
+            "sha256": self.initial_structure_ref.sha256,
+            "format_id": self.initial_structure_ref.format_id,
+            "uri": self.initial_structure_ref.uri,
+        }
+
     def _register_structure(self) -> ArtifactRef:
+        if self.initial_structure_ref is not None:
+            return self.initial_structure_ref
         structure = dict(self.plan.structure)
         if structure.get("artifact_id"):
             artifact_id = str(structure["artifact_id"])
             path = Path(self.da.resolve_artifact_path(ArtifactRef(artifact_id=artifact_id)))
             digest = _sha(path)
-            return ArtifactRef(
+            self.initial_structure_ref = ArtifactRef(
                 artifact_id=artifact_id, sha256=digest,
                 format_id=structure.get("format"), uri=path.as_uri(),
                 source_system="Data_analysis",
             )
+            return self.initial_structure_ref
         raw_path = structure.get("path")
         if not raw_path:
             raise RealWorkflowUnavailable("CalculationPlan structure.path or structure.artifact_id is required")
@@ -199,11 +214,12 @@ class RealCP2KWorkflowAdapter:
         artifact_id = str(ids[0])
         resolved = Path(self.da.resolve_artifact_path(ArtifactRef(artifact_id=artifact_id)))
         digest = _sha(resolved)
-        return ArtifactRef(
+        self.initial_structure_ref = ArtifactRef(
             artifact_id=artifact_id, sha256=digest,
             format_id=structure.get("format"), uri=resolved.as_uri(),
             source_system="Data_analysis",
         )
+        return self.initial_structure_ref
 
     def _read_structure(self, artifact: ArtifactRef) -> tuple[list[tuple[str, float, float, float]], dict[str, float]]:
         path = Path(self.da.resolve_artifact_path(artifact))
@@ -458,7 +474,13 @@ class RealCP2KWorkflowAdapter:
         return HpcTaskManifest(str(task["task_id"]), refs, payload=payload)
 
     def _register_retrieved(self, role: str, reference: ArtifactRef, job_id: str) -> ArtifactRef:
-        staged_path = Path(reference.uri.removeprefix("file://"))
+        parsed = urlparse(reference.uri or "")
+        if parsed.scheme != "file":
+            raise RealWorkflowUnavailable(f"retrieved {role} does not have a local file URI")
+        local_value = unquote(parsed.path)
+        if os.name == "nt" and len(local_value) >= 3 and local_value[0] == "/" and local_value[2] == ":":
+            local_value = local_value[1:]
+        staged_path = Path(local_value)
         if not staged_path.is_file() or _sha(staged_path).lower() != str(reference.sha256).lower():
             raise RealWorkflowUnavailable(f"recovered {role} file failed local SHA256 verification")
         receipt = self.register_inputs(
@@ -467,7 +489,7 @@ class RealCP2KWorkflowAdapter:
             received_from=f"{self.backend_id} Slurm Job {job_id} output:{role}",
         )
         ids = list(receipt.get("artifact_ids") or []) if isinstance(receipt, Mapping) else []
-        if receipt.get("failures") or len(ids) != 1:
+        if not isinstance(receipt, Mapping) or receipt.get("failures") or len(ids) != 1:
             raise RealWorkflowUnavailable(
                 f"Data_analysis failed to register retrieved {role}: " +
                 json.dumps(receipt, ensure_ascii=False, default=str)[:1000]
@@ -510,7 +532,7 @@ class RealCP2KWorkflowAdapter:
                     if not workdir:
                         raise SubmissionUnknown("", "submission intent has no recoverable remote work directory")
                     self.hpc.attach_task(manifest, workdir)
-                    found = self.hpc._reconcile_submission(workdir, str(intent.get("submission_time") or ""))
+                    found = self.hpc.reconcile_submission(workdir, str(intent.get("submission_time") or ""))
                     if not found:
                         raise SubmissionUnknown(workdir, "submission could not be reconciled; no duplicate sbatch attempted")
                     job = __import__("pipeline_contracts.models", fromlist=["JobReference"]).JobReference(
@@ -588,7 +610,7 @@ class RealCP2KWorkflowAdapter:
             output_ref = self._register_retrieved("cp2k_output", by_role["cp2k_output"], job.job_id)
             cst = self.cst.execute(CSTTaskRequest(
                 task_id=str(task["task_id"]) + "-output-qc",
-                operation="cp2p.validate_output".replace("cp2p", "cp2k"),
+                operation="cp2k.validate_output",
                 input_artifacts=(output_ref,),
                 parameters={"run_type": prepared["run_type"]},
                 upstream_job_reference=job.job_id,
@@ -634,7 +656,7 @@ class RealCP2KWorkflowAdapter:
                 status="COMPLETED", job_id=job.job_id, scheduler_state=record.scheduler_state,
                 application_exit_code=0, output_artifacts=tuple(outputs), converged=converged,
                 qc={"cst": dict(validation), "scientific_qc": "not_assessed"},
-                diagnostics=(), execution_mode="real",
+                diagnostics=(), execution_mode="real", runtime={**prepared, "remote_workdir": prepared.get("remote_workdir"), "job_id": job.job_id},
             )
         except SubmissionUnknown:
             raise
@@ -675,7 +697,7 @@ class RealCP2KWorkflowAdapter:
                     "structure_sha256": structure_sha,
                     "environment": {"cp2k_version": str(task.get("tool_version"))},
                 },
-                upstream_job_reference=str(context.get("job_id") or ""),
+                upstream_job_reference=str(task.get("_upstream_job_reference") or ""),
             )
             outcome = self.da.analyze(request)
             successful = outcome.status in {TaskStatus.SUCCEEDED, TaskStatus.WARNING}
