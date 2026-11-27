@@ -29,7 +29,7 @@ class ProjectLifecycleTests(unittest.TestCase):
                 validation = {"status":"PASS", "structure_sha256":digest}
                 record = create_approval_record(
                     root / "approval.json", approver="owner", candidate_id="candidate-1",
-                    artifact_ref={"artifact_id":"artifact-1","sha256":report["structure_sha256"],"source_system":"Data_analysis","verified":True}, structure_path=structure,
+                    artifact_ref={"artifact_id":"artifact-1","sha256":digest,"source_system":"Data_analysis","verified":True}, structure_path=structure,
                     validation_report=validation, approved=True,
                 )
                 lifecycle.freeze_approval(project_run, record)
