@@ -58,6 +58,19 @@ class ModelSpec:
             raise ValueError("expected.candidate_count must be >= 1")
         if not isinstance(raw["build_constraints"], Mapping):
             raise ValueError("build_constraints must be an object")
+        constraints = dict(raw["build_constraints"])
+        if not isinstance(constraints.get("candidate_transforms"), list):
+            raise ValueError("build_constraints.candidate_transforms must be an explicit list")
+        if "random_seed" not in constraints:
+            raise ValueError("build_constraints.random_seed must be recorded (use null for deterministic non-random builds)")
+        donor_atoms = constraints.get("donor_atoms")
+        if not isinstance(donor_atoms, list) or any(item not in known for item in donor_atoms):
+            raise ValueError("build_constraints.donor_atoms must list valid atom IDs (or an empty list)")
+        for bond in bonds:
+            if bond["kind"] == "coordination" and not (
+                bond["atom1"] in donor_atoms or bond["atom2"] in donor_atoms
+            ):
+                raise ValueError("each coordination bond must reference an explicit donor atom")
         return cls("1.0.0", str(raw["project_id"]), str(raw["model_id"]), atoms, bonds,
                    dict(raw["fragments"]), expected,
                    dict(raw["build_constraints"]), tuple(dict(x) for x in raw["evidence"]))
