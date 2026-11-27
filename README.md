@@ -49,6 +49,8 @@ computation-pipeline compile-calculation-plan resolved-manifest.json approved-ca
 
 The two v4.1 resolutions above are explicit owner decisions; the CLI never applies them automatically.
 
+The v4.1 model plugin exposes `generate_validate_review()` to run deterministic candidate generation, validation, Data_analysis Artifact registration and review. It stops at `AWAITING_APPROVAL`; call `approve_candidate()` only after the owner has reviewed the package. `ProjectLifecycle.create_calculation_run()` then verifies the immutable approval and hands the exact Artifact ID/SHA to the existing CalculationPlan DAG.
+
 ## Quick start
 
     python -m pipeline_contracts.cli plan .\calculation-plan.json
