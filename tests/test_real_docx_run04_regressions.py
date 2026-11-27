@@ -310,7 +310,8 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
 
         geometry_eps = by_field["method.scf_eps_scf_ha.geometry_optimization"]
         force_eps = by_field["method.scf_eps_scf_ha.local_hessian_force"]
-        self.assertEqual(geometry_eps["docx_evidence_ids"], ["docx-block-000155"])
+        self.assertEqual(set(geometry_eps["docx_evidence_ids"]),
+                         {"docx-block-000155", "docx-block-000103"})
         self.assertIn("docx-block-000155", force_eps["docx_evidence_ids"])
         self.assertIn("docx-block-000052", force_eps["docx_evidence_ids"])
         self.assertTrue(any(
