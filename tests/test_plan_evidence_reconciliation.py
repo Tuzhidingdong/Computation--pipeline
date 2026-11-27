@@ -172,7 +172,7 @@ class ProjectProfileEvidenceReconciliationTests(unittest.TestCase):
     def test_different_units_are_not_converted_or_treated_as_equal(self):
         profile = {"method": {"cutoff": "500 eV"}}
         manifest = make_manifest(
-            [claim("cutoff", "500 Ry", "ev-1")],
+            [claim("cutoff", "500 Ry", "ev-1", source_text="Cutoff: 500 Ry")],
             [evidence("ev-1", "Cutoff: 500 Ry", 1)],
         )
         result = self.result_for(reconcile_project_profile(profile, manifest), "method.cutoff")
