@@ -44,8 +44,11 @@ class MockCSTAdapter:
             self.status = TaskStatus(status)
         except ValueError as exc:
             raise ContractError(f"unsupported mock CST status: {status}") from exc
-        if self.status not in {TaskStatus.SUCCEEDED, TaskStatus.WARNING, TaskStatus.FAILED, TaskStatus.PENDING}:
-            raise ContractError("mock CST supports succeeded, warning, failed, or pending")
+        if self.status not in {
+            TaskStatus.SUCCEEDED, TaskStatus.WARNING, TaskStatus.FAILED,
+            TaskStatus.PENDING, TaskStatus.UNAVAILABLE,
+        }:
+            raise ContractError("unsupported mock CST status")
         self.last_request: CSTTaskRequest | None = None
 
     def execute(self, request: CSTTaskRequest) -> AdapterOutcome:
@@ -55,8 +58,22 @@ class MockCSTAdapter:
             output = (_mock_artifact("cst", f"mock-cst-{request.task_id}", f"{request.task_id}/result"),)
         diagnostics: tuple[Diagnostic, ...] = ()
         if self.status == TaskStatus.WARNING:
-            diagnostics = (Diagnostic("MOCK_CST_WARNING", "Synthetic warning for contract testing", DiagnosticSeverity.WARNING),)
-        error = "Synthetic CST adapter failure; no calculation was run" if self.status == TaskStatus.FAILED else None
+            diagnostics = (
+                Diagnostic("MOCK_CST_WARNING", "Synthetic validation warning; no scientific QC was performed",
+                           DiagnosticSeverity.WARNING),
+            )
+        elif self.status in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE}:
+            diagnostics = (
+                Diagnostic(
+                    "MOCK_CST_" + self.status.value.upper(),
+                    "Synthetic CST validation did not run successfully",
+                    DiagnosticSeverity.ERROR,
+                ),
+            )
+        error = (
+            "Synthetic CST adapter " + self.status.value + "; no calculation was run"
+            if self.status in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE} else None
+        )
         provenance = ProvenanceRecord(
             task_id=request.task_id,
             component="MockCSTAdapter",
@@ -67,7 +84,7 @@ class MockCSTAdapter:
             upstream_job_reference=request.upstream_job_reference,
             parameters=request.parameters,
             software={"adapter": "mock-contract-v1"},
-            warnings=tuple(item.message for item in diagnostics),
+            warnings=tuple(item.message for item in diagnostics if item.severity == DiagnosticSeverity.WARNING),
         )
         return AdapterOutcome(
             task_id=request.task_id,
@@ -88,43 +105,102 @@ class MockCSTAdapter:
 
 
 class MockDataAnalysisAdapter:
-    """Returns synthetic IDs/references without creating an Artifact Store."""
+    """Returns synthetic IDs/references for orchestration tests; no Artifact Store is created."""
 
-    def __init__(self, status: TaskStatus | str = TaskStatus.SUCCEEDED) -> None:
+    def __init__(
+        self,
+        status: TaskStatus | str = TaskStatus.SUCCEEDED,
+        *,
+        failure_code: str = "MOCK_READER_FAILED",
+        failure_message: str | None = None,
+    ) -> None:
         try:
             self.status = TaskStatus(status)
         except ValueError as exc:
             raise ContractError(f"unsupported mock Data_analysis status: {status}") from exc
-        if self.status not in {TaskStatus.SUCCEEDED, TaskStatus.WARNING, TaskStatus.FAILED, TaskStatus.PENDING}:
-            raise ContractError("mock Data_analysis supports succeeded, warning, failed, or pending")
+        if self.status not in {
+            TaskStatus.SUCCEEDED, TaskStatus.WARNING, TaskStatus.FAILED,
+            TaskStatus.PENDING, TaskStatus.UNAVAILABLE,
+        }:
+            raise ContractError("unsupported mock Data_analysis status")
+        self.failure_code = failure_code
+        self.failure_message = failure_message
         self.last_request: AnalysisRequest | None = None
 
     def analyze(self, request: AnalysisRequest) -> AnalysisOutcome:
         self.last_request = request
-        analysis_run_id = f"mock-analysis-run-{request.task_id}"
+        successful = self.status in {TaskStatus.SUCCEEDED, TaskStatus.WARNING}
+        analysis_run_id = f"mock-analysis-run-{request.task_id}" if successful else None
         output = ()
         evidence = ()
-        if self.status in {TaskStatus.SUCCEEDED, TaskStatus.WARNING}:
-            output = (_mock_artifact("data-analysis", f"mock-analysis-artifact-{request.task_id}", f"{request.task_id}/analysis"),)
-            source_hashes = {
+        evidence_package = None
+        analysis_run_record = {}
+        if successful:
+            output = (
+                _mock_artifact(
+                    "data-analysis",
+                    f"mock-analysis-artifact-{request.task_id}",
+                    f"{request.task_id}/analysis",
+                ),
+            )
+            known_hashes = {
                 item.artifact_id: item.sha256
                 for item in request.input_artifacts
                 if item.sha256 is not None
             }
+            source_ids = tuple(
+                dict.fromkeys(
+                    [item.artifact_id for item in request.input_artifacts]
+                    + [item.artifact_id for item in output]
+                )
+            )
+            evidence_id = f"mock-evidence-{request.task_id}"
             evidence = (
                 EvidenceRef(
-                    evidence_id=f"mock-evidence-{request.task_id}",
-                    source_artifact_ids=tuple(item.artifact_id for item in request.input_artifacts),
-                    source_hashes=source_hashes,
+                    evidence_id=evidence_id,
+                    source_artifact_ids=source_ids,
+                    source_hashes=known_hashes,
                     source_locator=f"mock://evidence/{request.task_id}",
                     contract_id="mock-evidence-reference",
                     contract_version="0",
                 ),
             )
+            analysis_run_record = {
+                "analysis_run_id": analysis_run_id,
+                "operation_id": request.operation,
+                "input_artifact_ids": [item.artifact_id for item in request.input_artifacts],
+                "output_artifact_ids": [item.artifact_id for item in output],
+                "input_hashes": known_hashes,
+                "output_hashes": {},
+                "status": self.status.value,
+                "qc_status": "not_evaluated",
+                "execution_mode": "mock",
+            }
+            evidence_package = {
+                "evidence_package_id": evidence_id,
+                "execution_mode": "mock",
+                "analysis_run_id": analysis_run_id,
+                "input_artifact_ids": analysis_run_record["input_artifact_ids"],
+                "output_artifact_ids": analysis_run_record["output_artifact_ids"],
+                "qc_status": "not_evaluated",
+            }
+
         warnings: tuple[str, ...] = ()
+        diagnostics: tuple[Diagnostic, ...] = ()
         if self.status == TaskStatus.WARNING:
-            warnings = ("Synthetic Data_analysis warning for contract testing",)
-        error = "Synthetic Data_analysis adapter failure; no analysis was run" if self.status == TaskStatus.FAILED else None
+            warnings = ("Synthetic Data_analysis warning for orchestration testing",)
+            diagnostics = (
+                Diagnostic("MOCK_DA_WARNING", warnings[0], DiagnosticSeverity.WARNING),
+            )
+        error = None
+        if self.status in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE}:
+            error = self.failure_message or (
+                "Synthetic Data_analysis " + self.status.value + "; no output Artifact was registered"
+            )
+            diagnostics = (
+                Diagnostic(self.failure_code, error, DiagnosticSeverity.ERROR),
+            )
+
         provenance = ProvenanceRecord(
             task_id=request.task_id,
             component="MockDataAnalysisAdapter",
@@ -149,6 +225,9 @@ class MockDataAnalysisAdapter:
             warnings=warnings,
             error=error,
             execution_mode="mock",
+            analysis_run_record=analysis_run_record,
+            evidence_package=evidence_package,
+            diagnostics=diagnostics,
         )
 
 
