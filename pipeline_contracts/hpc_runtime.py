@@ -156,7 +156,9 @@ def render_beilong_cp2k_script(
         raise ContractError("BeiLong job directory must remain below the configured wcl workspace")
     _safe_token(input_name, "input filename")
     _safe_token(output_name, "output filename")
-    _safe_token(str(resources["module"]), "module name")
+    module_parts = str(resources["module"]).split("/")
+    if not module_parts or any(not re.fullmatch(r"[A-Za-z0-9_.+-]{1,64}", part) for part in module_parts):
+        raise ContractError("module name must be a slash-delimited safe module specifier")
     _safe_token(cp2k_executable, "CP2K executable")
     header_lines = []
     for line in privacy_header.splitlines():
