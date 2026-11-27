@@ -36,13 +36,13 @@ Start with [`AGENT_START_HERE.md`](AGENT_START_HERE.md). The current prerequisit
 
 ## Parallel adapter preparation
 
-The Pipeline-side contract and Mock adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). Optional real adapter classes now bind the exact Agent A Data_analysis and chem-scitoolkit branch APIs inspected on 2026-11-27. The real modules are imported lazily; no private branch is installed or added as a mandatory dependency. Data_analysis remains the Artifact/Analysis Run/Evidence owner, and the current no-derived-Artifact limitation is represented as a partial Analysis Run and Pipeline warning rather than a fabricated output reference.
+The Pipeline-side contract and Mock adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). Optional real adapters bind the Agent A Data_analysis and chem-scitoolkit APIs without copying upstream code. Data_analysis remains the Artifact/Analysis Run/Evidence owner; the DFT reader adapter resolves source Artifact IDs through the official Data_analysis resolver, persists JSON-compatible reader results under `data/derived/`, registers them with `register_derived_artifact()`, then creates an Analysis Run that references the registered output before normalization and Evidence packaging.
 
 - `RealDataAnalysisAdapter`: DFT reader discovery/read, operation discovery/dispatch, project-backed Analysis Run creation, normalized-result packaging and DFT Evidence Package.
 - `RealCSTAdapter`: finite CP2K builder, task-aware output validation, charge/PDOS/Cube/vacuum/ASE helpers and figure-profile functions.
 - `MockCSTAdapter`, `MockDataAnalysisAdapter` and `MockHpcAdapter` remain available and unchanged for contract tests.
 
-Real Data_analysis use requires a registered DA Artifact, a matching SHA-256, a local Artifact URI or an injected owner-provided resolver, and the DA project root. No Pipeline Artifact Store or direct DA registry parsing is introduced. Optional live source tests require explicitly supplied `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT`; public CI does not check out private source branches.
+Real Data_analysis use requires a registered source Artifact, its SHA-256 and the DA project root. `resolve_artifact_path()` and `register_derived_artifact()` own input resolution, custody checks and derived registration; Pipeline never reads DA registry files. Explicit local URI support is a compatibility fallback only when no official/injected resolver exists and remains subject to input-hash and DA provenance verification. Non-JSON-serializable results or registration failures remain visible as warnings with no invented output Artifact. Scientific QC stays `not_assessed`. Optional live source tests require explicitly supplied `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT`; public CI does not check out private source branches.
 
 Run the standard-library test suite with:
 
