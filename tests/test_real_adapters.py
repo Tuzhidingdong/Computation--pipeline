@@ -41,9 +41,20 @@ class FakeDataAnalysisAPI:
             raise FileNotFoundError(f"registered Artifact record not found: {artifact_id}")
         if artifact_id != self.expected_artifact_id:
             raise FileNotFoundError(f"registered Artifact record not found: {artifact_id}")
-        if _sha(self.source_path) != self.expected_hash:
+        root = Path(project_root).resolve()
+        resolved = self.source_path.resolve()
+        try:
+            relative = resolved.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("Artifact path escapes Data_analysis project") from exc
+        current = root
+        for part in relative.parts:
+            current = current / part
+            if current.is_symlink():
+                raise ValueError(f"symlink path component is not allowed: {current}")
+        if _sha(resolved) != self.expected_hash:
             raise ValueError(f"registered Artifact SHA-256 mismatch: {artifact_id}")
-        return self.source_path
+        return resolved
 
     def list_dft_readers(self, format_id=None):
         self.calls.append(("list_dft_readers", format_id))
@@ -192,9 +203,11 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
         return source
 
     def _setup(self, root: Path, artifact_id="ART-SYNTHETIC-INPUT"):
-        source = self._fixture(root)
         project = root / "da-project"
         project.mkdir()
+        received = project / "data" / "received"
+        received.mkdir(parents=True)
+        source = self._fixture(received)
         digest = _sha(source)
         api = FakeDataAnalysisAPI(project, artifact_id, digest, source)
         request = AnalysisRequest(
