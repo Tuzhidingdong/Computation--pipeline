@@ -256,6 +256,8 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "method.force_threshold_ev_per_angstrom", "method.sccs_dielectric",
             "method.basis_sensitivity", "method.engine",
             "method.che.temperature_K", "method.che.potential_v_vs_rhe",
+            "scientific_scope.reaction_intermediate",
+            "scientific_scope.protonation_products[0]", "scientific_scope.protonation_products[1]",
             "method.local_hessian.displacement_angstrom",
             "method.local_hessian.frozen_support_and_Cu13",
             "tasks.WP2.cell_sizes_angstrom[0]", "tasks.WP2.cell_sizes_angstrom[1]",
@@ -273,14 +275,27 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "systems.Cu-20.cluster.multiplicities[0]",
             "systems.SnCu-20.support_multiplicities[0]",
             "tasks.WP1.isolated_fragment_spin_candidate_count",
+            "tasks.WP1.summary_fragment_single_point_count",
+            "tasks.WP1.mace_fmax_ev_per_angstrom",
             "tasks.WP1.isolated_fragment_spin_candidates.Cu13[0]",
             "tasks.WP1.isolated_fragment_spin_candidates.Cu20_support[0]",
             "tasks.WP1.isolated_fragment_spin_candidates.SnCu20_support[0]",
             "tasks.WP1.retained_structurally_distinct_candidates_per_catalyst.min",
             "tasks.WP2.representative_sncu20_models",
+            "tasks.WP3.hcco_candidates_per_catalyst",
             "tasks.WP3.protonation_products_per_catalyst",
             "tasks.WP3.gas_references[0]",
             "tasks.WP4.adsorbate_atom_counts_per_catalyst[0]",
+            "tasks.WP5.sccs_single_points",
+            "tasks.WP5.tzv2p_single_points",
+            "scientific_scope.thermodynamic_only",
+            "topology_requirements.explicit_elements",
+            "topology_requirements.explicit_covalent_bonds_and_orders",
+            "topology_requirements.explicit_coordination_bonds",
+            "topology_requirements.explicit_donor_atoms",
+            "topology_requirements.explicit_formal_charges",
+            "topology_requirements.explicit_spin_candidates",
+            "topology_requirements.explicit_3d_construction_constraints",
         ]
         for field in review_fields:
             with self.subTest(field=field):
@@ -289,10 +304,14 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
 
         geometry_eps = by_field["method.scf_eps_scf_ha.geometry_optimization"]
         force_eps = by_field["method.scf_eps_scf_ha.local_hessian_force"]
-        self.assertIn("docx-block-000103", geometry_eps["docx_evidence_ids"])
-        self.assertIn("docx-block-000155", geometry_eps["docx_evidence_ids"])
-        self.assertIn("docx-block-000103", force_eps["docx_evidence_ids"])
+        self.assertEqual(geometry_eps["docx_evidence_ids"], ["docx-block-000155"])
+        self.assertIn("docx-block-000155", force_eps["docx_evidence_ids"])
         self.assertIn("docx-block-000052", force_eps["docx_evidence_ids"])
+        self.assertTrue(any(
+            item["field"] == "method.scf_eps_scf_ha"
+            and "docx-block-000103" in item["evidence_ids"]
+            for item in manifest["unresolved_structured_fields"]
+        ))
 
         orientation = by_field["tasks.WP1.support_cluster_docking_orientation_count"]
         self.assertEqual(orientation["status"], "profile_only")
