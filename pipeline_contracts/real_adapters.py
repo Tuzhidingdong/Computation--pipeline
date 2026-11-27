@@ -325,6 +325,10 @@ class RealDataAnalysisAdapter:
             reader_results: list[dict[str, Any]] = []
             reader_catalogues: list[dict[str, Any]] = []
             for artifact in request.input_artifacts:
+                if not artifact.sha256:
+                    raise ContractError(
+                        f"Artifact {artifact.artifact_id} must carry a SHA-256 after official resolution"
+                    )
                 path = self.resolve_artifact_path(artifact)
                 format_id = artifact.format_id or request.parameters.get("format_id")
                 candidates = api.list_dft_readers(format_id) if format_id else api.list_dft_readers()
@@ -352,13 +356,11 @@ class RealDataAnalysisAdapter:
                 result_record = dict(read_result)
                 result_record["pipeline_artifact_id"] = artifact.artifact_id
                 actual_hash = result_record.get("source_sha256")
-                if not actual_hash or (
-                    artifact.sha256 and str(actual_hash).lower() != artifact.sha256.lower()
-                ):
+                if not actual_hash or str(actual_hash).lower() != artifact.sha256.lower():
                     result_record["status"] = "artifact_hash_mismatch"
                     result_record["error"] = (
                         f"Data_analysis read hash {actual_hash!r} does not match "
-                        f"the supplied ArtifactRef SHA-256 {artifact.sha256!r}"
+                        f"the verified ArtifactRef SHA-256 {artifact.sha256!r}"
                     )
                 reader_results.append(result_record)
 
