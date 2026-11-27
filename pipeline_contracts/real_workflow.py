@@ -636,7 +636,16 @@ class RealCP2KWorkflowAdapter:
                     diagnostics=("Slurm terminated without COMPLETED state",),
                     execution_mode="real",
                 )
-            if record.application_exit_code not in (0, None):
+            if record.application_exit_code is None:
+                return ExecutionResult(
+                    status="INTERRUPTED_RECOVERY", job_id=job.job_id,
+                    scheduler_state=record.scheduler_state,
+                    diagnostics=("Slurm terminal state is visible but its allocation exit code is not yet available; "
+                                 "the same Job ID will be queried again, with no resubmission.",),
+                    execution_mode="real",
+                    runtime={**prepared, "remote_workdir": prepared.get("remote_workdir"), "job_id": job.job_id},
+                )
+            if record.application_exit_code != 0:
                 return ExecutionResult(
                     status="FAILED_PERMANENT", job_id=job.job_id,
                     scheduler_state=record.scheduler_state,
@@ -707,6 +716,10 @@ class RealCP2KWorkflowAdapter:
             raise
         except (ConnectionError, TimeoutError):
             raise
+        except HpcRuntimeError as exc:
+            # Transport/accounting/download errors are infrastructure conditions;
+            # preserve the current Job ID and resume by querying/retrieving it.
+            raise ConnectionError(f"HPC Skill operation temporarily unavailable: {exc}") from exc
         except Exception as exc:
             return ExecutionResult(
                 status="FAILED_PERMANENT", job_id=existing_job_id,
