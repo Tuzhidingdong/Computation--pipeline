@@ -2,11 +2,9 @@
 
 ## Purpose and ownership
 
-The module **pipeline_contracts.plan_compiler.evidence_reconciliation** is a read-only, project-agnostic checker. It compares non-metadata values in a Project Profile with the labelled claims and source evidence already present in a Project Manifest.
+The module **pipeline_contracts.plan_compiler.evidence_reconciliation** is an independent, read-only checker. It compares values in a Project Profile with labelled claims and original evidence in a Project Manifest.
 
-It does **not** parse DOCX files, extract new claims, change a Profile, rewrite Manifest claims, confirm scientific parameters, or participate in compilation/execution. The caller supplies two parsed mappings. This module returns an auditable report only.
-
-The implementation is intentionally independent of the compiler flow. It is not imported or called by compiler.py, manifest.py, the v4.1 project plugin, the CLI, or the CalculationPlan path.
+It does **not** parse DOCX, extract claims, alter a Profile/Manifest, confirm scientific parameters, or participate in compilation/execution. It is not imported by the compiler, Manifest extractor, v4.1 plugin, CLI, or CalculationPlan path.
 
 ## Interface
 
@@ -24,9 +22,9 @@ report = reconcile_project_profile(
 )
 ~~~
 
-**aliases** maps a dotted Profile field path to one exact Manifest field or label, or a sequence of exact identifiers. An explicit entry replaces that path's default suffix aliases; to disambiguate repeated leaf names, explicitly map each affected Profile path. Identifier normalisation follows the Manifest's existing lowercase/underscore/punctuation-removal convention. It does not use substring, edit-distance, embedding, or semantic-similarity matching.
+**aliases** maps a dotted Profile path to one or more exact Manifest field names/labels. An explicit entry replaces that path's default exact suffix aliases. It can disambiguate repeated leaf names. There is no substring, edit-distance, embedding, or semantic-similarity matching.
 
-The report has this top-level shape:
+The report contains one entry per flattened Profile field:
 
 ~~~json
 {
@@ -47,80 +45,137 @@ The report has this top-level shape:
       "status": "SOURCE_SUPPORTED",
       "evidence_id": "docx-block-000007",
       "evidence_ids": ["docx-block-000007"],
+      "missing_evidence_ids": [],
       "evidence": [
         {
           "evidence_id": "docx-block-000007",
           "text": "Exchange-correlation functional: PBE",
           "evidence_text": "Exchange-correlation functional: PBE",
           "source": {"part": "word/document.xml", "paragraph": 7},
+          "contribution": "field_assertion",
           "claim_field": "xc",
           "claim_label": "Exchange-correlation functional",
           "claim_value": "PBE",
           "claim_unit": null,
-          "claim_status": "requires_confirmation"
+          "claim_status": "requires_confirmation",
+          "claim_source_text": "Exchange-correlation functional: PBE"
         }
       ],
+      "provenance_issues": [],
       "rationale": "..."
     }
   ]
 }
 ~~~
 
-**evidence_id** is a convenience pointer to the first source; **evidence_ids** and **evidence** retain every matched source claim. For table-derived claims, **text** prefers the Manifest claim's complete source_text (which may contain the joined row), while **evidence_text** preserves the exact text in the referenced evidence record. **source** retains the claim/evidence location. The input Manifest is never modified.
+**evidence_id** is a convenience pointer to the first reference. **evidence_ids** retains every referenced ID in claim order, including an ID that cannot be resolved; **missing_evidence_ids** lists unresolved/ambiguous references. **evidence** contains only records found exactly once in the Manifest's original evidence array. It never fabricates a source record for a missing ID.
+
+## Agent B Manifest evidence compatibility
+
+The reader accepts both the earlier single-reference shape and Agent B's newer structure:
+
+~~~json
+{
+  "field": "multiplicity",
+  "label": "Multiplicity",
+  "value": "2",
+  "evidence_id": "docx-block-000010",
+  "evidence_ids": ["docx-block-000010", "docx-block-000011"],
+  "source": {"part": "word/document.xml", "table": 1, "row": 1, "column": 1},
+  "source_text": "Multiplicity | 2",
+  "sources": [
+    {
+      "evidence_id": "docx-block-000010",
+      "source": {"part": "word/document.xml", "table": 1, "row": 1, "column": 1},
+      "source_text": "Multiplicity",
+      "raw_value": "2"
+    },
+    {
+      "evidence_id": "docx-block-000011",
+      "source": {"part": "word/document.xml", "table": 1, "row": 1, "column": 2},
+      "source_text": "2",
+      "raw_value": "2"
+    }
+  ],
+  "context": {"system_id": "Cu-20", "work_package": "WP1"}
+}
+~~~
+
+For a multi-cell assertion:
+
+- Every evidence_ids reference must resolve to exactly one Manifest evidence record.
+- When sources is present, its ordered IDs, source_text, and source locations must agree with those raw evidence records.
+- The first cell is emitted as contribution=field_label; later value cells are emitted separately as contribution=field_value.
+- Every returned cell's text and source come only from that individual original Manifest evidence record.
+- The row-level claim_source_text remains a separate aggregate field. It is never copied into a cell's text.
+- The claim label/field must match the first cell, and the ordered text from value cells must match the claim value. For multiple cells, table/row/column locations must be complete and in order.
+
+A missing, duplicate, inconsistent, or incomplete referenced record prevents SOURCE_SUPPORTED and produces NEEDS_REVIEW. The Profile value is never inserted into the evidence array.
+
+## System and Work Package scoping
+
+The current Profile shape expresses scope in its path:
+
+- systems.<system_id>... and models.<model_id>... are system/model-scoped.
+- tasks.WP<n>... is Work-Package-scoped.
+- A Manifest claim carries scope through context.system_id and context.work_package.
+
+A claim is eligible only when every scope dimension matches exactly. A missing dimension, or a source claim that is narrower than the Profile path (for example, a system-specific claim offered for a global method field), is ambiguous and returns NEEDS_REVIEW. A claim explicitly scoped to a different system or WP is excluded from that Profile field; it cannot create a false conflict or support another system/WP. Repeated same-name fields across systems/WPs are compared only within matching scope.
+
+Scope is not inferred from nearby headings or values by this module. It trusts only the explicit structured context carried by the Manifest claim.
 
 ## Matching and status rules
 
-1. Flatten Profile mappings into dotted paths. Arrays are treated as one ordered field, not split into invented positional fields. Explicit null/empty scalar fields are included as NEEDS_REVIEW. Metadata roots schema_version, project_id, description, and compiler-generated known_blockers are excluded.
-2. For automatic matching, compare the Manifest claim's field and label against exact Profile path suffixes (from the full path down to the leaf). This permits a unique leaf match such as method.xc ↔ xc; if the same leaf identifies multiple Profile paths, the result is NEEDS_REVIEW. A project may supply an explicit alias to disambiguate or connect differently named fields.
-3. A Profile value is SOURCE_SUPPORTED only when there is at least one exact field-linked claim, all relevant claims have complete evidence ID/text/location provenance, the claims reduce to one unique source value, and that value equals the Profile value after the limited normalisation below.
-4. Repeated claims with the same normalised value are one value supported by multiple source records. Different values for the same exact field are SOURCE_CONFLICT, even when one happens to equal the Profile value. No source record is deleted or selected away.
-5. An exact field claim with one unique value different from the Profile is SOURCE_MISMATCH. A field name that is merely similar does not count as a match.
-6. If no exact field claim exists but the Profile value/term appears as a literal token or phrase in raw Manifest evidence, the result is MENTION_ONLY. This records occurrence only; it is not field support. A standalone number cannot support a parameter.
-7. If neither a field-linked claim nor a literal mention exists, the result is PROFILE_ONLY. Missing values, incomplete claim provenance, or multi-Profile-path matches are NEEDS_REVIEW.
+1. Flatten Profile mappings into dotted paths. Arrays are one ordered aggregate field, not guessed positional labels. Empty/null fields remain visible as NEEDS_REVIEW. Document metadata (schema_version, project_id, description, known_blockers) is excluded.
+2. Match Manifest field/label identifiers against exact Profile path suffixes after deterministic identifier normalisation. Explicit aliases replace the defaults for their path.
+3. Return SOURCE_SUPPORTED only when there is an exact field match, a unique scope-compatible target, one unique value, complete evidence references, and equality under the conservative value normalisation.
+4. Repeated identical claims remain separate and preserve every referenced evidence record. Different values for the same exact field in the same system/WP scope return SOURCE_CONFLICT.
+5. A complete exact field claim with one unique value different from the Profile returns SOURCE_MISMATCH.
+6. A literal token/phrase in raw evidence without a field-bound claim returns MENTION_ONLY; a coincidentally repeated number never supports a parameter.
+7. No field claim and no literal mention returns PROFILE_ONLY. Missing values, ambiguous ownership, or incomplete evidence returns NEEDS_REVIEW.
 
 ## Normalisation boundary
 
 Allowed:
 
-- Ignore case and collapse whitespace in field identifiers and textual values.
-- Treat integer/decimal/scientific-notation representations of the same finite numeric value as equal (for example, 500, 500.0, and 5e2).
-- Accept a repeated KEY=VALUE / KEY: VALUE form only when the repeated key exactly normalises to that claim's own field or label; otherwise the value is left untouched.
-- Compare values already split by a labelled table claim as the claim's extracted field/value pair.
-- Compare quantities only when both sides explicitly carry a unit. Explicit unit suffixes in Profile keys are recognised only from a closed whitelist: _ry, _ha, _hartree, _ev, _mev, _angstrom, _ev_per_angstrom, _bohr, _nm, _ps, _fs, and _k. A small set of unambiguous spelling aliases is canonicalised: Å/Angstrom, Ha/hartree, and eV/Å/eV/Angstrom.
+- NFKC, case, whitespace, and deterministic identifier-format normalisation compatible with the current Manifest label normaliser.
+- Equal finite numeric values expressed as integer, decimal, or scientific notation (for example 500, 500.0, and 5e2).
+- KEY=VALUE / KEY: VALUE only when the repeated key exactly identifies the claim's own field or label.
+- Quantities only when both sides explicitly carry a unit. A closed Profile-key suffix whitelist is used for fields such as _ry, _ha, _hartree, _ev, _mev, _angstrom, _ev_per_angstrom, _bohr, _nm, _ps, _fs, and _k. Explicit Å/Angstrom, Ha/hartree, and eV/Å/eV/Angstrom aliases are canonicalised.
 
 Not allowed:
 
-- No conversion between different physical units (for example, eV ↔ Ry or Å ↔ nm), even when a conversion would be mathematically possible.
-- No unit guessing from arbitrary Profile path text. Only the closed, documented suffix whitelist is treated as an explicit unit declaration; otherwise a unit must be present in the actual value or explicit { "value": ..., "unit": ... } object / Manifest claim unit field.
-- No fuzzy/semantic field matching, partial-string matching, inference from nearby numbers, or selection of one value from a conflict.
-- No promotion of a MENTION_ONLY result to source support.
+- No conversion between different physical units (for example eV ↔ Ry or Å ↔ nm).
+- No guessing a unit from arbitrary key text.
+- No fuzzy matching, partial-name matching, nearby-number binding, or conflict winner selection.
+- No use of aggregate row text as the original text of any individual cell.
+- No use of Profile values as substitute evidence.
 
-## Test coverage
+## Regression tests
 
-The test file **tests/test_plan_evidence_reconciliation.py** uses only synthetic Profile/Manifest dictionaries. It covers:
+The test file tests/test_plan_evidence_reconciliation.py uses synthetic data matching Agent B's claim/evidence structure. It covers:
 
-- repeated identical values remaining SOURCE_SUPPORTED;
-- two different values producing SOURCE_CONFLICT;
-- absent source field producing PROFILE_ONLY;
-- isolated numeric mention producing MENTION_ONLY;
-- exact explicit alias mapping, including resolution of duplicate leaf-name ambiguity;
-- mismatching units producing SOURCE_MISMATCH (no conversion);
-- evidence ID, text and source location retention, without mutating source evidence;
-- ambiguous field-to-multiple-Profile mapping producing NEEDS_REVIEW;
-- non-exact/similar field names not being accepted;
-- KEY=VALUE handling, table-row excerpt retention, explicit unit handling, and incomplete provenance.
+- two-/multi-cell table rows resolving every evidence ID and returning original per-cell text/location;
+- first-cell label versus second-cell value separation;
+- missing value-cell evidence and nonexistent IDs failing closed;
+- inconsistent sources text/location failing closed;
+- repeated identical row claims preserving every cell reference without false conflict;
+- different systems and WPs retaining independent claims;
+- ambiguous or missing system/WP ownership returning NEEDS_REVIEW;
+- different units not being converted;
+- the six statuses, exact aliases, duplicate values, mismatches, mentions, incomplete provenance, and read-only input handling.
 
 Run:
 
 ~~~bash
 python -m unittest discover -s tests -p "test_plan_evidence_reconciliation.py" -v
-python -m compileall -q pipeline_contracts tests
+python -m unittest discover -s tests -v
+python -m compileall -q pipeline_contracts tests examples
 ~~~
 
 ## Known limitations
 
-- This module validates the relationship encoded in Manifest claims. It does not independently validate the DOCX parser's extraction quality or reconstruct omitted table structure.
-- Manifest table claims currently point to the label cell's evidence ID while source_text may contain the joined row. The report intentionally preserves both the claim excerpt and the referenced evidence cell rather than fabricating a new evidence ID for another cell.
-- Profile arrays are compared as ordered aggregate values. A differently formatted prose/list representation may require an explicit, source-backed claim representation; the module will not guess list equivalence.
-- Exact default suffix matching may be ambiguous for repeated leaf names. Supply an explicit, unique alias only after the field mapping has been established by the project owner/reviewer.
-- This report is not an owner confirmation and must not be used as a scientific decision or execution approval.
+- The checker validates provenance relations already encoded in the Manifest. It does not audit DOCX extraction itself or infer a missing system/WP context.
+- It recognises system scope at Profile paths systems.<id> / models.<id> and WP scope at tasks.WP<n>. Other project-specific scope schemas require an explicit future interface extension, not a guessed binding.
+- Profile arrays remain ordered aggregate values. It will not infer equivalence between arbitrary prose, table layouts, or differently shaped arrays.
+- A successful status is evidence reconciliation only, not owner confirmation, scientific approval, model validation, or execution permission.
