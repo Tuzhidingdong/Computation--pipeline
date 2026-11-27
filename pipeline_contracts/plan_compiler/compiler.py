@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 import json
+import hashlib
 from .docx_reader import read_frozen_docx
 from .manifest import build_project_manifest
 from ..calculation_plan import CalculationPlan, PlanValidationError
@@ -24,8 +25,16 @@ class CompilationResult:
 
 def compile_docx(docx_path: str | Path, *, project_id: str,
                  plan_version: str | None = None) -> CompilationResult:
-    blocks = read_frozen_docx(docx_path)
+    source = Path(docx_path)
+    source_bytes = source.read_bytes()
+    blocks = read_frozen_docx(source)
     manifest = build_project_manifest(blocks, project_id=project_id, plan_version=plan_version)
+    manifest["source_document"] = {
+        "file_name": source.name,
+        "size_bytes": len(source_bytes),
+        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "parser": "pipeline_contracts.plan_compiler.docx_reader",
+    }
     return CompilationResult(manifest, None, tuple(manifest["diagnostics"]))
 
 
