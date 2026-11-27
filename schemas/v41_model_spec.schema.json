@@ -27,7 +27,7 @@
     }},
     "fragments": {"type": "object"},
     "expected": {"type": "object", "required": ["atom_count", "charge", "multiplicity", "candidate_count"]},
-    "build_constraints": {"type": "object", "required": ["candidate_transforms"]},
+    "build_constraints": {"type": "object", "required": ["candidate_transforms", "donor_atoms", "random_seed"]},
     "evidence": {"type": "array", "minItems": 1, "items": {"type": "object"}},
     "artifact_formats": {"type": "object"}
   },
