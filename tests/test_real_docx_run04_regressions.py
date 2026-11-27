@@ -154,6 +154,19 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
                          {"docx-block-000154", "docx-block-000158"})
         self.assertEqual(len(output_claims), 2)
 
+    def test_numeric_formatting_normalizes_but_physical_units_do_not_merge(self):
+        equivalent = detect_conflicts([
+            {"field": "cutoff_ry", "label": "CUTOFF", "value": "500.0 Ry", "evidence_id": "ev-a"},
+            {"field": "cutoff_ry", "label": "CUTOFF", "value": "500 Ry", "evidence_id": "ev-b"},
+        ])
+        self.assertEqual(equivalent, [])
+        different_units = detect_conflicts([
+            {"field": "cutoff", "label": "CUTOFF", "value": "500 Ry", "evidence_id": "ev-a"},
+            {"field": "cutoff", "label": "CUTOFF", "value": "500 Ha", "evidence_id": "ev-b"},
+        ])
+        self.assertEqual(len(different_units), 1)
+        self.assertTrue(different_units[0].blocks_execution)
+
     def test_ase_same_label_with_different_parameter_values_still_blocks(self):
         diagnostics = detect_conflicts([
             {"field": "ase_vibrations_cp2k", "label": "ASE Vibrations + CP2K",
