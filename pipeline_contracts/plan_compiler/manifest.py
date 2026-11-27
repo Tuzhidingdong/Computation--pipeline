@@ -433,7 +433,7 @@ def _build_block_contexts(blocks: list[ExtractedBlock]) -> dict[str, dict]:
             current_wp = f"WP{int(wp_match.group('number'))}"
             if not (style_match or numbered):
                 heading_stack.append(text)
-        explicit_gate = re.search(r"\\bWP\\s*(\\d+)\\s*(?:试算门控|gate)", text, re.I)
+        explicit_gate = re.search(r"\bWP\s*(\d+)\s*(?:试算门控|gate)", text, re.I)
         if explicit_gate:
             current_wp = f"WP{int(explicit_gate.group(1))}"
         parsed = _parse_label_value(text) if text else None
