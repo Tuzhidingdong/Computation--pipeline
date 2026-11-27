@@ -6,6 +6,8 @@ from zipfile import ZipFile
 
 from pipeline_contracts.plan_compiler import read_frozen_docx, compile_docx, detect_conflicts
 from pipeline_contracts.plan_compiler.manifest import extract_claims
+from pipeline_contracts.plan_compiler import confirm_manifest_claims
+from pipeline_contracts.cli import main as cli_main
 
 
 def make_docx(path: Path):
@@ -50,6 +52,35 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertEqual(result.manifest["compilation_status"], "BLOCKED")
         self.assertEqual(len(result.manifest["evidence"]), 2)
         self.assertEqual(result.diagnostics[0]["code"], "PLAN_FIELD_CONFLICT")
+
+    def test_owner_confirmation_is_auditable_and_removes_only_selected_unresolved_claim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "plan.docx"
+            make_docx(path)
+            manifest = compile_docx(path, project_id="test").manifest
+            evidence_id = next(x["evidence_id"] for x in manifest["claims"]
+                               if x.get("field") == "cutoff")
+            confirmed = confirm_manifest_claims(
+                manifest, evidence_ids=[evidence_id], confirmer="owner",
+                rationale="Confirmed against the frozen approved method table",
+            )
+        claim = next(x for x in confirmed["claims"] if x.get("field") == "cutoff")
+        self.assertEqual(claim["status"], "user_confirmed")
+        self.assertEqual(len(confirmed["confirmations"]), 1)
+        self.assertFalse(any(x["evidence_id"] == evidence_id
+                             for x in confirmed["unresolved_definitions"]))
+
+    def test_v41_cli_writes_blocked_manifest_instead_of_selecting_ambiguous_values(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            docx = Path(tmp) / "frozen.docx"
+            make_docx(docx)
+            output = Path(tmp) / "manifest.json"
+            code = cli_main(["compile-v41-docx", str(docx), "--plan-version", "v4.1",
+                             "--output", str(output)])
+            self.assertEqual(code, 2)
+            manifest = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["compilation_status"], "BLOCKED")
 
     def test_labelled_values_are_not_promoted_without_confirmation(self):
         with tempfile.TemporaryDirectory() as tmp:
