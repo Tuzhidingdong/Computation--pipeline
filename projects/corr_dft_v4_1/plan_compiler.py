@@ -134,9 +134,10 @@ def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: st
             "_angstrom": {"å", "angstrom"}, "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
             "_k": {"k"}, "_v_vs_rhe": {"v"},
         }
+        path_segments = [re.sub(r"\[\d+\]$", "", segment) for segment in key.split(".")]
         expected = next(
             (units for suffix, units in sorted(expected_units.items(), key=lambda pair: len(pair[0]), reverse=True)
-             if suffix in key),
+             if any(segment.endswith(suffix) for segment in path_segments)),
             None,
         )
         if not same_number:
