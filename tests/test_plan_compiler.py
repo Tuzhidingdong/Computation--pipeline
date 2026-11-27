@@ -32,6 +32,10 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertEqual(blocks[0].style, "Heading1")
         self.assertEqual(blocks[2].location["table"], 1)
         self.assertEqual(blocks[3].location["column"], 2)
+        result = compile_docx(path, project_id="test")
+        self.assertEqual(result.manifest["sections"][0]["heading"], "Plan")
+        table_claim = next(x for x in result.manifest["claims"] if x.get("field") == "multiplicity")
+        self.assertEqual(table_claim["value"], "2")
 
     def test_conflicting_labelled_values_block_without_discarding_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
