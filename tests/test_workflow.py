@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, tempfile, unittest
+import json, subprocess, sys, tempfile, unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -92,6 +92,19 @@ class WorkflowTests(unittest.TestCase):
         try:
             self.assertEqual(ctl.run(rid,plan),"LOCKED")
             self.assertEqual(adapter.submissions,{})
+            child_code = (
+                "import sys; from pipeline_contracts.workflow import WorkflowStore; "
+                "s=WorkflowStore(sys.argv[1]); "
+                "token=s.acquire_run_lock(sys.argv[2]); "
+                "print('LOCKED' if token is None else 'ACQUIRED'); "
+                "s.release_run_lock(sys.argv[2], token) if token else None; s.close()"
+            )
+            child = subprocess.run(
+                [sys.executable, "-c", child_code, str(store.path), rid],
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+            self.assertEqual(child.returncode, 0, child.stderr)
+            self.assertEqual(child.stdout.strip(), "LOCKED")
         finally:
             store.release_run_lock(rid,lock)
         self.assertEqual(ctl.run(rid,plan),"COMPLETED")
