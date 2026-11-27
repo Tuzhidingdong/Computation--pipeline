@@ -269,6 +269,30 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
             self.assertLess(call_names.index("create_dft_analysis_run_from_project"), call_names.index("run_dft_operation"))
             self.assertLess(call_names.index("run_dft_operation"), call_names.index("build_evidence_package"))
 
+    def test_real_adapter_can_start_from_artifact_id_without_caller_sha_or_uri(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, _ = self._setup(root)
+            request = AnalysisRequest(
+                task_id="TASK-DA-ID-ONLY",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef(
+                    artifact_id="ART-SYNTHETIC-INPUT",
+                    format_id="finite_displacement_force_table",
+                    source_system="Data_analysis",
+                ),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+                parameters={"reader_id": "python-csv"},
+            )
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
+            self.assertEqual(outcome.status, TaskStatus.SUCCEEDED, outcome.error)
+            self.assertEqual(outcome.analysis_run_record["input_artifact_ids"], ["ART-SYNTHETIC-INPUT"])
+            self.assertTrue(outcome.output_artifacts)
+            self.assertTrue(any(call[0] == "resolve_artifact_path" for call in api.calls))
+            reader_call = next(call for call in api.calls if call[0] == "read_dft_file")
+            self.assertEqual(reader_call[1], source.resolve())
+
     def test_validated_only_reader_result_is_registered_as_partial_parse(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
