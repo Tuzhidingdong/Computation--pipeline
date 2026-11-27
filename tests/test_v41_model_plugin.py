@@ -10,7 +10,7 @@ from projects.corr_dft_v4_1.model_plugin.toolchain import toolchain_report
 
 
 class SimpleWriter:
-    def write(self, path, symbols, positions):
+    def write(self, path, symbols, positions, atom_ids):
         # The test writer is explicitly test-only; production requires ASE.
         path.write_text("test-only structure placeholder", encoding="utf-8")
 
@@ -23,7 +23,7 @@ class ModelPluginTests(unittest.TestCase):
                 {"atom_id": "Cu1", "element": "Cu", "position": [0,0,0]},
                 {"atom_id": "O1", "element": "O", "position": [2,0,0]},
             ],
-            "bonds": [{"atom1":"Cu1","atom2":"O1","kind":"coordination"}],
+            "bonds": [{"atom1":"Cu1","atom2":"O1","kind":"coordination","distance_range_angstrom":[1.8,2.2]}],
             "fragments": {"ligand": {"atom_ids": ["O1"]}},
             "expected": {"atom_count": 2, "composition": {"Cu":1,"O":1}, "charge":0,"multiplicity":1,"candidate_count":1},
             "build_constraints": {
