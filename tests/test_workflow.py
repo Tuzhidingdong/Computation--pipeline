@@ -76,8 +76,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
 
     def test_cli_plan_validate_run_status_resume_report(self):
-        with ExitStack() as stack:
-            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+        with tempfile.TemporaryDirectory() as tmp:
             plan_file=str(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
             state_db=str(Path(tmp)/"cli.sqlite")
             for command in (["plan",plan_file],["validate",plan_file]):
@@ -201,8 +200,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(adapter.existing, [None,"98765"])
 
     def test_cli_preflight_reports_missing_real_runtime_without_submission(self):
-        with ExitStack() as stack:
-            tmp = stack.enter_context(tempfile.TemporaryDirectory())
+        with tempfile.TemporaryDirectory() as tmp:
             plan_file=str(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
             config=str(Path(tmp)/"missing-runtime.json")
             output=StringIO()
