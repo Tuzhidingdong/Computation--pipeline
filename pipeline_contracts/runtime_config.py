@@ -94,6 +94,20 @@ def validate_runtime_for_backend(
         raise RuntimeConfigError(
             f"HPC backend {backend_id!r} is missing local setting(s): {', '.join(missing)}"
         )
+    skill_root = Path(str(backend.get("skill_root"))).expanduser().resolve()
+    if not skill_root.is_dir():
+        raise RuntimeConfigError(f"Skill root is not an existing directory: {skill_root}")
+    for key in ("job_record_script", "slurm_template", "privacy_header_template"):
+        value = backend.get(key)
+        if not value:
+            continue
+        candidate = Path(str(value)).expanduser().resolve()
+        try:
+            candidate.relative_to(skill_root)
+        except ValueError as exc:
+            raise RuntimeConfigError(f"{key} must resolve inside configured skill_root") from exc
+        if not candidate.is_file():
+            raise RuntimeConfigError(f"configured Skill file does not exist: {candidate}")
     for field in ("nodes", "ntasks", "cpus_per_task", "mem", "time", "partition", "module"):
         if not resources.get(field):
             raise RuntimeConfigError(
