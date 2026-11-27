@@ -39,6 +39,7 @@ The package now exports `PipelineRunner`, `PipelineTaskManifest`, `PipelineTaskR
 - Scientific QC remains `not_assessed`. Mock records/evidence are tagged as mock and are not scientific validation.
 - Python example: `examples/postprocess_existing_cp2k_output.py`; user instructions are in the README's “Minimal Pipeline MVP” section.
 - This is a synchronous single-workflow coordinator only. It does not include DAG scheduling, persistent task databases, queues, a service/API server or real HPC submission.
+- Current runner CI [45936035658](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45936035658): 37 tests run, 35 passed and 2 optional live source-tree tests skipped; compileall checked `pipeline_contracts`, `tests` and `examples` successfully.
 
 ## Remaining boundaries
 
