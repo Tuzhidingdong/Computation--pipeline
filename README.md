@@ -54,3 +54,76 @@ python -m compileall -q pipeline_contracts tests
 ## Development
 
 Implementation must follow the phases and acceptance criteria in `TASK_PLAN_v1.0.0.md`. Do not treat the presence of a script as proof that its scientific function is validated.
+
+## Minimal Pipeline MVP — existing CP2K output post-processing
+
+The first synchronous coordinator is available as a Python API. It runs one linear task:
+
+\`\`\`text
+input Artifact IDs
+    → optional CST validation
+    → Data_analysis Reader
+    → derived JSON Artifact
+    → Analysis Run / Provenance
+    → Evidence Package
+    → PipelineTaskResult
+\`\`\`
+
+It does not submit CP2K, AIMD, Slurm or HPC jobs. The runner requires explicit adapter injection; it never silently falls back to Mock adapters.
+
+### Real Data_analysis example
+
+See [examples/postprocess_existing_cp2k_output.py](examples/postprocess_existing_cp2k_output.py). The example reads an already registered CP2K output Artifact by ID, optionally calls RealCSTAdapter output validation, and returns the Analysis Run ID, derived Artifact ID and Evidence Package ID.
+
+The environment must already expose the owner-approved Data_analysis source/API and any selected Reader/CST dependencies; Pipeline does not install the private upstream branch automatically. For PowerShell:
+
+\`\`\`powershell
+$env:DATA_ANALYSIS_PROJECT_ROOT = "E:\Data_analysis_Project"
+$env:CP2K_OUTPUT_ARTIFACT_ID = "ART-..."
+$env:CP2K_RUN_TYPE = "ENERGY"
+python examples/postprocess_existing_cp2k_output.py
+\`\`\`
+
+The example uses only the Artifact ID; resolve_artifact_path(project_root, artifact_id) resolves the registered input. Input SHA-256 and format metadata are optional manifest fields. The real Data_analysis resolver and Analysis Run creator verify the registered Artifact and SHA-256.
+
+### Python API
+
+\`\`\`python
+from pathlib import Path
+from pipeline_contracts import (
+    PipelineRunner, PipelineTaskManifest,
+    RealCSTAdapter, RealDataAnalysisAdapter,
+)
+
+project_root = Path(r"E:\Data_analysis_Project")
+artifact_id = "ART-CP2K-OUTPUT"
+
+runner = PipelineRunner(
+    data_analysis_adapter=RealDataAnalysisAdapter(project_root),
+    cst_adapter=RealCSTAdapter(),
+)
+task = PipelineTaskManifest(
+    task_id="CP2K-POSTPROCESS-001",
+    project_root=project_root,
+    input_artifact_ids=(artifact_id,),
+    operation="dft.artifact.read",
+    parameters={"reader_id": "cp2k-output-tools"},
+    input_artifact_formats={artifact_id: "cp2k_output"},
+    cst_validation={
+        "operation": "cp2k.validate_output",
+        "parameters": {"run_type": "ENERGY"},
+        "required": False,
+    },
+)
+result = runner.run(task)
+print(result.status, result.analysis_run_id)
+print([item.artifact_id for item in result.output_artifacts])
+print((result.evidence_package or {}).get("evidence_package_id"))
+\`\`\`
+
+When optional CST dependencies are unavailable, the runner records a warning and continues to Data_analysis. A required CST stage that is unavailable stops the workflow. A failed Reader or failed derived registration never returns a successful task result.
+
+### Mock end-to-end example
+
+Inject MockCSTAdapter() and MockDataAnalysisAdapter() to exercise the same orchestration and reference chain without reading project data or generating scientific values. Mock Analysis Run / Evidence objects are marked execution_mode="mock" and qc_status="not_evaluated".
+
