@@ -456,10 +456,13 @@ class RealCP2KWorkflowAdapter:
   &END PRINT
 """
             input_text = input_text[:position] + trajectory_print + input_text[position:]
-        suffix = uuid.uuid4().hex[:10]
+        # A distinct Data_analysis derived file is required for every DAG node.
+        # The remote HPC filename remains the generic "input.inp"; only the
+        # private local Artifact source path carries the opaque task identity.
         input_name = "input.inp"
         derived_dir = self.da_project_root / "data" / "derived"
-        input_path = derived_dir / input_name
+        local_derived_name = f"input-{str(task['task_id'])}.inp"
+        input_path = derived_dir / local_derived_name
         _atomic_new_file(input_path, input_text.encode("utf-8"))
         api = self.da_api
         derived_input = api.register_derived_artifact(
