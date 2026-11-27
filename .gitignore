@@ -51,3 +51,9 @@ project_output/
 Thumbs.db
 .idea/
 .vscode/
+# Local real HPC runtime and workflow execution state
+.pipeline/runtime.local.json
+.pipeline/workflow.sqlite
+.pipeline/workflow.sqlite-shm
+.pipeline/workflow.sqlite-wal
+.pipeline/staging/
