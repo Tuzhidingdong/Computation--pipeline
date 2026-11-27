@@ -69,8 +69,8 @@ def build_candidates(
     spec: ModelSpec, output_dir: str | Path, *, writer: StructureWriter | None = None,
 ) -> list[ModelCandidate]:
     transforms = spec.build_constraints.get("candidate_transforms")
-    if not isinstance(transforms, list) or not transforms:
-        raise ValueError("candidate_transforms must explicitly define the full planned candidate set")
+    if not isinstance(transforms, list) or len(transforms) != int(spec.expected["candidate_count"]):
+        raise ValueError("candidate_transforms must contain exactly expected.candidate_count entries; planned candidates cannot be silently reduced")
     writer = writer or _ase_writer()
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
