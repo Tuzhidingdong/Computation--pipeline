@@ -38,6 +38,17 @@ Known v4.1 blockers are intentionally reported rather than guessed: the scope of
 
 The current builder transforms a fully specified atom graph. It is not yet a topology inference engine or a substitute for a missing v4.1 atom graph. No real v4.1 model candidate has been claimed or approved.
 
+### Plan compiler CLI
+
+```bash
+computation-pipeline compile-v41-docx frozen-plan.docx --plan-version v4.1 --output project-manifest.json
+computation-pipeline confirm-manifest project-manifest.json --evidence-id docx-block-000012 --confirmed-by "project owner" --rationale "Confirmed against frozen source table" --output confirmed-manifest.json
+computation-pipeline resolve-v41-planning confirmed-manifest.json --orientation-scope per_catalyst --fragment-spin-resolution preserve_detailed_six_correct_summary --confirmed-by "project owner" --rationale "Preserve all six detailed spin cases and correct the summary" --output resolved-manifest.json
+computation-pipeline compile-calculation-plan resolved-manifest.json approved-calculation-plan.json
+```
+
+The two v4.1 resolutions above are explicit owner decisions; the CLI never applies them automatically.
+
 ## Quick start
 
     python -m pipeline_contracts.cli plan .\calculation-plan.json
