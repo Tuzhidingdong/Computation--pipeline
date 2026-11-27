@@ -39,10 +39,13 @@ _METHOD_TERMS = (
     "poisson", "cell", "smearing", "temperature", "eps_scf", "scf", "hessian",
     "force_threshold", "vibrat", "frequency", "thermo", "ase", "mace", "solvation",
     "dielectric", "sccs", "che", "optimization", "optimisation", "multipole",
+    "spin", "potential", "displacement", "frozen_support",
 )
 _MODEL_TERMS = (
     "formula", "composition", "atom_count", "number_of_atoms", "charge",
-    "multiplicity", "spin", "motif", "geometry", "coordination", "donor",
+    "multiplicity", "spin", "motif", "geometry", "coordination",
+    "valence_electrons", "cluster_atom_count", "cluster_formula", "support_atom_count",
+    "complete_atom_count", "support_motif", "complete_formula", "donor",
     "bond", "topology", "structure",
 )
 _RESOURCE_TERMS = (
@@ -149,35 +152,157 @@ def _claim_source_records(claim: dict) -> list[dict]:
     ]
 
 
-def detect_conflicts(claims: Iterable[dict]) -> list[CompilationDiagnostic]:
-    """Compare values only within the same normalised field identity.
 
-    Every original claim remains untouched. Diagnostics carry the raw values and
-    source evidence from both (or all) semantically distinct value groups.
-    """
-    grouped: dict[tuple[str, str, str], list[dict]] = {}
+def _claim_label_identity(claim: dict) -> str:
+    """Preserve meaningful non-ASCII label words when distinguishing prose claims."""
+    label = unicodedata.normalize("NFKC", str(claim.get("label") or "")).casefold()
+    return "".join(char for char in label if char.isalnum())
+
+
+def _charge_value_and_explanation(label: str, value: str) -> tuple[str, str | None]:
+    """Separate a scalar CHARGE value from its following explanatory sentence."""
+    if _normalise_label(label) != "charge":
+        return value, None
+    match = re.match(r"^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*[;；]\s*(.+?)\s*$", value, re.S)
+    if not match:
+        return value, None
+    return match.group(1), match.group(2)
+
+
+def _append_inline_claim(claims: list[dict], block: ExtractedBlock, index: int,
+                         context: dict, field: str, value: Any, *, label: str | None = None,
+                         unit: str | None = None) -> None:
+    evidence_id = f"docx-block-{index:06d}"
+    for existing in claims:
+        if (existing.get("field") == field
+                and evidence_id in _claim_evidence_ids(existing)
+                and _normalise_field_value(existing.get("value", "")) == _normalise_field_value(value)):
+            return
+    claims.append({
+        "field": field, "label": label or field, "value": value, "unit": unit,
+        "status": "requires_confirmation", "evidence_id": evidence_id,
+        "evidence_ids": [evidence_id], "source": dict(block.location),
+        "source_text": block.text, "context": dict(context),
+    })
+
+
+def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict[str, dict],
+                                    claims: list[dict]) -> None:
+    """Extract only explicit machine keywords and unambiguous labelled quantities."""
+    patterns = [
+        ("xc", re.compile(r"\bXC_FUNCTIONAL\s+(PBE)\b", re.I), lambda m: m.group(1).upper()),
+        ("dispersion", re.compile(r"\bTYPE\s+DFTD3\s*\(\s*BJ\s*\)", re.I), lambda m: "D3(BJ)"),
+        ("cutoff_ry", re.compile(r"\b(?:CUTOFF|density cutoff of)\s*(\d+(?:\.\d+)?)\s*Ry\b", re.I), lambda m: f"{m.group(1)} Ry"),
+        ("rel_cutoff_ry", re.compile(r"\b(?:REL_CUTOFF|relative cutoff of)\s*(\d+(?:\.\d+)?)\s*Ry\b", re.I), lambda m: f"{m.group(1)} Ry"),
+        ("spin_polarized", re.compile(r"\bUKS\s+\.TRUE\.", re.I), lambda m: "true"),
+        ("smearing_temperature_K", re.compile(r"\bELECTRONIC_TEMP\s+(\d+(?:\.\d+)?)\b", re.I), lambda m: f"{m.group(1)} K"),
+        ("added_mos", re.compile(r"\bADDED_MOS\s+(\d+)\b", re.I), lambda m: m.group(1)),
+        ("periodicity", re.compile(r"\bPERIODIC\s+NONE\b", re.I), lambda m: "NONE"),
+        ("poisson_solver", re.compile(r"\bMartyna[- ]Tuckerman\b", re.I), lambda m: "MT"),
+        ("sccs_dielectric", re.compile(r"\bSCCS\b.{0,40}?ε\s*=\s*(\d+(?:\.\d+)?)", re.I | re.S), lambda m: m.group(1)),
+        ("basis_sensitivity", re.compile(r"\b(TZV2P)(?:-MOLOPT-GTH)?\b", re.I), lambda m: "TZV2P"),
+        ("engine", re.compile(r"\bCP2K\b.{0,100}?\bQuickstep\b.{0,100}?\bGPW\b", re.I | re.S), lambda m: "CP2K Quickstep / GPW"),
+        ("force_threshold_ev_per_angstrom", re.compile(r"(?:force threshold|MAX_FORCE).{0,100}?(?:~|<|≤)?\s*(0?\.\d+)\s*eV/Å", re.I | re.S), lambda m: f"{m.group(1)} eV/Å"),
+        ("che_temperature_K", re.compile(r"\bT\s*=\s*(\d+(?:\.\d+)?)\s*K\b", re.I), lambda m: f"{m.group(1)} K"),
+        ("potential_v_vs_rhe", re.compile(r"\bU\s*=\s*([+-]?\d+(?:\.\d+)?)\s*V\s*vs\.?\s*RHE\b", re.I), lambda m: f"{m.group(1)} V"),
+    ]
+    rows: dict[tuple, list[tuple[int, ExtractedBlock]]] = {}
+    for index, block in enumerate(blocks, start=1):
+        text = block.text
+        if not text.strip():
+            continue
+        evidence_id = f"docx-block-{index:06d}"
+        context = contexts[evidence_id]
+        for field, pattern, render in patterns:
+            for match in pattern.finditer(text):
+                _append_inline_claim(claims, block, index, context, field, render(match))
+
+        if re.search(r"\bEPS_SCF\b", text, re.I):
+            for field, pattern in (
+                ("eps_scf_geometry_optimization", r"(1\.0E-\d+)\s*\((?:优化/静态|geometry\s*optimization)\)"),
+                ("eps_scf_local_hessian_force", r"(1\.0E-\d+)\s*\((?:力计算|force\s*calculation)\)"),
+            ):
+                match = re.search(pattern, text, re.I)
+                if match:
+                    _append_inline_claim(claims, block, index, context, field, match.group(1))
+
+        if re.search(r"(?:finite displacement|有限位移|Vibrations)", text, re.I):
+            displacement = re.search(r"±\s*(\d+(?:\.\d+)?)\s*Å", text, re.I)
+            if displacement:
+                _append_inline_claim(claims, block, index, context, "displacement_angstrom", f"{displacement.group(1)} Å")
+            if re.search(r"冻结(?:基底|支持体)|frozen support", text, re.I):
+                _append_inline_claim(claims, block, index, context, "frozen_support_and_Cu13", "true")
+
+        if re.search(r"(?:双盒子|cell|box|超胞).{0,100}(?:vs\.?|与|and)", text, re.I | re.S):
+            sizes = list(dict.fromkeys(re.findall(r"(\d+(?:\.\d+)?)\s*Å", text, re.I)))
+            if len(sizes) >= 2:
+                _append_inline_claim(claims, block, index, context, "cell_sizes_angstrom", sizes[:2])
+
+        markers = list(re.finditer(r"\b(Cu-20|SnCu-20)\s*:", text, re.I))
+        for marker_index, marker in enumerate(markers):
+            system_id = marker.group(1)
+            end = markers[marker_index + 1].start() if marker_index + 1 < len(markers) else len(text)
+            segment = text[marker.end():end]
+            scoped_context = dict(context)
+            scoped_context["system_id"] = system_id
+            motif_match = re.match(r"\s*(.+?)\s*,\s*\d+\s+support atoms", segment, re.I | re.S)
+            if motif_match:
+                motif_and_cluster = motif_match.group(1).strip()
+                motif = re.split(r"\s*\+\s*Cu13\b", motif_and_cluster, maxsplit=1, flags=re.I)[0].strip()
+                _append_inline_claim(claims, block, index, scoped_context, "support_motif", motif)
+                _append_inline_claim(claims, block, index, scoped_context, "cluster_formula", "Cu13")
+            quantities = (
+                ("support_atom_count", r"(\d+)\s+support atoms\b"),
+                ("cluster_atom_count", r"(\d+)\s+cluster atoms\b"),
+                ("complete_atom_count", r"=\s*(\d+)\s+atoms\b"),
+                ("explicit_valence_electrons", r"(\d+)\s+valence electrons\b"),
+                ("charge", r"net charge\s+([+-]?\d+(?:\.\d+)?)\b"),
+            )
+            for field, pattern in quantities:
+                found = re.search(pattern, segment, re.I)
+                if found:
+                    _append_inline_claim(claims, block, index, scoped_context, field, found.group(1))
+
+    for index, block in enumerate(blocks, start=1):
+        if block.kind == "table_cell":
+            rows.setdefault((block.location.get("table"), block.location.get("row")), []).append((index, block))
+    for cells in rows.values():
+        cells.sort(key=lambda pair: int(pair[1].location.get("column", 0)))
+        if not cells or not re.search(r"\bWP\s*4\b", cells[0][1].text, re.I):
+            continue
+        for index, block in cells[1:]:
+            match = re.search(r"(\d+)\s*次?\s*(?:快速)?单点力调用", block.text)
+            if match:
+                context = dict(contexts[f"docx-block-{index:06d}"])
+                context["work_package"] = "WP4"
+                _append_inline_claim(claims, block, index, context, "total_force_evaluations", match.group(1))
+
+
+def detect_conflicts(claims: Iterable[dict]) -> list[CompilationDiagnostic]:
+    """Compare claims within the same field, label and explicit system/WP scope."""
+    grouped: dict[tuple[str, str, str, str], list[dict]] = {}
     for claim in claims:
         field = claim.get("field")
-        if field:
-            context = claim.get("context") or {}
-            system_id = str(context.get("system_id") or "")
-            work_package = str(context.get("work_package") or "")
-            identity = (
-                _normalise_label(str(field)),
-                _normalise_label(system_id),
-                _normalise_label(work_package),
-            )
-            grouped.setdefault(identity, []).append(claim)
+        if not field or _field_category(str(field)) == "outputs":
+            continue
+        context = claim.get("context") or {}
+        system_id = str(context.get("system_id") or "")
+        work_package = str(context.get("work_package") or "")
+        label_identity = _claim_label_identity(claim) or _normalise_label(str(field))
+        identity = (
+            _normalise_label(str(field)), label_identity,
+            _normalise_label(system_id), _normalise_label(work_package),
+        )
+        grouped.setdefault(identity, []).append(claim)
 
     diagnostics: list[CompilationDiagnostic] = []
-    for (field, system_id, work_package), items in grouped.items():
+    for (field, _label_identity, system_id, work_package), items in grouped.items():
         value_groups: dict[str, list[dict]] = {}
         for item in items:
             normalised = _normalise_field_value(item.get("value", ""))
             value_groups.setdefault(normalised, []).append(item)
         if len(value_groups) <= 1:
             continue
-
         conflicting_values = []
         all_evidence_ids: list[str] = []
         for normalised_value, value_claims in value_groups.items():
@@ -197,15 +322,10 @@ def detect_conflicts(claims: Iterable[dict]) -> list[CompilationDiagnostic]:
                 "raw_values": raw_values,
                 "evidence": evidence_records,
             })
-
         diagnostics.append(CompilationDiagnostic(
-            "PLAN_FIELD_CONFLICT",
-            "error",
+            "PLAN_FIELD_CONFLICT", "error",
             f"Multiple semantically different source values were found for '{field}'; no value was selected.",
-            field,
-            tuple(all_evidence_ids),
-            True,
-            tuple(conflicting_values),
+            field, tuple(all_evidence_ids), True, tuple(conflicting_values),
             {
                 "system_id": (items[0].get("context") or {}).get("system_id"),
                 "work_package": (items[0].get("context") or {}).get("work_package"),
@@ -309,6 +429,7 @@ def extract_claims(blocks: Iterable[ExtractedBlock]) -> tuple[list[dict], list[d
         parsed = _parse_label_value(text)
         if parsed:
             label, value = parsed
+            value, explanation = _charge_value_and_explanation(label, value)
             evidence_ids = [ev["evidence_id"]]
             claim = {
                 "field": _normalise_label(label),
@@ -322,6 +443,8 @@ def extract_claims(blocks: Iterable[ExtractedBlock]) -> tuple[list[dict], list[d
                 "source_text": block.text,
                 "context": dict(contexts[ev["evidence_id"]]),
             }
+            if explanation:
+                claim["value_explanation"] = explanation
             claims.append(claim)
         for number in _NUMBER_UNIT.finditer(text):
             claims.append({
@@ -369,6 +492,7 @@ def extract_claims(blocks: Iterable[ExtractedBlock]) -> tuple[list[dict], list[d
                 "context": dict(contexts[evidence_ids[0]]),
             })
 
+    _extract_explicit_inline_claims(blocks, contexts, claims)
     diagnostics = detect_conflicts(claims)
     return claims, evidence, [item.as_dict() for item in diagnostics]
 
