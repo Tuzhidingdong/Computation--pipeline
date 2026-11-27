@@ -133,7 +133,11 @@ def _compare_profile_value(profile_value: Any, docx_value: str, profile_path: st
                 "_angstrom": {"å", "angstrom"}, "_ev_per_angstrom": {"ev/å", "ev/angstrom"},
                 "_k": {"k"}, "_v_vs_rhe": {"v"},
             }
-            expected = next((units for suffix, units in expected_units.items() if suffix in key), None)
+            expected = next(
+                (units for suffix, units in sorted(expected_units.items(), key=lambda pair: len(pair[0]), reverse=True)
+                 if suffix in key),
+                None,
+            )
             if same_number and expected is not None and unit in expected:
                 return "consistent"
             if same_number and expected is None and not unit:
