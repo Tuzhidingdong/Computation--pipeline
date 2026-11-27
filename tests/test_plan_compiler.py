@@ -78,6 +78,29 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertFalse(any(x["evidence_id"] == evidence_id
                              for x in confirmed["unresolved_definitions"]))
 
+
+    def test_table_claim_can_be_confirmed_using_any_contributing_cell_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "plan.docx"
+            make_docx(path)
+            manifest = compile_docx(path, project_id="test").manifest
+            table_claim = next(
+                item for item in manifest["claims"] if item.get("field") == "multiplicity"
+            )
+            value_cell_evidence_id = table_claim["evidence_ids"][-1]
+            confirmed = confirm_manifest_claims(
+                manifest, evidence_ids=[value_cell_evidence_id], confirmer="owner",
+                rationale="Confirmed the table value using the value-cell source.",
+            )
+        claim = next(item for item in confirmed["claims"]
+                     if item.get("field") == "multiplicity")
+        self.assertEqual(claim["status"], "user_confirmed")
+        self.assertEqual(claim["evidence_ids"], table_claim["evidence_ids"])
+        self.assertFalse(any(
+            value_cell_evidence_id in item.get("evidence_ids", [])
+            for item in confirmed["unresolved_definitions"]
+        ))
+
     def test_v41_cli_writes_blocked_manifest_instead_of_selecting_ambiguous_values(self):
         import json
         with tempfile.TemporaryDirectory() as tmp:
