@@ -109,7 +109,7 @@ def _normalise_field_value(value: Any) -> str:
     # Canonicalise only a complete scalar numeric token. Decimal formatting
     # differences are equivalent; the unit token remains part of the identity.
     numeric = re.fullmatch(
-        r"([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)([a-zå/0-9^]+)?",
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)([a-zå/0-9^]+)?",
         value,
         re.I,
     )
