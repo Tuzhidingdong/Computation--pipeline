@@ -24,7 +24,7 @@ A prior local run under `F:\cp2k practical\hyy\pipeline_real_test_20261127_01\` 
 | Capability | Current status | Boundary |
 |---|---|---|
 | Generic DOCX reader | Implemented; synthetic DOCX CI-tested | Extracts body paragraphs, heading levels, numbering metadata, table cells and source coordinates. It has not yet been validated against the owner-side Frozen DOCX in this branch. |
-| Evidence-backed Manifest | Implemented; synthetic DOCX CI-tested | Preserves source blocks and labelled claims, keeps unconfirmed claims unresolved, and blocks conflicting labelled values. File-level source SHA/provenance still needs to be added. |
+| Evidence-backed Manifest | Implemented; synthetic DOCX CI-tested | Preserves source blocks and labelled claims, keeps unconfirmed claims unresolved, blocks conflicting labelled values, and records source filename, byte size, SHA-256 and parser identity. |
 | v4.1 project profile | Implemented as a project-specific reference profile | Contains system/method/task values maintained in the repo. The compiler currently overlays this profile; it does not yet reconcile every profile field to exact evidence from the Frozen DOCX. |
 | Known WP1 ambiguity controls | Implemented; CI-tested | Requires an explicit orientation scope. Spin-count mismatch now permits either owner-confirmed retention of all six named candidates or explicit selection of four named candidates; it no longer silently fixes one scientific interpretation. |
 | CalculationPlan conversion | Partial | Existing CalculationPlan validation is preserved. Current CLI requires a separate CalculationPlan JSON; the full DOCX/Manifest-to-CalculationPlan compiler is not yet implemented. |
@@ -47,9 +47,9 @@ A prior local run under `F:\cp2k practical\hyy\pipeline_real_test_20261127_01\` 
 
 ## CI evidence
 
-- Successful Actions run #387 tested PR merge commit `0bb46db`, which included branch commit `a2d6ec44abc633b56261a4d50f455c2a280ffe03`.
-- Result: 98 tests passed, 2 optional upstream integration tests skipped; `compileall` passed.
-- Two additional path-safety / finite-transform tests were committed after that run and still require a fresh CI result.
+- Successful Actions run #398 tested PR merge commit `cab002a`, which included branch commit `ede316918fe814e84fe13a382eaced11147c495a`.
+- Result: 100 tests passed, 2 optional upstream integration tests skipped; `compileall` passed.
+- The suite includes candidate path-traversal / non-finite transform checks and DOCX source-hash provenance assertions.
 - All current CI evidence is software/contract evidence. It is not a real Frozen DOCX parse, a real v4.1 chemistry build, live Artifact registration, or HPC calculation.
 
 ## Next validation gates
