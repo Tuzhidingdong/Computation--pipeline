@@ -217,7 +217,12 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             event_names = [x[0] for x in events]
             self.assertLess(event_names.index("register_inputs"), event_names.index("resolve_artifact_path"))
             self.assertLess(event_names.index("cst"), event_names.index("register_derived_artifact"))
-            self.assertLess(event_names.index("register_derived_artifact"), event_names.index("resolve_artifact_path", 2))
+            derived_index = event_names.index("register_derived_artifact")
+            input_resolve_index = next(
+                i for i, event in enumerate(events)
+                if event[0] == "resolve_artifact_path" and event[1] == "ART-CP2K-INPUT"
+            )
+            self.assertLess(derived_index, input_resolve_index)
             self.assertEqual(events[0][0], "register_inputs")
             derived_event = next(x for x in events if x[0] == "register_derived_artifact")
             self.assertEqual(derived_event[1], ("ART-STRUCT",))
