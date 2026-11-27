@@ -200,7 +200,8 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
                 continue
             if work_package and item_wp and item_wp != work_package.casefold():
                 continue
-            profile_tail = ".".join(parts[2:]) if len(parts) > 2 else parts[-1]
+            tail_start = 2 if root_scope in {"systems", "tasks"} and len(parts) > 2 else 1
+            profile_tail = ".".join(parts[tail_start:])
             profile_tail = re.sub(r"\[\d+\]", "", profile_tail)
             item_tail = item_field.split(".", 1)[1] if "." in item_field else item_field
             field_match = (
