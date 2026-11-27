@@ -22,6 +22,7 @@
       "privacy_header_template": "",
       "remote_root": "",
       "allowed_workspace_root": "",
+      "remote_cp2k_data_dir": "",
       "module_init_path": "",
       "cp2k_executable": "cp2k.psmp",
       "command_timeout_seconds": 45
@@ -35,6 +36,7 @@
       "job_record_script": "",
       "slurm_template": "",
       "remote_root": "",
+      "remote_cp2k_data_dir": "",
       "account": "",
       "command_timeout_seconds": 45
     }
