@@ -103,6 +103,23 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(ctl.resume(rid,plan),"FAILED")
             self.assertEqual(adapter.calls,1)
 
+    def test_retry_wait_is_not_retried_by_ordinary_resume(self):
+        class RetryWait:
+            execution_mode="real"
+            def __init__(self): self.calls=0
+            def preflight(self,task): return {"ready":True}
+            def execute(self,task,existing_job_id=None,**kwargs):
+                self.calls+=1
+                return ExecutionResult("RETRY_WAIT",diagnostics=("retry requires explicit authorization",),
+                                       execution_mode="real")
+            def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
+        with tempfile.TemporaryDirectory() as tmp:
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+            plan=example_plan(); adapter=RetryWait(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+            self.assertEqual(ctl.run(rid,plan),"RETRY_WAIT")
+            self.assertEqual(ctl.resume(rid,plan),"RETRY_WAIT")
+            self.assertEqual(adapter.calls,1)
+
     def test_infrastructure_failure_is_distinct_and_not_retried_by_resume(self):
         class InfraFail:
             execution_mode="real"
