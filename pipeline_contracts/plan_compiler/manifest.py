@@ -242,24 +242,27 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
                 _append_inline_claim(claims, block, index, context, field, render(match))
 
         if re.search(r"\bEPS_SCF\b", text, re.I):
-            geometry_eps = re.search(
-                r"EPS_SCF\s+([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\s+for\s+(?:geometry\s+)?optimization",
-                text, re.I,
-            )
-            force_eps = re.search(
-                r"([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\s+for\s+force\s+calculations",
-                text, re.I,
-            )
             explicit_eps = re.search(r"EPS_SCF\s+([0-9]+(?:\.[0-9]+)?(?:E[-+]?\d+)?)\s*Ha\b", text, re.I)
-            if geometry_eps:
-                _append_inline_claim(claims, block, index, context,
-                                     "eps_scf_geometry_optimization", f"{geometry_eps.group(1)} Ha")
-            if force_eps:
-                _append_inline_claim(claims, block, index, context,
-                                     "eps_scf_local_hessian_force", f"{force_eps.group(1)} Ha")
-            elif explicit_eps and re.search(r"ENERGY_FORCE|finite displacement|有限位移", text, re.I):
+            if explicit_eps and re.search(r"ENERGY_FORCE|finite displacement|有限位移", text, re.I):
                 _append_inline_claim(claims, block, index, context,
                                      "eps_scf_local_hessian_force", f"{explicit_eps.group(1)} Ha")
+
+        # The English copy-ready source does not spell these values as EPS_SCF
+        # directives; it describes them as operation-specific SCF thresholds.
+        geometry_scf = re.search(
+            r"optimized at the DFT level.{0,900}?SCF threshold\s+10\^(-\d+)\s*Ha",
+            text, re.I | re.S,
+        )
+        hessian_scf = re.search(
+            r"CP2K static force evaluations\s*\(SCF threshold tightened to\s+10\^(-\d+)\s*Ha",
+            text, re.I | re.S,
+        )
+        if geometry_scf:
+            _append_inline_claim(claims, block, index, context,
+                                 "eps_scf_geometry_optimization", f"1E{geometry_scf.group(1)} Ha")
+        if hessian_scf:
+            _append_inline_claim(claims, block, index, context,
+                                 "eps_scf_local_hessian_force", f"1E{hessian_scf.group(1)} Ha")
 
         if re.search(r"(?:finite displacement|有限位移|Vibrations)", text, re.I):
             displacement = re.search(r"±\s*(\d+(?:\.\d+)?)\s*Å", text, re.I)
@@ -790,8 +793,54 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "evidence_ids": [item["evidence_id"] for item in spin_cells],
                 "source_text": " | ".join(item.get("text", "") for item in spin_cells),
             },
+            {
+                "field": "topology_requirements.explicit_spin_candidates", "status": "unresolved",
+                "reason": "Fragment and complete-model multiplicities are explicitly listed, but the source row does not provide a verified per-system mapping for the topology requirement.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
         ])
 
+
+    # Structural descriptions mention donor/coordination chemistry and net charges,
+    # but do not provide atom-indexed topology. Retain those source cues as review items.
+    topology_sources = [
+        item for item in evidence
+        if item.get("evidence_id") in {"docx-block-000062", "docx-block-000155"}
+    ]
+    if topology_sources:
+        topology_evidence_ids = [item["evidence_id"] for item in topology_sources]
+        topology_text = " | ".join(item.get("text", "") for item in topology_sources)
+        for field, reason in (
+            ("topology_requirements.explicit_elements",
+             "Chemical elements occur in the model descriptions, but no complete atom-indexed element map is supplied."),
+            ("topology_requirements.explicit_covalent_bonds_and_orders",
+             "The source describes a local motif and selected excluded bonds, but does not provide a complete atom-pair covalent bond/order list."),
+            ("topology_requirements.explicit_coordination_bonds",
+             "Metal–oxygen coordination is described at motif level, but atom-indexed coordination pairs are absent."),
+            ("topology_requirements.explicit_donor_atoms",
+             "Phenolic/carboxyl oxygen donors and coordinating water are mentioned, but donor atom IDs are not provided."),
+            ("topology_requirements.explicit_formal_charges",
+             "Net model charges and oxidation-state descriptions are present, but atom-indexed formal charges are not supplied."),
+            ("topology_requirements.explicit_3d_construction_constraints",
+             "Initial orientation and pre-relaxation are described, but explicit 3D construction constraints are not supplied."),
+        ):
+            unresolved_structured_fields.append({
+                "field": field, "status": "unresolved", "reason": reason,
+                "evidence_ids": topology_evidence_ids, "source_text": topology_text,
+            })
+
+    # The reaction intermediate/products are textually identified, but the source
+    # does not explicitly assert the Profile's broader thermodynamic-only scope.
+    reaction_block = next((item for item in evidence if item.get("evidence_id") == "docx-block-000114"), None)
+    if reaction_block:
+        unresolved_structured_fields.append({
+            "field": "scientific_scope.thermodynamic_only", "status": "unresolved",
+            "reason": "Thermodynamic CHE branches are explicit, but the source does not establish an exclusive thermodynamics-only scope.",
+            "evidence_ids": [reaction_block["evidence_id"]],
+            "source": dict(reaction_block.get("source") or {}),
+            "source_text": reaction_block.get("text", ""),
+        })
 
     # Related DOCX text without a proven WP scope remains unresolved, never profile-filled.
     for item in evidence:
@@ -817,6 +866,24 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                     "reason": "The candidate range is explicit, but the paragraph does not assign it to WP1.",
                     "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
                 })
+                unresolved_structured_fields.append({
+                    "field": "tasks.hcco_candidates_per_catalyst", "status": "unresolved",
+                    "reason": "The paragraph discusses pre-relaxed *HCCO adsorption configurations and 3–4 optimized candidates, but does not bind that range to WP3 or define an exact HCCO candidate count.",
+                    "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                })
+            if re.search(r"MACE-MP-0.*?fmax\s*<\s*0\.05\s*eV/Å", text, re.I | re.S):
+                unresolved_structured_fields.append({
+                    "field": "tasks.mace_fmax_ev_per_angstrom", "status": "unresolved",
+                    "reason": "The MACE pre-relaxation threshold is explicit, but the paragraph does not assign it to WP1.",
+                    "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                })
+            if re.search(r"verifying the spin multiplicities of isolated fragments", text, re.I):
+                unresolved_structured_fields.append({
+                    "field": "tasks.summary_fragment_single_point_count", "status": "unresolved",
+                    "reason": "Isolated-fragment spin verification is described, but this paragraph does not state a WP1 single-point count.",
+                    "evidence_ids": ["docx-block-000079", "docx-block-000080", eid],
+                    "source": dict(item.get("source") or {}), "source_text": text,
+                })
             if re.search(r"protonation branches", text, re.I):
                 unresolved_structured_fields.append({
                     "field": "tasks.protonation_products_per_catalyst", "status": "unresolved",
@@ -825,9 +892,22 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 })
                 unresolved_structured_fields.append({
                     "field": "tasks.gas_references", "status": "unresolved",
-                    "reason": "Gas-phase species are mentioned, but the paragraph does not establish the WP3 gas-reference field mapping.",
+                    "reason": "H2 and H2CCO appear in the thermodynamic expressions, but the paragraph does not establish WP3 gas-reference field ownership.",
                     "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
                 })
+            if re.search(r"SCCS.*?sensitivity checks|basis-set sensitivity checks", text, re.I | re.S):
+                unresolved_structured_fields.extend([
+                    {
+                        "field": "tasks.sccs_single_points", "status": "unresolved",
+                        "reason": "SCCS sensitivity is explicitly described on key states, but no WP5 ownership or single-point count is stated.",
+                        "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                    },
+                    {
+                        "field": "tasks.tzv2p_single_points", "status": "unresolved",
+                        "reason": "TZV2P basis sensitivity is explicitly described on key states, but no WP5 ownership or single-point count is stated.",
+                        "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                    },
+                ])
 
     # A system identifier in a source heading or explicit System/Catalyst label is
     # itself structured data with its own evidence. It is not supplied by the profile.
