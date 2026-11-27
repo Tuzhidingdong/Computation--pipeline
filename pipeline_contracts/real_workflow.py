@@ -356,12 +356,13 @@ class RealCP2KWorkflowAdapter:
             )
         input_text = str(cst.structured_result["input_text"])
         if task["operation"] == "cp2k.geo_opt":
-            # The scientific protocol is unchanged; this adds only a declared output
-            # request for the optimized geometry needed by the dependent ENERGY node.
-            input_text = input_text.rstrip() + """
-
-&MOTION
-  &PRINT
+            # Insert only a declared output request inside the existing MOTION
+            # section; do not create a duplicate top-level MOTION section.
+            marker = "&END MOTION"
+            position = input_text.upper().rfind(marker)
+            if position < 0:
+                raise RealWorkflowUnavailable("CST GEO_OPT builder output has no closing &END MOTION")
+            trajectory_print = """  &PRINT
     &TRAJECTORY
       FORMAT XYZ
       FILENAME = optimized_structure.xyz
@@ -370,8 +371,8 @@ class RealCP2KWorkflowAdapter:
       &END EACH
     &END TRAJECTORY
   &END PRINT
-&END MOTION
 """
+            input_text = input_text[:position] + trajectory_print + input_text[position:]
         suffix = uuid.uuid4().hex[:10]
         input_name = "cp2k_" + str(task["task_id"])[:32] + ".inp"
         derived_dir = self.da_project_root / "data" / "derived"
