@@ -44,7 +44,7 @@ The important settings are:
 | resource_profiles | Explicit nodes, tasks, CPUs/task, memory, time, partition, account and module. The plan selects one profile by name. |
 | input_files.basis / input_files.potential | Local regular files for the exact basis_file_name and potential_file_name in the CalculationPlan. Both must be present in the same local directory so cp2klint --base-dir can resolve them. They are also staged to the remote task directory. |
 
-The local basis/pseudopotential files are mandatory in this MVP. The generated CP2K input refers to the declared file names, not guessed installation paths.
+The local basis/pseudopotential files are mandatory in this MVP. The generated CP2K input refers to the declared file names, not guessed installation paths. The CalculationPlan must also explicitly declare relative cutoff, Poisson solver, UKS, coordinate-centering, SCF parameters and all cell lengths/angles. The validator blocks missing values instead of inheriting the upstream builder's defaults.
 
 ### UCAS_hpc
 
