@@ -36,6 +36,7 @@ class TaskStatus(str, Enum):
     SUCCEEDED = "succeeded"
     WARNING = "warning"
     FAILED = "failed"
+    UNAVAILABLE = "unavailable"
 
 
 class DiagnosticSeverity(str, Enum):
@@ -134,10 +135,10 @@ class AdapterOutcome:
     def __post_init__(self) -> None:
         _require_text("outcome.task_id", self.task_id)
         _require_mapping("structured_result", self.structured_result)
-        if self.status == TaskStatus.FAILED and not self.error:
-            raise ContractError("failed adapter outcome requires an error message")
-        if self.status != TaskStatus.FAILED and self.error is not None:
-            raise ContractError("error must be absent unless adapter status is failed")
+        if self.status in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE} and not self.error:
+            raise ContractError("failed or unavailable adapter outcome requires an error message")
+        if self.status not in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE} and self.error is not None:
+            raise ContractError("error is allowed only for failed or unavailable adapter outcomes")
         if self.status == TaskStatus.WARNING and not any(
             item.severity == DiagnosticSeverity.WARNING for item in self.diagnostics
         ):
@@ -219,10 +220,10 @@ class AnalysisOutcome:
         _require_mapping("analysis_run_record", self.analysis_run_record)
         if self.evidence_package is not None:
             _require_mapping("evidence_package", self.evidence_package)
-        if self.status == TaskStatus.FAILED and not self.error:
-            raise ContractError("failed analysis outcome requires an error message")
-        if self.status != TaskStatus.FAILED and self.error is not None:
-            raise ContractError("analysis error must be absent unless status is failed")
+        if self.status in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE} and not self.error:
+            raise ContractError("failed or unavailable analysis outcome requires an error message")
+        if self.status not in {TaskStatus.FAILED, TaskStatus.UNAVAILABLE} and self.error is not None:
+            raise ContractError("analysis error is allowed only for failed or unavailable outcomes")
         if self.execution_mode == "mock" and self.qc_status != "not_evaluated":
             raise ContractError("mock analysis cannot claim a scientific QC result")
 
