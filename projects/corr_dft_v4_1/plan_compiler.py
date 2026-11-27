@@ -184,7 +184,11 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
             profile_tail = ".".join(parts[2:]) if len(parts) > 2 else parts[-1]
             profile_tail = re.sub(r"\[\d+\]", "", profile_tail)
             item_tail = item_field.split(".", 1)[1] if "." in item_field else item_field
-            field_match = item_tail == profile_tail or item_tail.endswith("." + profile_tail)
+            field_match = (
+                item_tail == profile_tail
+                or item_tail.endswith("." + profile_tail)
+                or profile_tail.startswith(item_tail + ".")
+            )
             source_text = _normalise_label(str(item.get("source_text", "")))
             if field_match or any(alias and alias in source_text for alias in aliases):
                 unresolved_matches.append(item)
