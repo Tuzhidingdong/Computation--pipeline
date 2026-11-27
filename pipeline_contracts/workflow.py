@@ -167,11 +167,12 @@ class WorkflowController:
                 row=next((x for x in self.store.tasks(rid) if x["status"]!="COMPLETED" and x["task_id"] not in processed),None)
                 if row is None: break
                 tid=row["task_id"]; processed.add(tid); state=row["status"]
-                if state in {"FAILED_PERMANENT","FAILED_INFRASTRUCTURE","CANCELLED"}:
+                if state in {"FAILED_PERMANENT","FAILED_INFRASTRUCTURE","CANCELLED","RETRY_WAIT"}:
                     final = {
                         "FAILED_PERMANENT": "FAILED",
                         "FAILED_INFRASTRUCTURE": "FAILED_INFRASTRUCTURE",
                         "CANCELLED": "CANCELLED",
+                        "RETRY_WAIT": "RETRY_WAIT",
                     }[state]
                     self.store.set_run_status(rid,final); return final
                 task=json.loads(row["task_json"]); deps=json.loads(row["dependencies_json"])
