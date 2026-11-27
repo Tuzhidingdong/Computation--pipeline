@@ -48,17 +48,20 @@ def confirm_manifest_claims(manifest: Mapping[str, Any], *, evidence_ids: list[s
     selected = set(evidence_ids)
     matched = set()
     for claim in claims:
-        if claim.get("status") == "requires_confirmation" and claim.get("evidence_id") in selected:
+        claim_evidence_ids = set(claim.get("evidence_ids") or [claim.get("evidence_id")])
+        claim_evidence_ids.discard(None)
+        matched_evidence_ids = claim_evidence_ids & selected
+        if claim.get("status") == "requires_confirmation" and matched_evidence_ids:
             claim["status"] = "user_confirmed"
             claim["confirmation"] = {"confirmed_by": confirmer, "rationale": rationale}
-            matched.add(claim["evidence_id"])
+            matched.update(matched_evidence_ids)
     missing = selected - matched
     if missing:
         raise ValueError("no unconfirmed labelled claims for evidence IDs: " + ", ".join(sorted(missing)))
     result["claims"] = claims
     result["unresolved_definitions"] = [
         item for item in result.get("unresolved_definitions", [])
-        if item.get("evidence_id") not in selected
+        if not (set(item.get("evidence_ids") or [item.get("evidence_id")]) & selected)
     ]
     result.setdefault("confirmations", []).append({
         "evidence_ids": sorted(selected), "confirmed_by": confirmer, "rationale": rationale,
