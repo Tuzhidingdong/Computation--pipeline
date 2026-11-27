@@ -11,7 +11,7 @@
 - **Upstream Data_analysis inspected branch:** `cp2k-dft-artifact-and-evidence-support` at `22ad1290e0d78c6a98fbd6d2d194d3ad8e1c689a`
 - **Upstream chem-scitoolkit inspected branch:** `dft-finite-cluster-production-interfaces` at `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba`
 - **No production DFT or HPC task has been submitted.**
-- **Latest verified Agent B test run:** PR Actions run [45930335174](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930335174) on commit `42ecbcfd061d4093eca1f191ad0d2d60c2ea583a`: 19 tests run, 17 passed, 2 opt-in live upstream tests skipped; compileall passed.
+- **Latest verified Agent B test run:** PR Actions run [45930492422](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930335174) on commit `341d8fa435b7887b090cebcdf2b11c9e5a146b7d`: 21 tests run, 19 passed, 2 opt-in live upstream tests skipped; compileall passed.
 
 ## Agent B work — real Skill adapter phase
 
@@ -38,7 +38,7 @@ The real CST adapter uses exact functions observed on the supplied Agent A branc
 - New real adapter boundary tests: tests injected Data_analysis API double, CST builder/validator doubles, missing resolver/hash, unsupported format and reader-unavailable cases.
 - Optional live tests are skipped unless `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT` are explicitly set. They use temporary synthetic artifacts only.
 - GitHub Actions PR run [45930335174](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930335174): `Ran 19 tests`, `OK (skipped=2)`; the 17 executed tests passed and the two opt-in source-tree tests were skipped because `DATA_ANALYSIS_SOURCE_ROOT` / `CHEM_SCI_TOOLKIT_SOURCE_ROOT` were not supplied. `python -m compileall -q pipeline_contracts tests` passed.
-- Matching push run [45930329890](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930329890) also succeeded.
+- Matching push run [45930485763](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930329890) also succeeded.
 - Passing adapter tests validate interface wiring and status/provenance flow only, not scientific algorithms or scientific QC.
 
 ## Remaining blockers / follow-up
