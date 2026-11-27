@@ -3,42 +3,174 @@
   "$id": "https://github.com/Tuzhidingdong/Computation--pipeline/schemas/project_manifest.schema.json",
   "title": "Coordination DFT Project Manifest",
   "type": "object",
-  "required": ["schema_version", "project", "systems", "models", "method", "tasks", "claims", "evidence", "diagnostics", "compilation_status"],
+  "required": [
+    "schema_version",
+    "project",
+    "systems",
+    "models",
+    "method",
+    "tasks",
+    "claims",
+    "evidence",
+    "diagnostics",
+    "compilation_status",
+    "source_document"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
-    "project": {
-      "type": "object", "required": ["project_id", "source_format"],
-      "properties": {
-        "project_id": {"type": "string", "minLength": 1},
-        "plan_version": {"type": ["string", "null"]},
-        "source_format": {"const": "docx"}
-      }, "additionalProperties": true
+    "schema_version": {
+      "const": "1.0.0"
     },
-    "systems": {"type": "array", "items": {"type": "object"}},
-    "models": {"type": "array", "items": {"type": "object"}},
-    "method": {"type": "object"},
-    "tasks": {"type": "array", "items": {"type": "object"}},
-    "task_count_claims": {"type": "array", "items": {"type": "object"}},
-    "dependencies": {"type": "array", "items": {"type": "object"}},
-    "input_outputs": {"type": "object"},
-    "resources": {"type": "object"},
-    "scientific_constraints": {"type": "array", "items": {"type": "object"}},
-    "claims": {"type": "array", "items": {"type": "object"}},
-    "unresolved_definitions": {"type": "array", "items": {"type": "object"}},
+    "project": {
+      "type": "object",
+      "required": [
+        "project_id",
+        "source_format"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_format": {
+          "const": "docx"
+        }
+      },
+      "additionalProperties": true
+    },
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "method": {
+      "type": "object"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "task_count_claims": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "input_outputs": {
+      "type": "object"
+    },
+    "resources": {
+      "type": "object"
+    },
+    "scientific_constraints": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "unresolved_definitions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "evidence": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["evidence_id", "source", "block_kind", "text"],
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "source",
+          "block_kind",
+          "text"
+        ],
         "properties": {
-          "evidence_id": {"type": "string"},
-          "source": {"type": "object"},
-          "block_kind": {"enum": ["paragraph", "table_cell"]},
-          "text": {"type": "string"}
-        }, "additionalProperties": true
+          "evidence_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object"
+          },
+          "block_kind": {
+            "enum": [
+              "paragraph",
+              "table_cell"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     },
-    "diagnostics": {"type": "array", "items": {"type": "object"}},
-    "compilation_status": {"enum": ["BLOCKED", "NEEDS_REVIEW", "READY_FOR_APPROVAL"]}
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "compilation_status": {
+      "enum": [
+        "BLOCKED",
+        "NEEDS_REVIEW",
+        "READY_FOR_APPROVAL"
+      ]
+    },
+    "source_document": {
+      "type": "object",
+      "required": [
+        "file_name",
+        "size_bytes",
+        "sha256",
+        "parser"
+      ],
+      "properties": {
+        "file_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "parser": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }
