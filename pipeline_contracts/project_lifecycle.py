@@ -8,7 +8,7 @@ import uuid
 
 from .workflow import WorkflowStore
 from .calculation_plan import CalculationPlan
-from projects.corr_dft_v4_1.model_plugin.approval import verify_approval_record
+from projects.corr_dft_v4_1.model_plugin.approval import verify_approval_record, verify_approval_record_integrity
 
 PROJECT_STAGES = (
     "DOCX_INGEST", "PLAN_COMPILE", "MODEL_GENERATE", "MODEL_VALIDATE",
@@ -92,10 +92,14 @@ class ProjectLifecycle:
         self.store.event(run_id, stage, status, {"inputs": dict(inputs or {}),
                                                 "outputs": dict(outputs or {}), "error": error})
     def freeze_approval(self, run_id: str, record: Mapping[str, Any]):
-        if record.get("approval_status") != "APPROVED":
-            raise ValueError("only an approved model record can be frozen")
-        if not record.get("artifact_id") or not record.get("structure_sha256"):
-            raise ValueError("approved Artifact ID and SHA-256 are required")
+        if not verify_approval_record_integrity(record):
+            raise ValueError("model approval record or Data_analysis ArtifactRef integrity is invalid")
+        approval_stage = self.db.execute(
+            "SELECT status FROM project_lifecycle_tasks WHERE project_run_id=? AND stage='MODEL_APPROVAL'",
+            (run_id,),
+        ).fetchone()
+        if approval_stage is None or approval_stage["status"] != "AWAITING_APPROVAL":
+            raise RuntimeError("model approval can only be frozen from AWAITING_APPROVAL")
         self.db.execute(
             "INSERT INTO model_approval_records VALUES(?,?,?,?,?,?)",
             (run_id, record["candidate_id"], record["artifact_id"], record["structure_sha256"],
