@@ -476,7 +476,7 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
                 with _install_fake_ase():
                     self.assertEqual(ctl.run(rid,plan),"FAILED")
                 self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
-                self.assertFalse(any(x[0]=="register_inputs" for x in events if x[2]=="cp2k.out"))
+                self.assertFalse(any(x[0]=="register_inputs" and len(x)>2 and x[2]=="cp2k.out" for x in events))
             finally:
                 store.close()
 
