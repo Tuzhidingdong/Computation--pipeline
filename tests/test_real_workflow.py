@@ -73,8 +73,9 @@ class FakeDAAdapter:
 
 
 class FakeCSTAdapter:
-    def __init__(self, events):
+    def __init__(self, events, *, geo_opt_converged=True):
         self.events = events
+        self.geo_opt_converged = geo_opt_converged
 
     def _load_components(self):
         class Builder:
@@ -104,7 +105,7 @@ class FakeCSTAdapter:
                 status=TaskStatus.SUCCEEDED,
                 structured_result={
                     "status": "passed", "program_normal_termination": True,
-                    "scf_converged": True, "geometry_optimization_completed": True,
+                    "scf_converged": True, "geometry_optimization_completed": self.geo_opt_converged,
                     "cp2k_version": "2025.2",
                 },
                 error=None,
@@ -113,8 +114,15 @@ class FakeCSTAdapter:
 
 
 class FakeHPC:
-    def __init__(self, root):
+    def __init__(self, root, *, scheduler_state="COMPLETED", exit_code=0,
+                 running_polls=0, missing_roles=(), corrupt_hashes=False):
         self.root = Path(root)
+        self.scheduler_state = scheduler_state
+        self.exit_code = exit_code
+        self.running_polls = running_polls
+        self.status_calls = 0
+        self.missing_roles = set(missing_roles)
+        self.corrupt_hashes = corrupt_hashes
         self.manifests = {}
         self.jobs = {}
         self.submissions = []
@@ -148,10 +156,14 @@ class FakeHPC:
         return reference
 
     def get_status(self, reference):
-        return HpcStatus(reference, HpcState.AWAITING_VALIDATION, "COMPLETED")
+        self.status_calls += 1
+        if self.status_calls <= self.running_polls:
+            return HpcStatus(reference, HpcState.RUNNING, "RUNNING")
+        mapped = HpcState.AWAITING_VALIDATION if self.scheduler_state == "COMPLETED" else HpcState.FAILED
+        return HpcStatus(reference, mapped, self.scheduler_state)
 
     def get_record(self, reference):
-        return HpcJobRecord(reference, "COMPLETED", "unknown", 0, "scheduler completed")
+        return HpcJobRecord(reference, self.scheduler_state, "unknown", self.exit_code, "scheduler record")
 
     def retrieve_selected_outputs(self, reference, output_selection):
         manifest = self.jobs[reference.job_id][1]
@@ -160,6 +172,8 @@ class FakeHPC:
         directory.mkdir(parents=True, exist_ok=True)
         refs = []
         for role in output_selection:
+            if role in self.missing_roles:
+                continue
             declared = str(manifest.payload["output_files"][role]).replace("JOB_ID", reference.job_id)
             path = directory / declared
             if role == "cp2k_output":
@@ -171,7 +185,8 @@ class FakeHPC:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             refs.append(ArtifactRef(
                 artifact_id=f"STAGED-{reference.job_id}-{role}",
-                sha256=digest, uri=path.resolve().as_uri(), source_system="HPC:ucas",
+                sha256=("0" * 64 if self.corrupt_hashes else digest),
+                uri=path.resolve().as_uri(), source_system="HPC:ucas",
             ))
         return tuple(refs)
 
@@ -366,6 +381,123 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
                 self.assertEqual(report["execution_mode"], "real")
                 self.assertEqual(len([event for event in report["events"] if event["event"] == "DYNAMIC_TASK_ADDED"]), 1)
                 self.assertTrue(all(ok for _, ok, *_ in hpc.updates))
+            finally:
+                store.close()
+
+    def test_real_workflow_resumes_known_job_id_without_second_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); da_project=root/"da"; active=root/"active"; skills=root/"skills"
+            da_project.mkdir(); active.mkdir()
+            structure=root/"structure.xyz"
+            structure.write_text("2\\ninput\\nH 0 0 0\\nH 0.7 0 0\\n",encoding="utf-8")
+            runtime=make_runtime(root,active,skills); runtime["data_analysis"]["project_root"]=str(da_project)
+            plan=CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            raw=plan.as_dict(); raw["project_root"]=str(da_project); raw["structure"]["path"]=str(structure)
+            plan=CalculationPlan.from_mapping(raw)
+            events=[]; paths={}; api=FakeDataAnalysisAPI(paths,events); da=FakeDAAdapter(da_project,paths,events)
+            hpc=FakeHPC(root,running_polls=1)
+            adapter=RealCP2KWorkflowAdapter(plan,da_project,runtime,cst_adapter=FakeCSTAdapter(events),
+                data_analysis_adapter=da,hpc_backend=hpc,data_analysis_api=api)
+            store=WorkflowStore(root/"workflow.sqlite")
+            try:
+                ctl=WorkflowController(store,adapter); run_id=ctl.create(plan)
+                with _install_fake_ase():
+                    self.assertEqual(ctl.run(run_id,plan),"RUNNING")
+                    first=store.tasks(run_id)[0]
+                    saved_job=first["job_id"]
+                    self.assertTrue(saved_job)
+                    self.assertEqual(ctl.resume(run_id,plan),"COMPLETED")
+                self.assertEqual(len(hpc.submissions),2)  # GEO_OPT and ENERGY, one each
+                self.assertEqual(hpc.submissions[0][1],saved_job)
+                self.assertEqual(hpc.status_calls,3)  # first running; resumed GEO_OPT + ENERGY terminal
+                self.assertEqual(store.tasks(run_id)[0]["job_id"],saved_job)
+            finally:
+                store.close()
+
+    def test_real_scheduler_node_failure_is_not_reported_as_scientific_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); da=root/"da"; active=root/"active"; skills=root/"skills"
+            da.mkdir(); active.mkdir()
+            structure=root/"input.xyz"; structure.write_text("2\\ninput\\nH 0 0 0\\nH 0.7 0 0\\n",encoding="utf-8")
+            runtime=make_runtime(root,active,skills); runtime["data_analysis"]["project_root"]=str(da)
+            plan=CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            raw=plan.as_dict(); raw["project_root"]=str(da); raw["structure"]["path"]=str(structure)
+            plan=CalculationPlan.from_mapping(raw)
+            events=[]; paths={}; api=FakeDataAnalysisAPI(paths,events); hpc=FakeHPC(root,scheduler_state="NODE_FAIL",exit_code=None)
+            adapter=RealCP2KWorkflowAdapter(plan,da,runtime,cst_adapter=FakeCSTAdapter(events),
+                data_analysis_adapter=FakeDAAdapter(da,paths,events),hpc_backend=hpc,data_analysis_api=api)
+            store=WorkflowStore(root/"workflow.sqlite")
+            try:
+                ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+                with _install_fake_ase():
+                    self.assertEqual(ctl.run(rid,plan),"FAILED_INFRASTRUCTURE")
+                self.assertEqual(len(hpc.submissions),1)
+                self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_INFRASTRUCTURE")
+            finally:
+                store.close()
+
+    def test_cp2k_nonconverged_geo_opt_does_not_create_energy_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); da=root/"da"; active=root/"active"; skills=root/"skills"
+            da.mkdir(); active.mkdir()
+            structure=root/"input.xyz"; structure.write_text("2\\ninput\\nH 0 0 0\\nH 0.7 0 0\\n",encoding="utf-8")
+            runtime=make_runtime(root,active,skills); runtime["data_analysis"]["project_root"]=str(da)
+            plan=CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            raw=plan.as_dict(); raw["project_root"]=str(da); raw["structure"]["path"]=str(structure)
+            plan=CalculationPlan.from_mapping(raw)
+            events=[]; paths={}; api=FakeDataAnalysisAPI(paths,events); hpc=FakeHPC(root)
+            adapter=RealCP2KWorkflowAdapter(plan,da,runtime,cst_adapter=FakeCSTAdapter(events,geo_opt_converged=False),
+                data_analysis_adapter=FakeDAAdapter(da,paths,events),hpc_backend=hpc,data_analysis_api=api)
+            store=WorkflowStore(root/"workflow.sqlite")
+            try:
+                ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+                with _install_fake_ase():
+                    self.assertEqual(ctl.run(rid,plan),"FAILED")
+                self.assertEqual([x["operation"] for x in store.tasks(rid)],["cp2k.geo_opt"])
+                self.assertEqual(len(hpc.submissions),1)
+            finally:
+                store.close()
+
+    def test_missing_retrieved_cp2k_output_is_never_registered_as_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); da=root/"da"; active=root/"active"; skills=root/"skills"
+            da.mkdir(); active.mkdir()
+            structure=root/"input.xyz"; structure.write_text("2\\ninput\\nH 0 0 0\\nH 0.7 0 0\\n",encoding="utf-8")
+            runtime=make_runtime(root,active,skills); runtime["data_analysis"]["project_root"]=str(da)
+            plan=CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            raw=plan.as_dict(); raw["project_root"]=str(da); raw["structure"]["path"]=str(structure)
+            plan=CalculationPlan.from_mapping(raw)
+            events=[]; paths={}; api=FakeDataAnalysisAPI(paths,events); hpc=FakeHPC(root,missing_roles=("cp2k_output",))
+            adapter=RealCP2KWorkflowAdapter(plan,da,runtime,cst_adapter=FakeCSTAdapter(events),
+                data_analysis_adapter=FakeDAAdapter(da,paths,events),hpc_backend=hpc,data_analysis_api=api)
+            store=WorkflowStore(root/"workflow.sqlite")
+            try:
+                ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+                with _install_fake_ase():
+                    self.assertEqual(ctl.run(rid,plan),"FAILED")
+                self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
+                self.assertFalse(any(x[0]=="register_inputs" for x in events if x[2]=="cp2k.out"))
+            finally:
+                store.close()
+
+    def test_retrieved_output_hash_mismatch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); da=root/"da"; active=root/"active"; skills=root/"skills"
+            da.mkdir(); active.mkdir()
+            structure=root/"input.xyz"; structure.write_text("2\\ninput\\nH 0 0 0\\nH 0.7 0 0\\n",encoding="utf-8")
+            runtime=make_runtime(root,active,skills); runtime["data_analysis"]["project_root"]=str(da)
+            plan=CalculationPlan.load(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            raw=plan.as_dict(); raw["project_root"]=str(da); raw["structure"]["path"]=str(structure)
+            plan=CalculationPlan.from_mapping(raw)
+            events=[]; paths={}; api=FakeDataAnalysisAPI(paths,events); hpc=FakeHPC(root,corrupt_hashes=True)
+            adapter=RealCP2KWorkflowAdapter(plan,da,runtime,cst_adapter=FakeCSTAdapter(events),
+                data_analysis_adapter=FakeDAAdapter(da,paths,events),hpc_backend=hpc,data_analysis_api=api)
+            store=WorkflowStore(root/"workflow.sqlite")
+            try:
+                ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+                with _install_fake_ase():
+                    self.assertEqual(ctl.run(rid,plan),"FAILED")
+                self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
             finally:
                 store.close()
 
