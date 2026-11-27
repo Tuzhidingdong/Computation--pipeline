@@ -36,6 +36,7 @@ class RuntimeConfigTests(unittest.TestCase):
                 "data_analysis": {"source_root": "", "project_root": ".."},
                 "chem_scitoolkit": {"source_root": ""},
                 "hpc_backends": {
+                    "beilong": {"module_init_path": "/cluster/modules/module.sh"},
                     "ucas": {
                         "enabled": True, "alias": "hpc", "ssh_executable": "../ssh.exe",
                         "scp_executable": "../scp.exe", "skill_root": "../UCAS_hpc",
@@ -55,6 +56,7 @@ class RuntimeConfigTests(unittest.TestCase):
             self.assertEqual(Path(payload["input_files"]["basis"]), basis.resolve())
             self.assertEqual(Path(payload["input_files"]["potential"]), potential.resolve())
             self.assertEqual(Path(payload["hpc_backends"]["ucas"]["skill_root"]), skill.resolve())
+            self.assertEqual(payload["hpc_backends"]["beilong"]["module_init_path"], "/cluster/modules/module.sh")
             backend, resources = validate_runtime_for_backend(payload, "ucas", "ucas-cpu")
             self.assertEqual(resources["account"], "research")
             self.assertEqual(Path(backend["job_record_script"]), skill_file.resolve())
