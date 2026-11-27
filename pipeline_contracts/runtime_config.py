@@ -54,6 +54,13 @@ def load_runtime_config(path: str | Path) -> dict[str, Any]:
     if cst.get("source_root"):
         cst["source_root"] = str(_resolve(cst["source_root"], base=base))
 
+    input_files = payload.setdefault("input_files", {})
+    if not isinstance(input_files, dict):
+        raise RuntimeConfigError("input_files must be an object")
+    for key in ("basis", "potential"):
+        if input_files.get(key):
+            input_files[key] = str(_resolve(input_files[key], base=base))
+
     backends = payload.setdefault("hpc_backends", {})
     if not isinstance(backends, dict):
         raise RuntimeConfigError("hpc_backends must be an object")
@@ -62,7 +69,7 @@ def load_runtime_config(path: str | Path) -> dict[str, Any]:
             raise RuntimeConfigError(f"hpc_backends.{backend_name} must be an object")
         for key in (
             "ssh_executable", "scp_executable", "ssh_config", "skill_root",
-            "job_record_script", "slurm_template", "privacy_header_template",
+            "job_record_script", "slurm_template", "privacy_header_template", "module_init_path",
         ):
             if profile.get(key):
                 profile[key] = str(_resolve(profile[key], base=base))
