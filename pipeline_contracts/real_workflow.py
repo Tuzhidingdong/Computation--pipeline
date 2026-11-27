@@ -140,6 +140,8 @@ class RealCP2KWorkflowAdapter:
             )
         self.backend_config["resource_profile"] = dict(self.resources)
         self.backend_config["basis_file_name"] = str(method_cfg["basis_file_name"])
+        geo_opt_stage = next(x for x in self.plan.calculations if x.get("operation") == "cp2k.geo_opt")
+        self.backend_config["required_cp2k_version"] = str(geo_opt_stage["tool_version"])
         self.backend_config["potential_file_name"] = str(method_cfg["potential_file_name"])
         if hpc_backend is not None:
             self.hpc = hpc_backend
