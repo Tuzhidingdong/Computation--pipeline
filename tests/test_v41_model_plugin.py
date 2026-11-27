@@ -72,7 +72,7 @@ class ModelPluginTests(unittest.TestCase):
             record_path = Path(tmp) / "approval.json"
             record = create_approval_record(
                 record_path, approver="owner", candidate_id="candidate-001",
-                artifact_id="artifact-1", structure_path=structure,
+                artifact_ref={"artifact_id":"artifact-1","sha256":report["structure_sha256"],"source_system":"Data_analysis","verified":True}, structure_path=structure,
                 validation_report=report, approved=True,
             )
             self.assertTrue(verify_approval_record(record, structure))
@@ -81,7 +81,7 @@ class ModelPluginTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 create_approval_record(
                     record_path, approver="owner", candidate_id="candidate-001",
-                    artifact_id="artifact-1", structure_path=structure,
+                    artifact_ref={"artifact_id":"artifact-1","sha256":report["structure_sha256"],"source_system":"Data_analysis","verified":True}, structure_path=structure,
                     validation_report=report, approved=True,
                 )
 
