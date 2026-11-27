@@ -78,6 +78,7 @@ class RealCP2KWorkflowAdapter:
         data_analysis_adapter: Any | None = None,
         hpc_backend: Any | None = None,
         command_runner: Any | None = None,
+        data_analysis_api: Any | None = None,
     ):
         self.plan = plan
         self.project_root = Path(project_root).expanduser().resolve()
@@ -98,10 +99,13 @@ class RealCP2KWorkflowAdapter:
         _add_source_root(data_cfg.get("source_root"))
         _add_source_root((self.runtime.get("chem_scitoolkit") or {}).get("source_root"))
 
-        try:
-            self.da_api = load_data_analysis_api()
-        except Exception as exc:
-            raise RealWorkflowUnavailable(f"Data_analysis API unavailable: {exc}") from exc
+        if data_analysis_api is not None:
+            self.da_api = data_analysis_api
+        else:
+            try:
+                self.da_api = load_data_analysis_api()
+            except Exception as exc:
+                raise RealWorkflowUnavailable(f"Data_analysis API unavailable: {exc}") from exc
         self.register_inputs = getattr(self.da_api, "register_inputs", None)
         if not callable(self.register_inputs):
             raise RealWorkflowUnavailable(
