@@ -6,6 +6,7 @@ from pathlib import Path
 from projects.corr_dft_v4_1.model_plugin import ModelSpec, build_candidates, create_approval_record, verify_approval_record
 from projects.corr_dft_v4_1.model_plugin.artifacts import register_candidate_structure, register_candidate_package
 from projects.corr_dft_v4_1.model_plugin.review import build_review_package
+from projects.corr_dft_v4_1.model_plugin.toolchain import toolchain_report
 
 
 class SimpleWriter:
@@ -126,6 +127,14 @@ class ModelPluginTests(unittest.TestCase):
             })
             self.assertEqual(len(api.calls), 4)
             self.assertTrue(all(item["verified"] for item in result["artifacts"].values()))
+
+    def test_toolchain_report_lists_exact_versions_and_optional_adapters(self):
+        report = toolchain_report()
+        self.assertIn("ase", report["packages"])
+        self.assertIn("rdkit", report["packages"])
+        self.assertIn("molSimplify", report["packages"])
+        self.assertIn("mace_torch", report["packages"])
+        self.assertIn(report["status"], {"READY", "MISSING_REQUIRED_TOOLS"})
 
     def test_missing_3d_position_fails_closed(self):
         raw = {
