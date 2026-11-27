@@ -197,7 +197,7 @@ def render_beilong_cp2k_script(
     ]
     if resources.get("qos"):
         directives.append(f"#SBATCH --qos={resources['qos']}")
-    data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory") if cp2k_data_dir else None
+    data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory") if cp2k_data_dir and cp2k_data_dir != "__WORKDIR__" else None
     if cp2k_data_dir == "__WORKDIR__":
         cp2k_data_export = 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
     else:
