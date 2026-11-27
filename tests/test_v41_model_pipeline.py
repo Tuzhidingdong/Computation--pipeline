@@ -47,7 +47,7 @@ class ModelPipelineTests(unittest.TestCase):
                     "fragments":{"ligand":{"atom_ids":["O1"]}},
                     "expected":{"atom_count":2,"composition":{"Cu":1,"O":1},
                                 "charge":0,"multiplicity":1,"candidate_count":1},
-                    "build_constraints":{"candidate_transforms":[{
+                    "build_constraints":{"random_seed":17,"candidate_transforms":[{
                         "candidate_id":"candidate-1","fragment_id":"ligand",
                         "origin":[0,0,0],"axis":[0,0,1],"angle_degrees":0,
                         "translation":[0,0,0]}],"donor_atoms":["O1"]},
