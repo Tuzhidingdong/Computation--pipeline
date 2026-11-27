@@ -129,29 +129,29 @@ def validate_candidate(
             continue
         if kind == "covalent" and bond.get("order") not in {1, 1.5, 2, 3}:
             diagnostics.append("TOPOLOGY_COVALENT_BOND_ORDER_INVALID")
-        if kind == "coordination":
-            if atom1 not in donor_atoms and atom2 not in donor_atoms:
-                diagnostics.append("COORDINATION_DONOR_NOT_DECLARED")
-            distance_range = bond.get("distance_range_angstrom")
-            if not isinstance(distance_range, list) or len(distance_range) != 2:
-                diagnostics.append("COORDINATION_DISTANCE_RANGE_MISSING")
-                continue
-            try:
-                lower, upper = (float(value) for value in distance_range)
-                distance = float(atoms.get_distance(atom_index[atom1], atom_index[atom2], mic=False))
-            except (TypeError, ValueError, OverflowError):
-                diagnostics.append("COORDINATION_DISTANCE_RANGE_INVALID")
-                continue
-            if not math.isfinite(lower) or not math.isfinite(upper) or lower <= 0 or upper <= lower:
-                diagnostics.append("COORDINATION_DISTANCE_RANGE_INVALID")
-            else:
-                passed = lower <= distance <= upper
+        if kind == "coordination" and atom1 not in donor_atoms and atom2 not in donor_atoms:
+            diagnostics.append("COORDINATION_DONOR_NOT_DECLARED")
+        distance_range = bond.get("distance_range_angstrom")
+        if not isinstance(distance_range, list) or len(distance_range) != 2:
+            diagnostics.append("BOND_DISTANCE_RANGE_MISSING")
+            continue
+        try:
+            lower, upper = (float(value) for value in distance_range)
+            distance = float(atoms.get_distance(atom_index[atom1], atom_index[atom2], mic=False))
+        except (TypeError, ValueError, OverflowError):
+            diagnostics.append("BOND_DISTANCE_RANGE_INVALID")
+            continue
+        if not math.isfinite(lower) or not math.isfinite(upper) or lower <= 0 or upper <= lower:
+            diagnostics.append("BOND_DISTANCE_RANGE_INVALID")
+        else:
+            passed = lower <= distance <= upper
+            if kind == "coordination":
                 coordination_checks.append({
                     "atom1": atom1, "atom2": atom2, "distance_angstrom": distance,
                     "accepted_range_angstrom": [lower, upper], "passed": passed,
                 })
-                if not passed:
-                    diagnostics.append("COORDINATION_DISTANCE_OUT_OF_RANGE")
+            if not passed:
+                diagnostics.append("BOND_DISTANCE_OUT_OF_RANGE")
 
     if (atoms_again.get_chemical_symbols() != symbols
             or len(atoms_again) != len(atoms)
