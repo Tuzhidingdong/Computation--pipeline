@@ -64,7 +64,7 @@ def make_manifest(root: Path, remote_workdir=None):
     data = root / "input.inp"
     script = root / "job.slurm"
     data.write_text("&GLOBAL\\n RUN_TYPE ENERGY\\n&END GLOBAL\\n", encoding="utf-8")
-    script.write_text("#!/usr/bin/env bash\\n#SBATCH --job-name=test\\n", encoding="utf-8")
+    script.write_bytes(data.read_bytes())
     digest = hashlib.sha256(data.read_bytes()).hexdigest()
     script_digest = hashlib.sha256(script.read_bytes()).hexdigest()
     payload = {
@@ -183,7 +183,7 @@ class SkillBackendTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._beilong(root,runner)
             manifest,local,digest,script_digest=make_manifest(root)
-            runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
+            runner.remote_digest=digest
             staged=adapter.stage_inputs(manifest)
             self.assertTrue(staged.stage_reference.startswith("/configured/wcl/hpc/jobs/"))
             calls=[call[0] for call in runner.calls]
@@ -196,7 +196,7 @@ class SkillBackendTests(unittest.TestCase):
     def test_ucas_uses_configured_hpc_alias_without_beilong_config_flag(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
-            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
+            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digest=digest
             adapter.stage_inputs(manifest)
             calls=[call[0] for call in runner.calls]
             ssh_calls=[x for x in calls if x[0].endswith("ssh.exe")]
@@ -209,7 +209,7 @@ class SkillBackendTests(unittest.TestCase):
     def test_sbatch_job_id_is_persisted_by_callback_before_job_record_command(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
-            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
+            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digest=digest
             adapter.stage_inputs(manifest)
             order=[]
             job=adapter.submit(
@@ -226,7 +226,7 @@ class SkillBackendTests(unittest.TestCase):
     def test_lost_sbatch_response_is_reconciled_or_marked_unknown_never_resubmitted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
-            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
+            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digest=digest
             staged=adapter.stage_inputs(manifest)
             runner.sbatch_mode="lost"
             with self.assertRaises(SubmissionUnknown):
@@ -237,7 +237,7 @@ class SkillBackendTests(unittest.TestCase):
     def test_lost_sbatch_response_can_reconcile_existing_job_by_opaque_workdir(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
-            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
+            manifest,local,digest,script_digest=make_manifest(root); runner.remote_digest=digest
             staged=adapter.stage_inputs(manifest)
             runner.sbatch_mode="lost"
             runner.reconcile_job=("13579",staged.stage_reference)
