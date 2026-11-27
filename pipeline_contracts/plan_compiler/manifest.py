@@ -721,7 +721,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
         item for item in evidence
         if item.get("evidence_id") == "docx-block-000103"
         and re.search(r"\bEPS_SCF\b", item.get("text", ""), re.I)
-        and not re.search(r"\bEPS_SCF\b.{0,40}\bHa\b", item.get("text", ""), re.I | re.S)
+        and not re.search(r"\d+(?:\.\d+)?(?:E[-+]?\d+)?\s*Ha\b", item.get("text", ""), re.I)
     ]
     if scf_without_unit:
         unresolved_structured_fields.append({
