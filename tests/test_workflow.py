@@ -103,6 +103,27 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(ctl.resume(rid,plan),"FAILED")
             self.assertEqual(adapter.calls,1)
 
+    def test_infrastructure_failure_is_distinct_and_not_retried_by_resume(self):
+        class InfraFail:
+            execution_mode="real"
+            def __init__(self): self.calls=0
+            def preflight(self,task): return {"ready":True}
+            def execute(self,task,existing_job_id=None,**kwargs):
+                self.calls+=1
+                return ExecutionResult(
+                    "FAILED_INFRASTRUCTURE", job_id="NODE-FAIL-1",
+                    scheduler_state="NODE_FAIL",
+                    diagnostics=("compute node failed",), execution_mode="real",
+                )
+            def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
+        with tempfile.TemporaryDirectory() as tmp:
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+            plan=example_plan(); adapter=InfraFail(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+            self.assertEqual(ctl.run(rid,plan),"FAILED_INFRASTRUCTURE")
+            self.assertEqual(ctl.resume(rid,plan),"FAILED_INFRASTRUCTURE")
+            self.assertEqual(adapter.calls,1)
+            self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_INFRASTRUCTURE")
+
     def test_submission_intent_and_job_id_are_durable_before_polling(self):
         class RunningAdapter:
             execution_mode="real"
