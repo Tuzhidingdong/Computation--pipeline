@@ -104,7 +104,8 @@ No structure or topology was generated, and no production calculation was launch
 
 - Code/test commit: 9d23895d5d568a1dfec2e4bc868fa737ff6efa66.
 - GitHub Actions run #405: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46015653652
-- Result on that exact code/test commit: 117 tests passed, 2 optional upstream integration tests skipped, 0 failures / 0 errors; compileall passed.
+- Result on that exact code/test commit: 117 tests total — 115 passed, 2 optional upstream integration tests skipped, 0 failures / 0 errors; compileall passed.
+- Actions run #408 on the follow-up status/report revision also passed: 117 total, 115 passed, 2 skipped, 0 failures / errors; compileall passed.
 - The first CI attempt detected 8 errors and 1 failed assertion. The errors shared a root cause in top-level Manifest evidence aggregation; the failed assertion expected the WP content category to be unresolved even though its source text had been preserved as a task block. Both were corrected and covered by the final successful run.
 - Real Frozen DOCX regression: not run in this environment; local revalidation required.
 - PR #3 remains Draft and unmerged.

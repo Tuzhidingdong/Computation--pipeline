@@ -51,7 +51,8 @@ In particular, the actual source claims for ase_vibrations__cp2k and copyready_e
 
 - Actions run #405: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46015653652
 - Tested code/test commit: 9d23895d5d568a1dfec2e4bc868fa737ff6efa66
-- Result: 117 tests passed, 2 optional upstream integration tests skipped, 0 failures / 0 errors; compileall passed.
+- Result: 117 tests total: 115 passed, 2 optional upstream integration tests skipped, 0 failures / 0 errors; compileall passed.
+- Actions run #408 on the subsequent status/report-only branch revision also passed with the same 117 total / 115 passed / 2 skipped result.
 - The first CI run on the initial code draft exposed a Manifest evidence-aggregation error and an overly broad test expectation. Both were corrected before the final passing run.
 - All test fixtures in this revision are synthetic. Software regression success must not be represented as real Frozen DOCX acceptance.
 
