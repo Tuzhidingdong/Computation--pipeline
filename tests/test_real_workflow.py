@@ -25,6 +25,23 @@ class FakeDataAnalysisAPI:
         self.events = events
         self.intake_index = 0
         self.derived_index = 0
+        self.reader_available = True
+
+    def list_dft_readers(self, format_id=None):
+        return [{
+            "format_id": "cp2k_output", "reader_id": "cp2k-output-tools",
+            "available": self.reader_available,
+            "availability_reason": "fixture reader unavailable" if not self.reader_available else "fixture reader available",
+        }]
+
+    def list_dft_operations(self):
+        return [
+            {"operation_id": "dft.artifact.read", "status": "implemented"},
+            {"operation_id": "dft.normalized_result.package", "status": "implemented"},
+        ]
+
+    def get_dft_operation(self, operation_id):
+        return next((item for item in self.list_dft_operations() if item["operation_id"] == operation_id), None)
 
     def register_inputs(self, project_root, input_path, *, source_class, received_from=None):
         self.events.append(("register_inputs", source_class, Path(input_path).name))
@@ -127,8 +144,10 @@ class FakeHPC:
         self.jobs = {}
         self.submissions = []
         self.updates = []
+        self.preflight_calls = 0
 
     def preflight(self):
+        self.preflight_calls += 1
         return HpcPreflight("ucas", True, ("stage_inputs", "submit", "status", "retrieve", "sha256"))
 
     def _new_remote_workdir(self, task_id):
@@ -280,6 +299,39 @@ def make_runtime(root, project_root, skill_root):
 
 
 class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
+    def test_preflight_blocks_before_hpc_when_data_analysis_reader_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            da_project = root / "da-project"
+            active = root / "active-project"
+            skill_root = root / "skills"
+            da_project.mkdir()
+            active.mkdir()
+            structure = root / "input.xyz"
+            structure.write_text("2\\nfixture\\nH 0 0 0\\nH 0.7 0 0\\n", encoding="utf-8")
+            runtime = make_runtime(root, active, skill_root)
+            runtime["data_analysis"]["project_root"] = str(da_project)
+            plan = CalculationPlan.load(Path(__file__).parents[1] / "examples" / "cp2k_geo_opt_energy_plan.json")
+            raw = plan.as_dict()
+            raw["project_root"] = str(da_project)
+            raw["structure"]["path"] = str(structure)
+            plan = CalculationPlan.from_mapping(raw)
+            events, paths = [], {}
+            api = FakeDataAnalysisAPI(paths, events)
+            api.reader_available = False
+            hpc = FakeHPC(root)
+            adapter = RealCP2KWorkflowAdapter(
+                plan, da_project, runtime, cst_adapter=FakeCSTAdapter(events),
+                data_analysis_adapter=FakeDAAdapter(da_project, paths, events),
+                hpc_backend=hpc, data_analysis_api=api,
+            )
+            with _install_fake_ase():
+                result = adapter.preflight({"operation": "cp2k.geo_opt"})
+            self.assertFalse(result["ready"])
+            self.assertIn("reader is unavailable", result["reason"])
+            self.assertEqual(hpc.preflight_calls, 0)
+            self.assertEqual(hpc.submissions, [])
+
     def test_structure_intake_then_derived_cp2k_input_registration_order(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
