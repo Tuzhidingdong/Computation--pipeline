@@ -1,5 +1,6 @@
 from __future__ import annotations
 import tempfile
+import hashlib
 import unittest
 from pathlib import Path
 from zipfile import ZipFile
@@ -36,6 +37,10 @@ class PlanCompilerTests(unittest.TestCase):
         self.assertEqual(blocks[2].location["table"], 1)
         self.assertEqual(blocks[3].location["column"], 2)
         self.assertEqual(result.manifest["sections"][0]["heading"], "Plan")
+        self.assertEqual(result.manifest["source_document"]["file_name"], "plan.docx")
+        self.assertEqual(result.manifest["source_document"]["size_bytes"], path.stat().st_size)
+        self.assertEqual(result.manifest["source_document"]["sha256"],
+                         hashlib.sha256(path.read_bytes()).hexdigest())
         table_claim = next(x for x in result.manifest["claims"] if x.get("field") == "multiplicity")
         self.assertEqual(table_claim["value"], "2")
 
