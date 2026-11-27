@@ -14,6 +14,9 @@ def create_approval_record(
 ) -> dict:
     if not approver.strip() or not candidate_id.strip() or not artifact_id.strip():
         raise ValueError("approver, candidate_id and registered artifact_id are required")
+    target = Path(path)
+    if target.exists():
+        raise FileExistsError(target)
     structure_path = Path(structure_path)
     digest = hashlib.sha256(structure_path.read_bytes()).hexdigest()
     if validation_report.get("status") != "PASS" or validation_report.get("structure_sha256") != digest:
@@ -32,7 +35,6 @@ def create_approval_record(
     record["record_sha256"] = hashlib.sha256(
         json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     fd = os.open(target, flags, 0o444)
