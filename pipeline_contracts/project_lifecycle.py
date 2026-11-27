@@ -7,6 +7,8 @@ import time
 import uuid
 
 from .workflow import WorkflowStore
+from .calculation_plan import CalculationPlan
+from projects.corr_dft_v4_1.model_plugin.approval import verify_approval_record
 
 PROJECT_STAGES = (
     "DOCX_INGEST", "PLAN_COMPILE", "MODEL_GENERATE", "MODEL_VALIDATE",
@@ -65,6 +67,14 @@ class ProjectLifecycle:
         ).fetchone()
         if row is None:
             raise KeyError(f"{run_id}:{stage}")
+        stage_index = PROJECT_STAGES.index(stage)
+        if stage_index:
+            previous = self.db.execute(
+                "SELECT status FROM project_lifecycle_tasks WHERE project_run_id=? AND stage=?",
+                (run_id, PROJECT_STAGES[stage_index - 1]),
+            ).fetchone()
+            if previous is None or previous["status"] != "COMPLETED":
+                raise RuntimeError(f"{stage} is blocked until {PROJECT_STAGES[stage_index - 1]} completes")
         self.db.execute(
             "UPDATE project_lifecycle_tasks SET status=?,input_json=?,output_json=?,error=?,updated_at=? "
             "WHERE project_run_id=? AND stage=?",
@@ -73,7 +83,9 @@ class ProjectLifecycle:
              error, time.time(), run_id, stage),
         )
         run_status = "AWAITING_APPROVAL" if status == "AWAITING_APPROVAL" else (
-            "BLOCKED" if status == "BLOCKED" else "FAILED" if status == "FAILED" else "RUNNING"
+            "BLOCKED" if status == "BLOCKED" else "FAILED" if status == "FAILED"
+            else "COMPLETED" if stage == PROJECT_STAGES[-1] and status == "COMPLETED"
+            else "RUNNING"
         )
         self.db.execute("UPDATE project_lifecycle_runs SET status=?,updated_at=? WHERE project_run_id=?",
                         (run_status, time.time(), run_id))
@@ -101,3 +113,21 @@ class ProjectLifecycle:
         if row is None:
             raise KeyError(f"no frozen approval for candidate {candidate_id}")
         return json.loads(row["record_json"])
+
+    def create_calculation_run(self, run_id: str, candidate_id: str, structure_path: str | Path,
+                               plan: CalculationPlan, controller) -> str:
+        """Enter the existing CalculationPlan DAG only with the frozen approved model."""
+        record = self.approval(run_id, candidate_id)
+        if not verify_approval_record(record, structure_path):
+            raise ValueError("approved model bytes changed or approval record integrity failed")
+        if (plan.structure.get("artifact_id") != record.get("artifact_id")
+                or plan.structure.get("sha256") != record.get("structure_sha256")):
+            raise ValueError("CalculationPlan must reference the exact approved Artifact ID and SHA-256")
+        plan.require_valid()
+        workflow_run_id = controller.create(plan)
+        self.transition(run_id, "CALCULATION_PLAN", "COMPLETED", outputs={
+            "workflow_run_id": workflow_run_id, "plan_id": plan.plan_id,
+            "model_artifact_id": record["artifact_id"],
+            "model_sha256": record["structure_sha256"],
+        })
+        return workflow_run_id
