@@ -22,8 +22,16 @@
       "properties": {
         "atom1": {"type": "string"}, "atom2": {"type": "string"},
         "kind": {"enum": ["covalent", "coordination"]},
-        "order": {"type": ["number", "null"]}, "donor": {"type": "boolean"}
-      }, "additionalProperties": true
+        "order": {"type": ["number", "null"]}, "donor": {"type": "boolean"},
+        "distance_range_angstrom": {"type": "array", "minItems": 2, "maxItems": 2,
+          "items": {"type": "number", "exclusiveMinimum": 0}}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "coordination"}}},
+         "then": {"required": ["distance_range_angstrom"]}},
+        {"if": {"properties": {"kind": {"const": "covalent"}}},
+         "then": {"required": ["order"]}}
+      ], "additionalProperties": true
     }},
     "fragments": {"type": "object"},
     "expected": {"type": "object", "required": ["atom_count", "charge", "multiplicity", "candidate_count"]},
