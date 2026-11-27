@@ -27,6 +27,8 @@ class WorkflowTests(unittest.TestCase):
         energy=json.loads(tasks[1]["task_json"]); self.assertEqual(energy["dependencies"],[tasks[0]["task_id"]])
         result=json.loads(tasks[1]["result_json"])
         self.assertTrue(result["analysis_run_id"]); self.assertTrue(result["evidence_package_id"])
+        events=[x["event"] for x in store.events(rid)]
+        self.assertIn("QUEUED",events); self.assertIn("RUNNING",events)
     def test_geo_opt_nonconvergence_does_not_create_energy(self):
         ctl,store,adapter,plan,rid=self.setup_run(converged=False)
         self.assertEqual(ctl.run(rid,plan),"FAILED")
@@ -46,6 +48,18 @@ class WorkflowTests(unittest.TestCase):
             ctl=WorkflowController(store,None); plan=example_plan(); rid=ctl.create(plan)
             self.assertEqual(ctl.run(rid,plan),"UNAVAILABLE")
             self.assertEqual(store.run_info(rid)["execution_mode"],"real")
+    def test_scheduler_completed_with_nonzero_application_exit_is_failure(self):
+        class BadApplication(MockCP2KWorkflowAdapter):
+            def execute(self, task, existing_job_id=None):
+                result=super().execute(task,existing_job_id)
+                from dataclasses import replace
+                return replace(result,application_exit_code=17)
+        with tempfile.TemporaryDirectory() as tmp:
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+            plan=example_plan(); ctl=WorkflowController(store,BadApplication()); rid=ctl.create(plan)
+            self.assertEqual(ctl.run(rid,plan),"FAILED")
+            self.assertEqual(store.tasks(rid)[0]["status"],"FAILED_PERMANENT")
+
     def test_input_change_changes_deterministic_task_identity(self):
         plan=example_plan(); first=compile_initial_tasks(plan)[0]
         raw=plan.as_dict(); raw["structure"]["path"]="different.xyz"
