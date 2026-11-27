@@ -139,7 +139,7 @@ def render_ucas_cp2k_script(
         else:
             data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory")
             export_line = f"export CP2K_DATA_DIR={shlex.quote(data_dir)}"
-        insertion = next((i + 1 for i, line in enumerate(lines) if line.startswith("module load ")), None)
+        insertion = next((i + 1 for i, line in enumerate(lines) if re.match(r"^\\s*module\\s+load\\s+", line)), None)
         if insertion is None:
             raise ContractError("UCAS template lacks a CP2K module load line")
         lines.insert(insertion, export_line)
