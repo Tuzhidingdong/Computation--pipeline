@@ -661,7 +661,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
 
     for item in evidence:
         text = item.get("text", "")
-        markers = list(re.finditer(r"\\b(Cu-20|SnCu-20)\\s*:", text, re.I))
+        markers = list(re.finditer(r"\b(Cu-20|SnCu-20)\s*:", text, re.I))
         if len(markers) < 2:
             continue
         for marker_index, marker in enumerate(markers):
@@ -677,7 +677,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
 
     spin_cells = [item for item in evidence if item.get("source", {}).get("table") == 5
                   and item.get("source", {}).get("row") == 6]
-    if spin_cells and any(re.search(r"M\\s*=", item.get("text", ""), re.I) for item in spin_cells):
+    if spin_cells and any(re.search(r"M\s*=", item.get("text", ""), re.I) for item in spin_cells):
         unresolved_structured_fields.append({
             "field": "systems.cluster.multiplicities", "status": "unresolved",
             "reason": "Spin multiplicities are listed, but the table headers do not establish safe per-system column ownership.",
