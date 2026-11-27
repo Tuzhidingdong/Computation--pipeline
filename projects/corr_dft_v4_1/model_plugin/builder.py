@@ -11,6 +11,7 @@ from typing import Any, Mapping, Protocol
 import hashlib
 import json
 import math
+import re
 
 from .spec import ModelSpec
 
@@ -81,8 +82,10 @@ def build_candidates(
     seen_ids = set()
     for transform in transforms:
         candidate_id = str(transform.get("candidate_id", ""))
-        if not candidate_id or candidate_id in seen_ids:
-            raise ValueError("candidate_id values must be non-empty and unique")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,79}", candidate_id):
+            raise ValueError("candidate_id must be a safe filename component (letters, digits, dot, underscore, hyphen)")
+        if candidate_id in seen_ids:
+            raise ValueError("candidate_id values must be unique")
         seen_ids.add(candidate_id)
         fragment_id = str(transform.get("fragment_id", ""))
         fragment = spec.fragments.get(fragment_id)
@@ -97,6 +100,19 @@ def build_candidates(
         translation = transform.get("translation", [0.0, 0.0, 0.0])
         if origin is None or axis is None or angle is None or len(translation) != 3:
             raise ValueError(f"{candidate_id}: origin, axis, angle_degrees and 3D translation are required")
+        if len(origin) != 3 or len(axis) != 3:
+            raise ValueError(f"{candidate_id}: origin and axis must each contain exactly three coordinates")
+        try:
+            origin = [float(value) for value in origin]
+            axis = [float(value) for value in axis]
+            angle = float(angle)
+            translation = [float(value) for value in translation]
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"{candidate_id}: transform coordinates and angle must be numeric") from exc
+        if not all(math.isfinite(value) for value in origin + axis + translation + [angle]):
+            raise ValueError(f"{candidate_id}: transform values must all be finite")
+        if math.sqrt(sum(value * value for value in axis)) == 0:
+            raise ValueError(f"{candidate_id}: rotation axis cannot be zero")
         moved = {}
         for atom_id in atom_ids:
             position = atom_by_id[atom_id]["position"]
