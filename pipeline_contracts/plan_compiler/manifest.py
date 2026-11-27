@@ -109,6 +109,17 @@ def build_project_manifest(
     blocks: list[ExtractedBlock], *, project_id: str, plan_version: str | None = None,
 ) -> dict[str, Any]:
     claims, evidence, diagnostics = extract_claims(blocks)
+    sections = []
+    heading_stack = []
+    for index, block in enumerate(blocks, start=1):
+        style = str(block.style or "")
+        match = re.match(r"Heading([1-9])$", style, re.IGNORECASE)
+        if match:
+            level = int(match.group(1))
+            heading_stack = heading_stack[:level - 1]
+            heading_stack.append(block.text.strip())
+            sections.append({"heading": block.text.strip(), "level": level,
+                             "path": list(heading_stack), "evidence_id": f"docx-block-{index:06d}"})
     return {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "project": {"project_id": project_id, "plan_version": plan_version,
