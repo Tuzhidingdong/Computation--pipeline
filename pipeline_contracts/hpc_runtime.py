@@ -158,7 +158,14 @@ def render_beilong_cp2k_script(
     _safe_token(output_name, "output filename")
     _safe_token(str(resources["module"]), "module name")
     _safe_token(cp2k_executable, "CP2K executable")
-    header = privacy_header.replace("/public1/home/sc50837/wcl", root)
+    header_lines = []
+    for line in privacy_header.splitlines():
+        if re.match(r"^#SBATCH\\s+--output=", line):
+            line = f"#SBATCH --output={root}/hpc/logs/wcl-%j.out"
+        elif re.match(r"^#SBATCH\\s+--error=", line):
+            line = f"#SBATCH --error={root}/hpc/logs/wcl-%j.err"
+        header_lines.append(line)
+    header = "\\n".join(header_lines)
     if not re.search(r"(?m)^#SBATCH\s+--job-name=wcl\s*$", header):
         raise ContractError("BeiLong privacy header must set #SBATCH --job-name=wcl exactly")
     for key in ("output", "error"):
@@ -307,8 +314,11 @@ class SkillSlurmBackend:
         for item in local_files:
             if not isinstance(item, Mapping) or set(item).difference({"path", "name"}):
                 raise ContractError("local_files entries must contain only path and name")
-            source = Path(str(item.get("path") or "")).expanduser().resolve(strict=True)
-            if source.is_symlink() or not source.is_file():
+            supplied = Path(str(item.get("path") or "")).expanduser()
+            if supplied.is_symlink():
+                raise ContractError(f"staged input must not be a symlink: {supplied}")
+            source = supplied.resolve(strict=True)
+            if not source.is_file():
                 raise ContractError(f"staged input is not a regular file: {source}")
             name = _safe_token(str(item.get("name") or source.name), "staged filename")
             local_hashes[name] = sha256_file(source)
