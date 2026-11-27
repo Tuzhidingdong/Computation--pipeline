@@ -4,7 +4,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 from pipeline_contracts.calculation_plan import CalculationPlan, compile_initial_tasks
-from pipeline_contracts.workflow import MockCP2KWorkflowAdapter, WorkflowController, WorkflowStore
+from pipeline_contracts.workflow import ExecutionResult, MockCP2KWorkflowAdapter, WorkflowController, WorkflowStore
 from pipeline_contracts.cli import main as cli_main
 
 def example_plan():
@@ -74,6 +74,75 @@ class WorkflowTests(unittest.TestCase):
             run_id=json.loads(output.getvalue())["workflow_run_id"]
             for command in (["status",run_id,"--state-db",state_db],["resume",run_id,"--state-db",state_db,"--mock"],["report",run_id,"--state-db",state_db]):
                 with redirect_stdout(StringIO()): self.assertEqual(cli_main(command),0)
+
+    def test_run_lock_prevents_two_controllers_from_running_same_workflow(self):
+        ctl,store,adapter,plan,rid=self.setup_run()
+        lock=store.acquire_run_lock(rid)
+        self.assertTrue(lock)
+        try:
+            self.assertEqual(ctl.run(rid,plan),"LOCKED")
+            self.assertEqual(adapter.submissions,{})
+        finally:
+            store.release_run_lock(rid,lock)
+        self.assertEqual(ctl.run(rid,plan),"COMPLETED")
+
+    def test_failed_permanent_task_is_not_retried_by_ordinary_resume(self):
+        class FailOnce:
+            execution_mode="real"
+            def __init__(self): self.calls=0
+            def preflight(self,task): return {"ready":True}
+            def execute(self,task,existing_job_id=None,**kwargs):
+                self.calls+=1
+                return ExecutionResult("FAILED_PERMANENT",job_id="777",scheduler_state="FAILED",
+                                       application_exit_code=1,diagnostics=("app failed",),execution_mode="real")
+            def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
+        with tempfile.TemporaryDirectory() as tmp:
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+            plan=example_plan(); adapter=FailOnce(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+            self.assertEqual(ctl.run(rid,plan),"FAILED")
+            self.assertEqual(ctl.resume(rid,plan),"FAILED")
+            self.assertEqual(adapter.calls,1)
+
+    def test_submission_intent_and_job_id_are_durable_before_polling(self):
+        class RunningAdapter:
+            execution_mode="real"
+            def __init__(self): self.existing=[]; self.submits=0
+            def preflight(self,task): return {"ready":True}
+            def execute(self,task,existing_job_id=None,*,runtime_state=None,on_submission_intent=None,on_job_submitted=None):
+                self.existing.append(existing_job_id)
+                if existing_job_id is None:
+                    self.submits+=1
+                    details={"remote_workdir":"/opaque/runs/abc123","submission_time":"2026-11-27T00:00:00Z",
+                             "input_hashes":{"cp2k.inp":"a"*64}}
+                    on_submission_intent(details)
+                    on_job_submitted("98765",details)
+                return ExecutionResult("RUNNING",job_id=existing_job_id or "98765",
+                    scheduler_state="RUNNING",state_trace=("SUBMITTED","QUEUED","RUNNING"),
+                    execution_mode="real",runtime={"remote_workdir":"/opaque/runs/abc123"})
+            def analyze(self,task,artifacts): raise AssertionError("analysis not reached")
+        with tempfile.TemporaryDirectory() as tmp:
+            store=WorkflowStore(Path(tmp)/"s.sqlite"); self.addCleanup(store.close)
+            plan=example_plan(); adapter=RunningAdapter(); ctl=WorkflowController(store,adapter); rid=ctl.create(plan)
+            self.assertEqual(ctl.run(rid,plan),"RUNNING")
+            first=store.tasks(rid)[0]; runtime=json.loads(first["result_json"])
+            self.assertEqual(first["job_id"],"98765")
+            self.assertTrue(runtime["submission_intent"])
+            self.assertEqual(runtime["remote_workdir"],"/opaque/runs/abc123")
+            self.assertEqual(ctl.resume(rid,plan),"RUNNING")
+            self.assertEqual(adapter.submits,1)
+            self.assertEqual(adapter.existing, [None,"98765"])
+
+    def test_cli_preflight_reports_missing_real_runtime_without_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan_file=str(Path(__file__).parents[1]/"examples"/"cp2k_geo_opt_energy_plan.json")
+            config=str(Path(tmp)/"missing-runtime.json")
+            output=StringIO()
+            with redirect_stdout(output):
+                code=cli_main(["preflight",plan_file,"--runtime-config",config])
+            self.assertEqual(code,1)
+            payload=json.loads(output.getvalue())
+            self.assertFalse(payload["ready"])
+            self.assertIn("not found", payload["preflight"]["reason"].lower())
 
     def test_input_change_changes_deterministic_task_identity(self):
         plan=example_plan(); first=compile_initial_tasks(plan)[0]
