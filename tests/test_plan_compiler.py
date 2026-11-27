@@ -27,12 +27,12 @@ class PlanCompilerTests(unittest.TestCase):
             path = Path(tmp) / "plan.docx"
             make_docx(path)
             blocks = read_frozen_docx(path)
+            result = compile_docx(path, project_id="test")
         self.assertEqual([b.kind for b in blocks],
                          ["paragraph", "paragraph", "table_cell", "table_cell"])
         self.assertEqual(blocks[0].style, "Heading1")
         self.assertEqual(blocks[2].location["table"], 1)
         self.assertEqual(blocks[3].location["column"], 2)
-        result = compile_docx(path, project_id="test")
         self.assertEqual(result.manifest["sections"][0]["heading"], "Plan")
         table_claim = next(x for x in result.manifest["claims"] if x.get("field") == "multiplicity")
         self.assertEqual(table_claim["value"], "2")
