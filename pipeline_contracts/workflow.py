@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 from .calculation_plan import CalculationPlan, compile_initial_tasks, compile_energy_task
+from .hpc_runtime import SubmissionUnknown
 
 TASK_STATES={"PENDING","READY","SUBMITTING","SUBMITTED","QUEUED","RUNNING","POSTPROCESSING","QC_PASSED","COMPLETED","RETRY_WAIT","BLOCKED","FAILED_PERMANENT","CANCELLED","INTERRUPTED_RECOVERY","SUBMISSION_UNKNOWN","UNAVAILABLE"}
 
