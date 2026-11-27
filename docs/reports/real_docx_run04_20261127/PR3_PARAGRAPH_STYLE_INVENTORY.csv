@@ -1,0 +1,49 @@
+﻿evidence_id,paragraph_index,style,list_info,text
+docx-block-000002,1,,null,
+docx-block-000003,2,,null,一、 研究的科学问题与严谨因果边界（Scientific Problem & Scope）
+docx-block-000004,3,,null,1.1 实验背景与理论模型定位
+docx-block-000005,4,,null,在阴离子交换膜（AEM）电解槽电催化一氧化碳还原（CORR）体系中（湿润 CO 阴极进料，1 M KOH 阳极电解液，200 mA cm⁻²），实验组构建了两类基于单宁酸（Tannic Acid）金属-多酚配位骨架负载超小金属 Cu 团簇的催化剂（对照组 Cu-20 与实验修饰组 SnOx 改性 SnCu-20），实验观察到引入 Sn 物种后产物选择性显著向乙酸盐方向偏移。
+docx-block-000006,5,,null,在理论建模中，鉴于天然单宁酸为多没食子酰基与多元醇核心构成的异质性酯类大分子网络，直接构建完整大分子网架既超出局部反应中心尺度又易引入构象噪音。本方案采用“四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif）”（70–71 个基底原子，负载 Cu13 团簇后总计 83–84 个原子）作为单宁酸金属配位环境的代表性局部简化模型；其中 SnCu-20 的理论基底精确对应“含 Sn(IV) 的多酚含氧配位环境（Sn(IV)-containing oxygen-coordinated polyphenol environment）”（由多酚配体氧与配位水共同构成局部配位，不声称直接模拟独立的 SnO₂/SnO 氧化物体相）。在此边界下，本研究聚焦以下三个核心科学问题：
+docx-block-000008,6,,null,
+docx-block-000009,7,,null,1.2 因果边界与七项核心科学纠偏（v4.1 基线冻结规范）
+docx-block-000034,8,,null,
+docx-block-000035,9,,null,二、 两阶段门控实现逻辑与开源工具链（Implementation Logic）
+docx-block-000036,10,,null,2.1 先基态试算、后批量吸附的冻结执行路线
+docx-block-000037,11,,null,本方案锁定为“两阶段门控（Two-Stage Gate-Controlled）”执行路线：第一阶段集中资源完成 Cu-20（83 原子）与 SnCu-20（84 原子）两个基态模型的试算与门控验证（Stage 1），在确认结构稳定收敛、奇/偶电子自旋合理、30 Å 非周期盒子通过电子密度尾部检验且基态电子结构清晰后，再放行 6 个吸附态与 ASE 有限位移 Sub-Hessian 计算（Stage 2）。后续仅允许在门控试算中修正实际暴露出的结构或数值问题，不再扩张模型尺寸。
+docx-block-000038,12,,null,
+docx-block-000039,13,,null,图 1. 冻结基线版（v4.1）两阶段门控开源 DFT 执行工作流
+docx-block-000040,14,,null,2.2 开源工具链分工与技术使用边界
+docx-block-000059,15,,null,
+docx-block-000060,16,,null,三、 70–71 原子基底建模、奇偶电子数与自旋规范（Modeling）
+docx-block-000061,17,,null,3.1 四没食子酸双核配位局域结构（70–71 基底原子）
+docx-block-000062,18,,null,为精准匹配 70–80 个基底原子 的规模并合理表征单宁酸的局域金属配位微环境，本方案构建电中性（CHARGE = 0）的四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif），在配位口袋上方负载同一二十面体 Cu13 团簇（注：该局域模型由四个没食子酸单体通过酚羟基/羧酸氧原子与金属中心配位形成，不包含单体间的 depside 酯键，也不代表天然单宁酸的完整高分子网络）：
+docx-block-000084,19,,null,
+docx-block-000085,20,,null,3.2 非周期超胞与 MT 电子密度尾部校验（30.0 Å vs. 34.0 Å）
+docx-block-000086,21,,null,83–84 原子复合体的最大几何跨度（含范德华半径）约为 14.5–15.0 Å。为满足 CP2K Martyna-Tuckerman（MT）非周期泊松求解器对完整电子密度空间跨度（L > 2 D_max，含弥散尾部）的收敛要求，默认立方超胞设定为 30.0 Å × 30.0 Å × 30.0 Å，并在 WP2 试算门控中执行如下低成本验证：
+docx-block-000087,22,ListBullet,null,30.0 Å vs. 34.0 Å 双盒子静态单点校验：选取优化后的代表性完整催化剂模型（SnCu-20，84 原子），分别在 30.0³ Å³ 与 34.0³ Å³ 立方盒子（均开启 &CENTER_COORDINATES 与双重 PERIODIC NONE）下运行静态单点计算，检查电子密度在盒子边界处是否衰减至 < 10⁻⁶ e/Bohr³，且两盒子总能差 < 1–2 meV。
+docx-block-000088,23,,null,四、 计算方法与核心参数规范（Parameters）
+docx-block-000089,24,,null,4.1 CP2K 电子结构、SCF 路线与几何优化参数（v4.1 锁定版本）
+docx-block-000111,25,,null,
+docx-block-000112,26,,null,4.2 ASE 有限位移 Sub-Hessian 与 CHE 热力学近似声明
+docx-block-000113,27,ListBullet,null,局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。
+docx-block-000114,28,ListBullet,null,"严格分离的 CHE 自由能与脱附近似公式（U = 0 V vs. RHE，T = 298.15 K）：• 分支 1（吸附态 C 端质子化）：ΔG1 = G(*H2CCO) − G(*HCCO) − 1/2 G(H2(g))
+• 分支 2（吸附态 O 端质子化）：ΔG2 = G(*HCCOH) − G(*HCCO) − 1/2 G(H2(g))
+• 热力学选择性驱动力：ΔΔG = ΔG1 − ΔG2 = G(*H2CCO) − G(*HCCOH)（电位与 pH 项严格抵消）
+• 独立气相脱附自由能：ΔG_des = E_DFT(*) + G(H2CCO(g)) − G(*H2CCO)（明确声明：因未单独计算空位催化剂的振动频率，ΔG_des 采用忽略基底/团簇振动自由能变化的近似处理，不作为完整的脱附振动自由能修正）。"
+docx-block-000115,29,,null,五、 两阶段门控执行计划（Two-Stage Gate-Controlled Task Plan）
+docx-block-000140,30,,null,
+docx-block-000141,31,,null,六、 基线冻结状态确认与结果分析判据（Frozen Baseline & Analysis）
+docx-block-000143,32,,null,
+docx-block-000144,33,ListBullet,null,1. 局域结构自洽与 EXAFS 键长 trend 互验：对比优化后 Cu-20 与 SnCu-20 基底平均 Cu–O 键长（对照 EXAFS 1.92 / 1.93 Å）及 Cu13 团簇平均 Cu–Cu 键长（对照 EXAFS 2.59 Å），同时明确声明有限团簇内禀配位数与实验系综平均配位数不可直接等同。定量对比 *HCCO 吸附后的 Cu–C、C–C 与 C–O 键长变化。
+docx-block-000145,34,ListBullet,null,2. 所选活性位点的热力学选择性驱动力（ΔΔG）与近似脱附能（ΔG_des）：在 U = 0 V vs. RHE 统一参照下（电位项在相对比较中严格抵消），比较顶部位点与团簇边缘位点代表性构型上的 *HCCO → *H2CCO（ΔG1）与 *HCCO → *HCCOH（ΔG2）竞争关系，以 ΔΔG = ΔG1 − ΔG2 量化含 Sn(IV) 多酚含氧配位环境引入前后所选活性位点热力学选择性倾向的偏移幅度；独立报告忽略基底振动变化的界面脱附自由能 ΔG_des。
+docx-block-000146,35,ListBullet,null,3. 同基准电子结构与辅助 d 带中心描述符：基于完全同网格/同晶胞（30 Å）的三维差分电荷密度（Δρ，等值面 ±0.003 e/Å³）与 Bader 原子电荷（Δq），客观量化含 Sn(IV) 多酚含氧配位环境对 Cu13 团簇及局部活性位点的电荷重排方向与大小；在真空能级统一对齐下对比活性 Cu 3d PDOS 与辅助描述符 d 带中心（εd）变化。
+docx-block-000147,36,,null,七、 可视化规范、计算方法撰写与无预设英文报告模板
+docx-block-000148,37,,null,7.1 科研可视化与图表规范
+docx-block-000149,38,ListBullet,null,Fig. A（83/84 原子基态与吸附构型局域放大图）：VESTA/VMD 正交投影、纯白背景（#FFFFFF）、无坐标轴与边框，清晰展示四没食子酸双核配位局域结构（Cu-20 vs. Sn(IV) 含氧配位 SnCu-20）与 Cu13 团簇界面，标注关键键长（保留两位小数）。
+docx-block-000150,39,ListBullet,null,Fig. B（严格同网格三维差分电荷密度图）：Cu-20 与 SnCu-20 采用一致等值面阈值（±0.003 e/Å³），黄色表示电子积累（Δρ > 0），青蓝色表示电子耗尽（Δρ < 0），图注中给出 Bader 转移电荷量。
+docx-block-000151,40,ListBullet,null,Fig. C（吸附态 CHE 自由能台阶图与独立脱附能）：Python Matplotlib 导出白底扁平矢量图（PDF/SVG，Arial 8 pt 字体），清晰区分吸附态质子化分叉（*H2CCO vs. *HCCOH，给出 ΔΔG）与后续 *H2CCO → H2CCO(g) 脱附步骤。
+docx-block-000152,41,ListBullet,null,Fig. D（真空能级对齐的活性 Cu PDOS 图）：横坐标统一以真空能级（E − E_vac）对齐，标出有限团簇活性 Cu 3d 态密度及辅助 d 带中心（εd）数值。
+docx-block-000153,42,,null,7.2 论文《Computational Details》英文撰写模板（v4.1 基线冻结版）
+docx-block-000156,43,,null,
+docx-block-000157,44,,null,7.3 论文《Results and Discussion》无预设英文结果报告模板（v4.1 基线冻结版）
+docx-block-000160,45,,null,

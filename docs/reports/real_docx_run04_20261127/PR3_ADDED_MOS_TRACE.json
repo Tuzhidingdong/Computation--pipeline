@@ -1,0 +1,94 @@
+{
+  "target": "ADDED_MOS 80",
+  "real_evidence_ids": [
+    "docx-block-000102",
+    "docx-block-000103",
+    "docx-block-000104"
+  ],
+  "evidence_with_text_location": {
+    "docx-block-000102": {
+      "location": {
+        "part": "word/document.xml",
+        "table": 6,
+        "row": 5,
+        "column": 1
+      },
+      "text": "SCF 收敛策略\n（明确区分路线）"
+    },
+    "docx-block-000103": {
+      "location": {
+        "part": "word/document.xml",
+        "table": 6,
+        "row": 5,
+        "column": 2
+      },
+      "text": "【优先测试主路线（标准金属对角化）】：\n  UKS .TRUE.\n  &DIAGONALIZATION (STANDARD)\n  &SMEAR / METHOD FERMI_DIRAC / ELECTRONIC_TEMP 300\n  &MIXING / METHOD BROYDEN_MIXING / ALPHA 0.2\n  ADDED_MOS 80\n  EPS_SCF 1.0E-6 (优化/静态) | 1.0E-8 (力计算)"
+    },
+    "docx-block-000104": {
+      "location": {
+        "part": "word/document.xml",
+        "table": 6,
+        "row": 5,
+        "column": 3
+      },
+      "text": "纠偏修正：不将 OT 与 Broyden mixing 混写。优先采用传统对角化 + Fermi–Dirac 展宽 + Broyden 密度混合 + ADDED_MOS 路线；若需测试直接有限温度 OT，须严格按对应 CP2K 版本文档单独配置并在 WP1 试算中验证。"
+    }
+  },
+  "claim_in_real_docx": {
+    "value": "【优先测试主路线（标准金属对角化）】：\n  UKS .TRUE.\n  &DIAGONALIZATION (STANDARD)\n  &SMEAR / METHOD FERMI_DIRAC / ELECTRONIC_TEMP 300\n  &MIXING / METHOD BROYDEN_MIXING / ALPHA 0.2\n  ADDED_MOS 80\n  EPS_SCF 1.0E-6 (优化/静态) | 1.0E-8 (力计算) | 纠偏修正：不将 OT 与 Broyden mixing 混写。优先采用传统对角化 + Fermi–Dirac 展宽 + Broyden 密度混合 + ADDED_MOS 路线；若需测试直接有限温度 OT，须严格按对应 CP2K 版本文档单独配置并在 WP1 试算中验证。",
+    "label": "SCF 收敛策略\n（明确区分路线）",
+    "evidence_ids": [
+      "docx-block-000102",
+      "docx-block-000103",
+      "docx-block-000104"
+    ],
+    "source": {
+      "part": "word/document.xml",
+      "table": 6,
+      "row": 5,
+      "column": 1
+    },
+    "source_text": "SCF 收敛策略\n（明确区分路线） | 【优先测试主路线（标准金属对角化）】：\n  UKS .TRUE.\n  &DIAGONALIZATION (STANDARD)\n  &SMEAR / METHOD FERMI_DIRAC / ELECTRONIC_TEMP 300\n  &MIXING / METHOD BROYDEN_MIXING / ALPHA 0.2\n  ADDED_MOS 80\n  EPS_SCF 1.0E-6 (优化/静态) | 1.0E-8 (力计算) | 纠偏修正：不将 OT 与 Broyden mixing 混写。优先采用传统对角化 + Fermi–Dirac 展宽 + Broyden 密度混合 + ADDED_MOS 路线；若需测试直接有限温度 OT，须严格按对应 CP2K 版本文档单独配置并在 WP1 试算中验证。",
+    "status": "requires_confirmation"
+  },
+  "claim_field": null,
+  "claim_label": "SCF 收敛策略\n（明确区分路线）",
+  "claim_value_contains_added_mos": true,
+  "field_provenance_path": "field_provenance.method.scf",
+  "field_provenance": {
+    "status": "docx_evidence",
+    "source_kind": "docx_evidence",
+    "evidence_ids": [
+      "docx-block-000102",
+      "docx-block-000103",
+      "docx-block-000104"
+    ],
+    "raw_values": [
+      "【优先测试主路线（标准金属对角化）】：\n  UKS .TRUE.\n  &DIAGONALIZATION (STANDARD)\n  &SMEAR / METHOD FERMI_DIRAC / ELECTRONIC_TEMP 300\n  &MIXING / METHOD BROYDEN_MIXING / ALPHA 0.2\n  ADDED_MOS 80\n  EPS_SCF 1.0E-6 (优化/静态) | 1.0E-8 (力计算) | 纠偏修正：不将 OT 与 Broyden mixing 混写。优先采用传统对角化 + Fermi–Dirac 展宽 + Broyden 密度混合 + ADDED_MOS 路线；若需测试直接有限温度 OT，须严格按对应 CP2K 版本文档单独配置并在 WP1 试算中验证。"
+    ]
+  },
+  "structured_method_keys": [
+    "ase",
+    "cp2k",
+    "cell",
+    "ase_vibrations_cp2k",
+    "fig_c_che",
+    "4_che",
+    "5_hessian",
+    "cp2k_2024_quickstep_gpw",
+    "scf",
+    "wp4_ase_sub_hessian_che"
+  ],
+  "structured_method_has_added_mos": false,
+  "structured_method_scf_value_head": "【优先测试主路线（标准金属对角化）】：\n  UKS .TRUE.\n  &DIAGONALIZATION (STANDARD)\n  &SMEAR / METHOD FERMI_DIRAC / ELECTRONIC_TEMP 300\n  &MIXING / METHOD BROYDEN_MIXING / ALPHA 0.2\n  ADDED_MOS 80\n  EPS_SCF 1.0E-6 (优化/静态) | 1.0E-8 (力计算) | 纠偏修正：不将 OT 与 Broyden mixing 混写。优先采用传统对角化 + Fermi–Dirac 展宽 + Broyden 密度混合 + ADDED_MOS 路线；若需测试直接有限温度 OT，须严格按对应 CP2K 版本文档单独配置并在 WP1 试算中验证。",
+  "profile_field": "method (profile_overlay.values)",
+  "profile_added_mos_present": false,
+  "source_evidence": {
+    "implicit_label_value_regex": "pipeline_contracts/plan_compiler/manifest.py:18-20",
+    "label_value_regex": "pipeline_contracts/plan_compiler/manifest.py:17",
+    "parse_label_value": "pipeline_contracts/plan_compiler/manifest.py:217-233",
+    "method_terms_include_added_mos": "pipeline_contracts/plan_compiler/manifest.py:36-42",
+    "synthetic_unit_test": "tests/test_plan_compiler.py:228-253"
+  },
+  "explanation": "Real DOCX places ADDED_MOS 80 inside a multi-line table cell whose label is 'SCF 收敛策略（明确区分路线）'. The parser splits at the first '：' and assigns the entire remainder as the value of field 'scf', so ADDED_MOS is retained only inside method.scf / field_provenance.method.scf. The upstream unit test uses a standalone paragraph 'ADDED_MOS 80', which matches the implicit label-value regex and produces method.added_mos; that synthetic case does not occur in the real DOCX."
+}

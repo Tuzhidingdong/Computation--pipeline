@@ -1,0 +1,1621 @@
+{
+  "conflict_count": 3,
+  "conflicts": [
+    {
+      "code": "PLAN_FIELD_CONFLICT",
+      "severity": "error",
+      "message": "Multiple semantically different source values were found for 'charge'; no value was selected.",
+      "field": "charge",
+      "evidence_ids": [
+        "docx-block-000079",
+        "docx-block-000080"
+      ],
+      "blocks_execution": true,
+      "conflicting_values": [
+        {
+          "normalised_value": "0;先校验孤立中性 cu13(m=2,4,6)与中性基底(2×cu2+,m=1,3)自旋初态,再对比完整奇数电子体系 m=2 与 m=4 锁定基态。",
+          "raw_values": [
+            "0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000079",
+              "source": {
+                "part": "word/document.xml",
+                "table": 5,
+                "row": 6,
+                "column": 2
+              },
+              "source_text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。",
+              "raw_value": "0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 5,
+                "row": 6,
+                "column": 2
+              },
+              "_resolved_text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+            }
+          ]
+        },
+        {
+          "normalised_value": "0;孤立中性基底(1×cu2+d9+闭壳层 sn4+d10,m=2)与 cu13 组合后,对比完整偶数电子体系 m=1 与 m=3(必要时 m=5)锁定基态。",
+          "raw_values": [
+            "0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000080",
+              "source": {
+                "part": "word/document.xml",
+                "table": 5,
+                "row": 6,
+                "column": 3
+              },
+              "source_text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+              "raw_value": "0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 5,
+                "row": 6,
+                "column": 3
+              },
+              "_resolved_text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+            }
+          ]
+        }
+      ],
+      "_evidence_resolved": [
+        {
+          "evidence_id": "docx-block-000079",
+          "location": {
+            "part": "word/document.xml",
+            "table": 5,
+            "row": 6,
+            "column": 2
+          },
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "evidence_id": "docx-block-000080",
+          "location": {
+            "part": "word/document.xml",
+            "table": 5,
+            "row": 6,
+            "column": 3
+          },
+          "text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+        }
+      ]
+    },
+    {
+      "code": "PLAN_FIELD_CONFLICT",
+      "severity": "error",
+      "message": "Multiple semantically different source values were found for 'ase_vibrations_cp2k'; no value was selected.",
+      "field": "ase_vibrations_cp2k",
+      "evidence_ids": [
+        "docx-block-000113",
+        "docx-block-000050",
+        "docx-block-000051",
+        "docx-block-000052"
+      ],
+      "blocks_execution": true,
+      "conflicting_values": [
+        {
+          "normalised_value": "不使用 cp2k mode_selective,而是在高精度优化收敛构型上,利用 python ase 的 ase.vibrations.vibrations 模块仅指定吸附质原子(*hcco 为 4 原子,*h2cco 与*hccoh 各为 5 原子)施加 ±0.01å 有限位移,每次调用 cp2k run_type energy_force(复用基态 .wfn 波函数,eps_scf 1.0e-8ha),由 ase 组装子空间 hessian 并求解谐振频率。6 个吸附态合计需 2 ×(25+31+31)=174 次快速单点力调用。方法学上明确声明:此为冻结基底与 cu13 条件下的局部振动近似,不包含吸附质与基底/团簇全部振动自由度的耦合。",
+          "raw_values": [
+            "不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000113",
+              "source": {
+                "part": "word/document.xml",
+                "paragraph": 27
+              },
+              "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+              "raw_value": "不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "paragraph": 27
+              },
+              "_resolved_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+            }
+          ]
+        },
+        {
+          "normalised_value": "冻结基底与 cu13 的 局部 sub-hessian 计算 | 由 ase vibrations 仅对吸附质原子(4–5 原子)施加 ±0.01å 有限位移,调用 cp2k run_type energy_force(复用基态 .wfn,eps_scf 1.0e-8ha)并在 python 中组装子空间 hessian。",
+          "raw_values": [
+            "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000050",
+              "source": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 1
+              },
+              "source_text": "ASE Vibrations\n+ CP2K 力接口",
+              "raw_value": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 1
+              },
+              "_resolved_text": "ASE Vibrations\n+ CP2K 力接口"
+            },
+            {
+              "evidence_id": "docx-block-000051",
+              "source": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 2
+              },
+              "source_text": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算",
+              "raw_value": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 2
+              },
+              "_resolved_text": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算"
+            },
+            {
+              "evidence_id": "docx-block-000052",
+              "source": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 3
+              },
+              "source_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+              "raw_value": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 4,
+                "row": 4,
+                "column": 3
+              },
+              "_resolved_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+            }
+          ]
+        }
+      ],
+      "_evidence_resolved": [
+        {
+          "evidence_id": "docx-block-000113",
+          "location": {
+            "part": "word/document.xml",
+            "paragraph": 27
+          },
+          "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+        },
+        {
+          "evidence_id": "docx-block-000050",
+          "location": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 1
+          },
+          "text": "ASE Vibrations\n+ CP2K 力接口"
+        },
+        {
+          "evidence_id": "docx-block-000051",
+          "location": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 2
+          },
+          "text": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算"
+        },
+        {
+          "evidence_id": "docx-block-000052",
+          "location": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 3
+          },
+          "text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+        }
+      ]
+    },
+    {
+      "code": "PLAN_FIELD_CONFLICT",
+      "severity": "error",
+      "message": "Multiple semantically different source values were found for 'copy_ready_english_text'; no value was selected.",
+      "field": "copy_ready_english_text",
+      "evidence_ids": [
+        "docx-block-000154",
+        "docx-block-000158"
+      ],
+      "blocks_execution": true,
+      "conflicting_values": [
+        {
+          "normalised_value": "computational details(frozen baseline v4.1)",
+          "raw_values": [
+            "Computational Details (Frozen Baseline v4.1)"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000154",
+              "source": {
+                "part": "word/document.xml",
+                "table": 9,
+                "row": 1,
+                "column": 1
+              },
+              "source_text": "Copy-Ready English Text: Computational Details (Frozen Baseline v4.1)",
+              "raw_value": "Computational Details (Frozen Baseline v4.1)",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 9,
+                "row": 1,
+                "column": 1
+              },
+              "_resolved_text": "Copy-Ready English Text: Computational Details (Frozen Baseline v4.1)"
+            }
+          ]
+        },
+        {
+          "normalised_value": "neutral & scope-bounded results report template(frozen v4.1)",
+          "raw_values": [
+            "Neutral & Scope-Bounded Results Report Template (Frozen v4.1)"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "docx-block-000158",
+              "source": {
+                "part": "word/document.xml",
+                "table": 10,
+                "row": 1,
+                "column": 1
+              },
+              "source_text": "Copy-Ready English Text: Neutral & Scope-Bounded Results Report Template (Frozen v4.1)",
+              "raw_value": "Neutral & Scope-Bounded Results Report Template (Frozen v4.1)",
+              "_resolved_location": {
+                "part": "word/document.xml",
+                "table": 10,
+                "row": 1,
+                "column": 1
+              },
+              "_resolved_text": "Copy-Ready English Text: Neutral & Scope-Bounded Results Report Template (Frozen v4.1)"
+            }
+          ]
+        }
+      ],
+      "_evidence_resolved": [
+        {
+          "evidence_id": "docx-block-000154",
+          "location": {
+            "part": "word/document.xml",
+            "table": 9,
+            "row": 1,
+            "column": 1
+          },
+          "text": "Copy-Ready English Text: Computational Details (Frozen Baseline v4.1)"
+        },
+        {
+          "evidence_id": "docx-block-000158",
+          "location": {
+            "part": "word/document.xml",
+            "table": 10,
+            "row": 1,
+            "column": 1
+          },
+          "text": "Copy-Ready English Text: Neutral & Scope-Bounded Results Report Template (Frozen v4.1)"
+        }
+      ]
+    }
+  ],
+  "related_claim_count": 35,
+  "related_claims": [
+    {
+      "field": null,
+      "label": null,
+      "value": "0.01",
+      "unit": "Å",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000052",
+      "evidence_ids": [
+        "docx-block-000052"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 4,
+        "row": 4,
+        "column": 3
+      },
+      "source_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000052",
+        "location": {
+          "part": "word/document.xml",
+          "table": 4,
+          "row": 4,
+          "column": 3
+        },
+        "text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000052",
+      "evidence_ids": [
+        "docx-block-000052"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 4,
+        "row": 4,
+        "column": 3
+      },
+      "source_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000052",
+        "location": {
+          "part": "word/document.xml",
+          "table": 4,
+          "row": 4,
+          "column": 3
+        },
+        "text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "1.0E-8",
+      "unit": "Ha",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000052",
+      "evidence_ids": [
+        "docx-block-000052"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 4,
+        "row": 4,
+        "column": 3
+      },
+      "source_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000052",
+        "location": {
+          "part": "word/document.xml",
+          "table": 4,
+          "row": 4,
+          "column": 3
+        },
+        "text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+      }
+    },
+    {
+      "field": "7080_charge",
+      "label": "为精准匹配 70–80 个基底原子 的规模并合理表征单宁酸的局域金属配位微环境，本方案构建电中性（CHARGE",
+      "value": "0）的四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif），在配位口袋上方负载同一二十面体 Cu13 团簇（注：该局域模型由四个没食子酸单体通过酚羟基/羧酸氧原子与金属中心配位形成，不包含单体间的 depside 酯键，也不代表天然单宁酸的完整高分子网络）：",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000062",
+      "evidence_ids": [
+        "docx-block-000062"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 18
+      },
+      "source_text": "为精准匹配 70–80 个基底原子 的规模并合理表征单宁酸的局域金属配位微环境，本方案构建电中性（CHARGE = 0）的四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif），在配位口袋上方负载同一二十面体 Cu13 团簇（注：该局域模型由四个没食子酸单体通过酚羟基/羧酸氧原子与金属中心配位形成，不包含单体间的 depside 酯键，也不代表天然单宁酸的完整高分子网络）：",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000062",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 18
+        },
+        "text": "为精准匹配 70–80 个基底原子 的规模并合理表征单宁酸的局域金属配位微环境，本方案构建电中性（CHARGE = 0）的四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif），在配位口袋上方负载同一二十面体 Cu13 团簇（注：该局域模型由四个没食子酸单体通过酚羟基/羧酸氧原子与金属中心配位形成，不包含单体间的 depside 酯键，也不代表天然单宁酸的完整高分子网络）："
+      }
+    },
+    {
+      "field": "charge",
+      "label": "CHARGE",
+      "value": "0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000079",
+      "evidence_ids": [
+        "docx-block-000079"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 5,
+        "row": 6,
+        "column": 2
+      },
+      "source_text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000079",
+        "location": {
+          "part": "word/document.xml",
+          "table": 5,
+          "row": 6,
+          "column": 2
+        },
+        "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+      }
+    },
+    {
+      "field": "charge",
+      "label": "CHARGE",
+      "value": "0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000080",
+      "evidence_ids": [
+        "docx-block-000080"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 5,
+        "row": 6,
+        "column": 3
+      },
+      "source_text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000080",
+        "location": {
+          "part": "word/document.xml",
+          "table": 5,
+          "row": 6,
+          "column": 3
+        },
+        "text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+      }
+    },
+    {
+      "field": "ase_vibrations_cp2k",
+      "label": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）",
+      "value": "不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "0.01",
+      "unit": "Å",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "1.0E-8",
+      "unit": "Ha",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000113",
+      "evidence_ids": [
+        "docx-block-000113"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 27
+      },
+      "source_text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000113",
+        "location": {
+          "part": "word/document.xml",
+          "paragraph": 27
+        },
+        "text": "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "1.0E-8",
+      "unit": "Ha",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000133",
+      "evidence_ids": [
+        "docx-block-000133"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 7,
+        "row": 5,
+        "column": 2
+      },
+      "source_text": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000133",
+        "location": {
+          "part": "word/document.xml",
+          "table": 7,
+          "row": 5,
+          "column": 2
+        },
+        "text": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000133",
+      "evidence_ids": [
+        "docx-block-000133"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 7,
+        "row": 5,
+        "column": 2
+      },
+      "source_text": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000133",
+        "location": {
+          "part": "word/document.xml",
+          "table": 7,
+          "row": 5,
+          "column": 2
+        },
+        "text": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。"
+      }
+    },
+    {
+      "field": "copy_ready_english_text",
+      "label": "Copy-Ready English Text",
+      "value": "Computational Details (Frozen Baseline v4.1)",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000154",
+      "evidence_ids": [
+        "docx-block-000154"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 1,
+        "column": 1
+      },
+      "source_text": "Copy-Ready English Text: Computational Details (Frozen Baseline v4.1)",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000154",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 1,
+          "column": 1
+        },
+        "text": "Copy-Ready English Text: Computational Details (Frozen Baseline v4.1)"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "500",
+      "unit": "Ry",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "60",
+      "unit": "Ry",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "83",
+      "unit": "atoms",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "84",
+      "unit": "atoms",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "0.05",
+      "unit": "eV/Å",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "300",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "0.01",
+      "unit": "eV/Å",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "-6",
+      "unit": "Ha",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "0",
+      "unit": "V",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "298.15",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "0.01",
+      "unit": "Å",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "2",
+      "unit": "K",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "-8",
+      "unit": "Ha",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000155",
+      "evidence_ids": [
+        "docx-block-000155"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 9,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000155",
+        "location": {
+          "part": "word/document.xml",
+          "table": 9,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Computational Details:\nAll spin-polarized density functional theory (DFT) calculations were performed using the Quickstep module of the CP2K package within the Gaussian and plane waves (GPW) framework. The Perdew-Burke-Ernzerhof (PBE) functional combined with Grimme's DFT-D3(BJ) dispersion correction was employed to describe exchange-correlation and van der Waals interactions. Core electrons were represented by Goedecker-Teter-Hutter (GTH) pseudopotentials explicitly matched to double-zeta valence polarized molecularly optimized basis sets: GTH-PBE-q11 / DZVP-MOLOPT-SR-GTH-q11 for Cu, GTH-PBE-q14 / DZVP-MOLOPT-SR-GTH-q14 for Sn (explicitly treating the 4d semicore electrons), and GTH-PBE-q4/q6/q1 / DZVP-MOLOPT-GTH for C, O, and H, with a plane-wave density cutoff of 500 Ry and a relative cutoff of 60 Ry. To construct computationally tractable, charge-neutral local models representative of the tannic-acid-derived metal-coordination environment, four-gallate dinuclear coordination motifs chelating two Cu2+ centers (Cu-20: [Cu2(C7H5O5)4]0 + Cu13, 70 support atoms + 13 cluster atoms = 83 atoms, 417 valence electrons, net charge 0) and a Sn(IV)-containing oxygen-coordinated polyphenol environment bridging Cu2+ with Sn4+ accompanied by charge-compensating ligand deprotonation and a coordinating H2O molecule (SnCu-20: [CuSn(C7H5O5)2(C7H4O5)2(H2O)]0 + Cu13, 71 support atoms + 13 cluster atoms = 84 atoms, 426 valence electrons, net charge 0, without Cu-Sn alloying or discrete oxide phases) were built to match the local Cu-O bond distances derived from EXAFS fitting. An identical icosahedral Cu13 cluster was anchored on both supports; theoretical Cu-Cu interatomic distances were compared with EXAFS bond-length trends while noting that ensemble-averaged experimental coordination numbers are not directly equivalent to those of an isolated finite cluster. All models were centered in a 30.0 × 30.0 × 30.0 Å3 cubic cell with non-periodic boundary conditions enforced in both the cell and Poisson solver (PERIODIC NONE, Martyna-Tuckerman solver), verified against a 34.0 × 34.0 × 34.0 Å3 cell to ensure full electron-density tail decay.\n\nInitial cluster-support orientations and *HCCO adsorption configurations (including representative top and cluster-edge sites) were pre-relaxed using the Atomic Simulation Environment (ASE) coupled with the MACE-MP-0 machine learning interatomic potential (fmax < 0.05 eV/Å) solely as a structure generator without relying on MACE energy rankings to eliminate distinct coordination topologies or adsorption sites. For each system, 3-4 chemically distinct candidate configurations were subsequently optimized at the DFT level using matrix diagonalization with Fermi-Dirac smearing (300 K) and Broyden density mixing (force threshold < 0.01 eV/Å, SCF threshold 10^-6 Ha) after verifying the spin multiplicities of isolated fragments and odd/even-electron full complexes (doublet/quartet for Cu-20 and singlet/triplet for SnCu-20). Thermodynamic reaction free energies (ΔG = ΔE_DFT + ΔE_ZPE - TΔS) for the competing single-(H+/e-) protonation branches (*HCCO + H+ + e- → *H2CCO vs. *HCCO + H+ + e- → *HCCOH) were evaluated via the computational hydrogen electrode (CHE) model at U = 0 V vs. RHE and T = 298.15 K, noting that electrode potential and pH terms cancel identically in the relative selectivity difference (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH). Zero-point energy and entropic corrections for adsorbed intermediates were obtained via partial Hessian vibrational analyses implemented through ASE finite displacements (±0.01 Å) interfaced with CP2K static force evaluations (SCF threshold tightened to 10^-8 Ha, keeping the 70/71-atom support and Cu13 cluster fixed under the local vibrational approximation). Ketene desorption (*H2CCO → H2CCO(g) + *) was evaluated separately while neglecting vibrational free-energy changes of the bare catalyst framework. Electrostatic implicit solvation sensitivity checks (SCCS with ε = 78.4) and basis-set sensitivity checks (TZV2P-MOLOPT-GTH) were carried out on key states. Charge density differences (Δρ = ρ_total - ρ_Cu13 - ρ_support, evaluated on identical grids, cells, and basis sets with neutral fragment states), Bader charges, and vacuum-aligned projected density of states (PDOS) were processed using Multiwfn 3.8."
+      }
+    },
+    {
+      "field": "copy_ready_english_text",
+      "label": "Copy-Ready English Text",
+      "value": "Neutral & Scope-Bounded Results Report Template (Frozen v4.1)",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000158",
+      "evidence_ids": [
+        "docx-block-000158"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 10,
+        "row": 1,
+        "column": 1
+      },
+      "source_text": "Copy-Ready English Text: Neutral & Scope-Bounded Results Report Template (Frozen v4.1)",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000158",
+        "location": {
+          "part": "word/document.xml",
+          "table": 10,
+          "row": 1,
+          "column": 1
+        },
+        "text": "Copy-Ready English Text: Neutral & Scope-Bounded Results Report Template (Frozen v4.1)"
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "83",
+      "unit": "atoms",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000159",
+      "evidence_ids": [
+        "docx-block-000159"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 10,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Theoretical Analysis of Thermodynamic Selectivity Bifurcation:\nTo investigate the electronic and thermodynamic effects of the Sn(IV)-containing oxygen-coordinated polyphenol environment on CO reduction selectivity, spin-polarized DFT calculations were performed on charge-neutral Cu-20 (70-atom four-gallate dinuclear support + Cu13 = 83 atoms) and SnCu-20 (71-atom Sn(IV)-modified support + Cu13 = 84 atoms) local models featuring identical Cu13 clusters (Figure X). In the optimized ground-state structures, the average support Cu-O bond lengths in Cu-20 and SnCu-20 are [X.XX] Å and [X.XX] Å, respectively, while the average Cu-Cu interatomic distance within the Cu13 cluster shifts from [X.XX] Å in Cu-20 to [X.XX] Å in SnCu-20, consistent with the local bond-length trends observed by EXAFS.\n\nCharge density difference (Δρ) maps and Bader charge analyses evaluated under identical grid and basis-set conditions quantify the interfacial charge redistribution induced by the Sn(IV)-containing oxygen-coordinated polyphenol motif (Figure X). Specifically, the net Bader charge on the Cu13 cluster changes from [q_Cu20] |e| in Cu-20 to [q_SnCu20] |e| in SnCu-20, indicating that the Sn(IV)-modified polyphenol support renders the supported Cu13 cluster slightly more [electron-rich / electron-deficient / polarized] by [|Δq|] |e|. At the local adsorption site, the Bader charge of the coordinating Cu atoms shifts from [q_site1] |e| to [q_site2] |e|. Vacuum-aligned projected density of states (PDOS) analysis of the active Cu 3d states further shows that the auxiliary d-band center (εd) [upshifts / downshifts / remains nearly unchanged] from [εd_1] eV in Cu-20 to [εd_2] eV in SnCu-20 (Figure X), modulating the orbital interaction with adsorbed *HCCO.\n\nWe next compared the thermodynamic reaction free energies (ΔG) of the two competing adsorbed-state protonation branches starting from *HCCO at the representative [top / edge] active site under the CHE framework: terminal-carbon protonation toward adsorbed ketene (*HCCO + H+ + e- → *H2CCO) versus oxygen protonation toward *HCCOH (*HCCO + H+ + e- → *HCCOH). Upon incorporating the Sn(IV)-containing coordination motif, the C-C and C-O bond lengths of adsorbed *HCCO change from [d_CC1] Å and [d_CO1] Å (Cu-20) to [d_CC2] Å and [d_CO2] Å (SnCu-20), respectively. Thermodynamically, ΔG for *H2CCO formation [decreases / increases] from [ΔG1_Cu] eV on Cu-20 to [ΔG1_SnCu] eV on SnCu-20, whereas ΔG for *HCCOH formation [increases / decreases] from [ΔG2_Cu] eV to [ΔG2_SnCu] eV. Consequently, the selectivity-determining free energy difference between the two adsorbed branches (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH) shifts from [ΔΔG_Cu] eV on Cu-20 to [ΔΔG_SnCu] eV on SnCu-20, [indicating a favorable thermodynamic shift toward the *H2CCO branch at the sampled active site / reflecting competitive energetics between the two branches]. Separately, under the approximation neglecting vibrational free-energy changes of the bare catalyst framework, desorption of *H2CCO into the gas phase (*H2CCO → H2CCO(g) + *) requires a free energy change of [ΔG_des_SnCu] eV on SnCu-20 (compared with [ΔG_des_Cu] eV on Cu-20); once desorbed, ketene is expected to undergo downstream homogeneous nucleophilic hydrolysis by OH- in the 1 M KOH electrolyte (outside the direct scope of the present interfacial DFT calculations) to yield acetate.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000159",
+        "location": {
+          "part": "word/document.xml",
+          "table": 10,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Theoretical Analysis of Thermodynamic Selectivity Bifurcation:\nTo investigate the electronic and thermodynamic effects of the Sn(IV)-containing oxygen-coordinated polyphenol environment on CO reduction selectivity, spin-polarized DFT calculations were performed on charge-neutral Cu-20 (70-atom four-gallate dinuclear support + Cu13 = 83 atoms) and SnCu-20 (71-atom Sn(IV)-modified support + Cu13 = 84 atoms) local models featuring identical Cu13 clusters (Figure X). In the optimized ground-state structures, the average support Cu-O bond lengths in Cu-20 and SnCu-20 are [X.XX] Å and [X.XX] Å, respectively, while the average Cu-Cu interatomic distance within the Cu13 cluster shifts from [X.XX] Å in Cu-20 to [X.XX] Å in SnCu-20, consistent with the local bond-length trends observed by EXAFS.\n\nCharge density difference (Δρ) maps and Bader charge analyses evaluated under identical grid and basis-set conditions quantify the interfacial charge redistribution induced by the Sn(IV)-containing oxygen-coordinated polyphenol motif (Figure X). Specifically, the net Bader charge on the Cu13 cluster changes from [q_Cu20] |e| in Cu-20 to [q_SnCu20] |e| in SnCu-20, indicating that the Sn(IV)-modified polyphenol support renders the supported Cu13 cluster slightly more [electron-rich / electron-deficient / polarized] by [|Δq|] |e|. At the local adsorption site, the Bader charge of the coordinating Cu atoms shifts from [q_site1] |e| to [q_site2] |e|. Vacuum-aligned projected density of states (PDOS) analysis of the active Cu 3d states further shows that the auxiliary d-band center (εd) [upshifts / downshifts / remains nearly unchanged] from [εd_1] eV in Cu-20 to [εd_2] eV in SnCu-20 (Figure X), modulating the orbital interaction with adsorbed *HCCO.\n\nWe next compared the thermodynamic reaction free energies (ΔG) of the two competing adsorbed-state protonation branches starting from *HCCO at the representative [top / edge] active site under the CHE framework: terminal-carbon protonation toward adsorbed ketene (*HCCO + H+ + e- → *H2CCO) versus oxygen protonation toward *HCCOH (*HCCO + H+ + e- → *HCCOH). Upon incorporating the Sn(IV)-containing coordination motif, the C-C and C-O bond lengths of adsorbed *HCCO change from [d_CC1] Å and [d_CO1] Å (Cu-20) to [d_CC2] Å and [d_CO2] Å (SnCu-20), respectively. Thermodynamically, ΔG for *H2CCO formation [decreases / increases] from [ΔG1_Cu] eV on Cu-20 to [ΔG1_SnCu] eV on SnCu-20, whereas ΔG for *HCCOH formation [increases / decreases] from [ΔG2_Cu] eV to [ΔG2_SnCu] eV. Consequently, the selectivity-determining free energy difference between the two adsorbed branches (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH) shifts from [ΔΔG_Cu] eV on Cu-20 to [ΔΔG_SnCu] eV on SnCu-20, [indicating a favorable thermodynamic shift toward the *H2CCO branch at the sampled active site / reflecting competitive energetics between the two branches]. Separately, under the approximation neglecting vibrational free-energy changes of the bare catalyst framework, desorption of *H2CCO into the gas phase (*H2CCO → H2CCO(g) + *) requires a free energy change of [ΔG_des_SnCu] eV on SnCu-20 (compared with [ΔG_des_Cu] eV on Cu-20); once desorbed, ketene is expected to undergo downstream homogeneous nucleophilic hydrolysis by OH- in the 1 M KOH electrolyte (outside the direct scope of the present interfacial DFT calculations) to yield acetate."
+      }
+    },
+    {
+      "field": null,
+      "label": null,
+      "value": "84",
+      "unit": "atoms",
+      "status": "mention_only",
+      "evidence_id": "docx-block-000159",
+      "evidence_ids": [
+        "docx-block-000159"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 10,
+        "row": 2,
+        "column": 1
+      },
+      "source_text": "Theoretical Analysis of Thermodynamic Selectivity Bifurcation:\nTo investigate the electronic and thermodynamic effects of the Sn(IV)-containing oxygen-coordinated polyphenol environment on CO reduction selectivity, spin-polarized DFT calculations were performed on charge-neutral Cu-20 (70-atom four-gallate dinuclear support + Cu13 = 83 atoms) and SnCu-20 (71-atom Sn(IV)-modified support + Cu13 = 84 atoms) local models featuring identical Cu13 clusters (Figure X). In the optimized ground-state structures, the average support Cu-O bond lengths in Cu-20 and SnCu-20 are [X.XX] Å and [X.XX] Å, respectively, while the average Cu-Cu interatomic distance within the Cu13 cluster shifts from [X.XX] Å in Cu-20 to [X.XX] Å in SnCu-20, consistent with the local bond-length trends observed by EXAFS.\n\nCharge density difference (Δρ) maps and Bader charge analyses evaluated under identical grid and basis-set conditions quantify the interfacial charge redistribution induced by the Sn(IV)-containing oxygen-coordinated polyphenol motif (Figure X). Specifically, the net Bader charge on the Cu13 cluster changes from [q_Cu20] |e| in Cu-20 to [q_SnCu20] |e| in SnCu-20, indicating that the Sn(IV)-modified polyphenol support renders the supported Cu13 cluster slightly more [electron-rich / electron-deficient / polarized] by [|Δq|] |e|. At the local adsorption site, the Bader charge of the coordinating Cu atoms shifts from [q_site1] |e| to [q_site2] |e|. Vacuum-aligned projected density of states (PDOS) analysis of the active Cu 3d states further shows that the auxiliary d-band center (εd) [upshifts / downshifts / remains nearly unchanged] from [εd_1] eV in Cu-20 to [εd_2] eV in SnCu-20 (Figure X), modulating the orbital interaction with adsorbed *HCCO.\n\nWe next compared the thermodynamic reaction free energies (ΔG) of the two competing adsorbed-state protonation branches starting from *HCCO at the representative [top / edge] active site under the CHE framework: terminal-carbon protonation toward adsorbed ketene (*HCCO + H+ + e- → *H2CCO) versus oxygen protonation toward *HCCOH (*HCCO + H+ + e- → *HCCOH). Upon incorporating the Sn(IV)-containing coordination motif, the C-C and C-O bond lengths of adsorbed *HCCO change from [d_CC1] Å and [d_CO1] Å (Cu-20) to [d_CC2] Å and [d_CO2] Å (SnCu-20), respectively. Thermodynamically, ΔG for *H2CCO formation [decreases / increases] from [ΔG1_Cu] eV on Cu-20 to [ΔG1_SnCu] eV on SnCu-20, whereas ΔG for *HCCOH formation [increases / decreases] from [ΔG2_Cu] eV to [ΔG2_SnCu] eV. Consequently, the selectivity-determining free energy difference between the two adsorbed branches (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH) shifts from [ΔΔG_Cu] eV on Cu-20 to [ΔΔG_SnCu] eV on SnCu-20, [indicating a favorable thermodynamic shift toward the *H2CCO branch at the sampled active site / reflecting competitive energetics between the two branches]. Separately, under the approximation neglecting vibrational free-energy changes of the bare catalyst framework, desorption of *H2CCO into the gas phase (*H2CCO → H2CCO(g) + *) requires a free energy change of [ΔG_des_SnCu] eV on SnCu-20 (compared with [ΔG_des_Cu] eV on Cu-20); once desorbed, ketene is expected to undergo downstream homogeneous nucleophilic hydrolysis by OH- in the 1 M KOH electrolyte (outside the direct scope of the present interfacial DFT calculations) to yield acetate.",
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000159",
+        "location": {
+          "part": "word/document.xml",
+          "table": 10,
+          "row": 2,
+          "column": 1
+        },
+        "text": "Theoretical Analysis of Thermodynamic Selectivity Bifurcation:\nTo investigate the electronic and thermodynamic effects of the Sn(IV)-containing oxygen-coordinated polyphenol environment on CO reduction selectivity, spin-polarized DFT calculations were performed on charge-neutral Cu-20 (70-atom four-gallate dinuclear support + Cu13 = 83 atoms) and SnCu-20 (71-atom Sn(IV)-modified support + Cu13 = 84 atoms) local models featuring identical Cu13 clusters (Figure X). In the optimized ground-state structures, the average support Cu-O bond lengths in Cu-20 and SnCu-20 are [X.XX] Å and [X.XX] Å, respectively, while the average Cu-Cu interatomic distance within the Cu13 cluster shifts from [X.XX] Å in Cu-20 to [X.XX] Å in SnCu-20, consistent with the local bond-length trends observed by EXAFS.\n\nCharge density difference (Δρ) maps and Bader charge analyses evaluated under identical grid and basis-set conditions quantify the interfacial charge redistribution induced by the Sn(IV)-containing oxygen-coordinated polyphenol motif (Figure X). Specifically, the net Bader charge on the Cu13 cluster changes from [q_Cu20] |e| in Cu-20 to [q_SnCu20] |e| in SnCu-20, indicating that the Sn(IV)-modified polyphenol support renders the supported Cu13 cluster slightly more [electron-rich / electron-deficient / polarized] by [|Δq|] |e|. At the local adsorption site, the Bader charge of the coordinating Cu atoms shifts from [q_site1] |e| to [q_site2] |e|. Vacuum-aligned projected density of states (PDOS) analysis of the active Cu 3d states further shows that the auxiliary d-band center (εd) [upshifts / downshifts / remains nearly unchanged] from [εd_1] eV in Cu-20 to [εd_2] eV in SnCu-20 (Figure X), modulating the orbital interaction with adsorbed *HCCO.\n\nWe next compared the thermodynamic reaction free energies (ΔG) of the two competing adsorbed-state protonation branches starting from *HCCO at the representative [top / edge] active site under the CHE framework: terminal-carbon protonation toward adsorbed ketene (*HCCO + H+ + e- → *H2CCO) versus oxygen protonation toward *HCCOH (*HCCO + H+ + e- → *HCCOH). Upon incorporating the Sn(IV)-containing coordination motif, the C-C and C-O bond lengths of adsorbed *HCCO change from [d_CC1] Å and [d_CO1] Å (Cu-20) to [d_CC2] Å and [d_CO2] Å (SnCu-20), respectively. Thermodynamically, ΔG for *H2CCO formation [decreases / increases] from [ΔG1_Cu] eV on Cu-20 to [ΔG1_SnCu] eV on SnCu-20, whereas ΔG for *HCCOH formation [increases / decreases] from [ΔG2_Cu] eV to [ΔG2_SnCu] eV. Consequently, the selectivity-determining free energy difference between the two adsorbed branches (ΔΔG = ΔG_*H2CCO - ΔG_*HCCOH) shifts from [ΔΔG_Cu] eV on Cu-20 to [ΔΔG_SnCu] eV on SnCu-20, [indicating a favorable thermodynamic shift toward the *H2CCO branch at the sampled active site / reflecting competitive energetics between the two branches]. Separately, under the approximation neglecting vibrational free-energy changes of the bare catalyst framework, desorption of *H2CCO into the gas phase (*H2CCO → H2CCO(g) + *) requires a free energy change of [ΔG_des_SnCu] eV on SnCu-20 (compared with [ΔG_des_Cu] eV on Cu-20); once desorbed, ketene is expected to undergo downstream homogeneous nucleophilic hydrolysis by OH- in the 1 M KOH electrolyte (outside the direct scope of the present interfacial DFT calculations) to yield acetate."
+      }
+    },
+    {
+      "field": "ase_vibrations_cp2k",
+      "label": "ASE Vibrations\n+ CP2K 力接口",
+      "value": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000050",
+      "evidence_ids": [
+        "docx-block-000050",
+        "docx-block-000051",
+        "docx-block-000052"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 4,
+        "row": 4,
+        "column": 1
+      },
+      "source_text": "ASE Vibrations\n+ CP2K 力接口 | 冻结基底与 Cu13 的\n局部 Sub-Hessian 计算 | 由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。",
+      "sources": [
+        {
+          "evidence_id": "docx-block-000050",
+          "source": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 1
+          },
+          "source_text": "ASE Vibrations\n+ CP2K 力接口"
+        },
+        {
+          "evidence_id": "docx-block-000051",
+          "source": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 2
+          },
+          "source_text": "冻结基底与 Cu13 的\n局部 Sub-Hessian 计算"
+        },
+        {
+          "evidence_id": "docx-block-000052",
+          "source": {
+            "part": "word/document.xml",
+            "table": 4,
+            "row": 4,
+            "column": 3
+          },
+          "source_text": "由 ASE Vibrations 仅对吸附质原子（4–5 原子）施加 ±0.01 Å 有限位移，调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn，EPS_SCF 1.0E-8 Ha）并在 Python 中组装子空间 Hessian。"
+        }
+      ],
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000050",
+        "location": {
+          "part": "word/document.xml",
+          "table": 4,
+          "row": 4,
+          "column": 1
+        },
+        "text": "ASE Vibrations\n+ CP2K 力接口"
+      }
+    },
+    {
+      "field": "",
+      "label": "总电荷与奇/偶电子\n自旋基态确认流程",
+      "value": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。 | CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000078",
+      "evidence_ids": [
+        "docx-block-000078",
+        "docx-block-000079",
+        "docx-block-000080"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 5,
+        "row": 6,
+        "column": 1
+      },
+      "source_text": "总电荷与奇/偶电子\n自旋基态确认流程 | CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。 | CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。",
+      "sources": [
+        {
+          "evidence_id": "docx-block-000078",
+          "source": {
+            "part": "word/document.xml",
+            "table": 5,
+            "row": 6,
+            "column": 1
+          },
+          "source_text": "总电荷与奇/偶电子\n自旋基态确认流程"
+        },
+        {
+          "evidence_id": "docx-block-000079",
+          "source": {
+            "part": "word/document.xml",
+            "table": 5,
+            "row": 6,
+            "column": 2
+          },
+          "source_text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "evidence_id": "docx-block-000080",
+          "source": {
+            "part": "word/document.xml",
+            "table": 5,
+            "row": 6,
+            "column": 3
+          },
+          "source_text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+        }
+      ],
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000078",
+        "location": {
+          "part": "word/document.xml",
+          "table": 5,
+          "row": 6,
+          "column": 1
+        },
+        "text": "总电荷与奇/偶电子\n自旋基态确认流程"
+      }
+    },
+    {
+      "field": "wp4_ase_sub_hessian_che",
+      "label": "【第二阶段：批量生产】\nWP4\nASE 有限位移\nSub-Hessian 与 CHE",
+      "value": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。 | 6 个吸附态有限位移局部频率（共 174 次快速单点力调用，复用参考波函数）+ 2 个气相频率。 | 所有吸附质局部 Hessian 振动模式无虚频；明确采用冻结基底条件下的局部振动近似；输出完整热力学自由能总表。",
+      "unit": null,
+      "status": "requires_confirmation",
+      "evidence_id": "docx-block-000132",
+      "evidence_ids": [
+        "docx-block-000132",
+        "docx-block-000133",
+        "docx-block-000134",
+        "docx-block-000135"
+      ],
+      "source": {
+        "part": "word/document.xml",
+        "table": 7,
+        "row": 5,
+        "column": 1
+      },
+      "source_text": "【第二阶段：批量生产】\nWP4\nASE 有限位移\nSub-Hessian 与 CHE | 1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。 | 6 个吸附态有限位移局部频率（共 174 次快速单点力调用，复用参考波函数）+ 2 个气相频率。 | 所有吸附质局部 Hessian 振动模式无虚频；明确采用冻结基底条件下的局部振动近似；输出完整热力学自由能总表。",
+      "sources": [
+        {
+          "evidence_id": "docx-block-000132",
+          "source": {
+            "part": "word/document.xml",
+            "table": 7,
+            "row": 5,
+            "column": 1
+          },
+          "source_text": "【第二阶段：批量生产】\nWP4\nASE 有限位移\nSub-Hessian 与 CHE"
+        },
+        {
+          "evidence_id": "docx-block-000133",
+          "source": {
+            "part": "word/document.xml",
+            "table": 7,
+            "row": 5,
+            "column": 2
+          },
+          "source_text": "1. 在代表性吸附态上对比 EPS_SCF = 1.0E-7 与 1.0E-8 Ha 的频率收敛性；\n2. 运行 ASE Vibrations + CP2K ENERGY_FORCE（冻结 70/71 原子基底与 Cu13，仅位移吸附质），提取 ZPE 与 TS_vib；\n3. 严格按公式计算 ΔG1、ΔG2、ΔΔG 与忽略基底振动变化的 ΔG_des。"
+        },
+        {
+          "evidence_id": "docx-block-000134",
+          "source": {
+            "part": "word/document.xml",
+            "table": 7,
+            "row": 5,
+            "column": 3
+          },
+          "source_text": "6 个吸附态有限位移局部频率（共 174 次快速单点力调用，复用参考波函数）+ 2 个气相频率。"
+        },
+        {
+          "evidence_id": "docx-block-000135",
+          "source": {
+            "part": "word/document.xml",
+            "table": 7,
+            "row": 5,
+            "column": 4
+          },
+          "source_text": "所有吸附质局部 Hessian 振动模式无虚频；明确采用冻结基底条件下的局部振动近似；输出完整热力学自由能总表。"
+        }
+      ],
+      "context": {
+        "section_path": [],
+        "system_id": null,
+        "work_package": null
+      },
+      "_evidence_resolved": {
+        "evidence_id": "docx-block-000132",
+        "location": {
+          "part": "word/document.xml",
+          "table": 7,
+          "row": 5,
+          "column": 1
+        },
+        "text": "【第二阶段：批量生产】\nWP4\nASE 有限位移\nSub-Hessian 与 CHE"
+      }
+    }
+  ],
+  "related_claim_field_counts": {
+    "None": 26,
+    "7080_charge": 1,
+    "charge": 2,
+    "ase_vibrations_cp2k": 2,
+    "copy_ready_english_text": 2,
+    "": 1,
+    "wp4_ase_sub_hessian_che": 1
+  },
+  "all_claim_fields": [
+    "",
+    "1",
+    "1_34_2_3",
+    "1_exafs_trend",
+    "2_gg_des",
+    "2_sniv_snox",
+    "300_vs_340",
+    "3_d",
+    "3_sn",
+    "4_2_34",
+    "4_che",
+    "5_hessian",
+    "6_sn_q14",
+    "7080_charge",
+    "7_oh",
+    "None",
+    "ase",
+    "ase_vibrations_cp2k",
+    "cell",
+    "charge",
+    "copy_ready_english_text",
+    "cp2k",
+    "cp2k_2024_quickstep_gpw",
+    "cu",
+    "cuo_193_exafs_r",
+    "cuo_4_192_exafs_cn",
+    "cuq11_cq4_hq1_oq6",
+    "cuq11_snq14_cq4_hq1_oq6",
+    "exafs",
+    "fig_a8384",
+    "fig_b",
+    "fig_c_che",
+    "fig_d_cu_pdos",
+    "fmax_005_ev",
+    "gth",
+    "mt",
+    "multiwfn_38_python",
+    "pdos",
+    "scf",
+    "sniv_sniv_containing_oxygen_coordinated_polyphenol_environment",
+    "stage_1",
+    "two_stage_gate_controlled",
+    "vesta_vmd_matplotlib",
+    "wp1_7071",
+    "wp2_30_vs_34_mt",
+    "wp3_hcco",
+    "wp4_ase_sub_hessian_che",
+    "wp5"
+  ],
+  "evidence_count": 160
+}
