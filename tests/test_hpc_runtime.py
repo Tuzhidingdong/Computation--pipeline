@@ -17,6 +17,7 @@ class FakeCommandRunner:
     def __init__(self):
         self.calls = []
         self.remote_digest = "0" * 64
+        self.remote_digests = {}
         self.sbatch_mode = "success"
         self.scheduler_state = "RUNNING"
         self.reconcile_job = None
@@ -61,10 +62,13 @@ def make_files(root: Path):
 
 def make_manifest(root: Path, remote_workdir=None):
     data = root / "input.inp"
+    script = root / "job.slurm"
     data.write_text("&GLOBAL\\n RUN_TYPE ENERGY\\n&END GLOBAL\\n", encoding="utf-8")
+    script.write_text("#!/usr/bin/env bash\\n#SBATCH --job-name=test\\n", encoding="utf-8")
     digest = hashlib.sha256(data.read_bytes()).hexdigest()
+    script_digest = hashlib.sha256(script.read_bytes()).hexdigest()
     payload = {
-        "local_files": [{"path": str(data), "name": "input.inp"}],
+        "local_files": [{"path": str(data), "name": "input.inp"}, {"path": str(script), "name": "job.slurm"}],
         "output_files": {"cp2k_output": "cp2k.out"},
         "input_filename": "input.inp",
         "job_script_name": "job.slurm",
@@ -81,7 +85,7 @@ def make_manifest(root: Path, remote_workdir=None):
         task_id="TASK-TEST-1",
         input_artifacts=(ArtifactRef("ART-INPUT", sha256=digest, mock=False),),
         payload=payload,
-    ), data, digest
+    ), data, digest, script_digest
 
 
 class ScriptRenderingTests(unittest.TestCase):
@@ -178,8 +182,8 @@ class SkillBackendTests(unittest.TestCase):
     def test_beilong_uses_dedicated_ssh_config_for_both_ssh_and_scp(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runner=FakeCommandRunner(); adapter=self._beilong(root,runner)
-            manifest,local,digest=make_manifest(root)
-            runner.remote_digest=digest
+            manifest,local,digest,script_digest=make_manifest(root)
+            runner.remote_digests={"input.inp":digest,"job.slurm":script_digest}
             staged=adapter.stage_inputs(manifest)
             self.assertTrue(staged.stage_reference.startswith("/configured/wcl/hpc/jobs/"))
             calls=[call[0] for call in runner.calls]
