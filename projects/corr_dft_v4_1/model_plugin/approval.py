@@ -50,5 +50,17 @@ def create_approval_record(
 
 
 def verify_approval_record(record: Mapping, structure_path: str | Path) -> bool:
+    payload = dict(record)
+    recorded_hash = payload.pop("record_sha256", None)
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    record_valid = recorded_hash == hashlib.sha256(canonical).hexdigest()
     digest = hashlib.sha256(Path(structure_path).read_bytes()).hexdigest()
-    return record.get("approval_status") == "APPROVED" and record.get("structure_sha256") == digest
+    artifact_ref = record.get("artifact_ref") or {}
+    return (
+        record_valid and record.get("approval_status") == "APPROVED"
+        and record.get("structure_sha256") == digest
+        and artifact_ref.get("artifact_id") == record.get("artifact_id")
+        and artifact_ref.get("sha256") == digest
+        and artifact_ref.get("source_system") == "Data_analysis"
+        and artifact_ref.get("verified") is True
+    )
