@@ -124,7 +124,7 @@ class FakeAtoms:
 def _install_fake_ase():
     package = types.ModuleType("ase")
     io_module = types.ModuleType("ase.io")
-    io_module.read = lambda path: FakeAtoms()
+    io_module.read = lambda path, index=0: FakeAtoms()
     package.io = io_module
     return patch.dict(sys.modules, {"ase": package, "ase.io": io_module})
 
