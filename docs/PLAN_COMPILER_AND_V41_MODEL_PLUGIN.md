@@ -49,3 +49,6 @@ The checked-in v4.1 task plan records target compositions and electron counts, b
 ## Verification boundary
 
 CI tests use synthetic DOCX packages and test-only structure/Artifact adapters. They verify parser contracts, blocking diagnostics, lifecycle state transitions, hash pinning, registration calls and the approval gate. They do not prove real v4.1 candidate geometry, actual CP2K pseudopotential electron counts, live Data_analysis registration, or HPC readiness. Those require the real Frozen DOCX, explicit v4.1 graph/construction inputs, and Agent A's live Artifact API.
+
+
+The orchestration entry point is `model_plugin.generate_validate_review(model_specs, ...)`. It persists MODEL_GENERATE → MODEL_VALIDATE → MODEL_REVIEW and stops at MODEL_APPROVAL=`AWAITING_APPROVAL`. `approve_candidate(..., approved=True)` is the explicit user decision path and freezes only a Data_analysis-verified ArtifactRef. The model pipeline test uses an injected test writer, validator and fake Artifact API; it verifies orchestration, not real v4.1 chemistry.
