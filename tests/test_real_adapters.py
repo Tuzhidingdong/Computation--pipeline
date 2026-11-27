@@ -329,8 +329,9 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
             outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
 
             self.assertEqual(outcome.status, TaskStatus.FAILED)
-            self.assertEqual(outcome.diagnostics[0].code, "DFT_ARTIFACT_HASH_MISMATCH")
-            self.assertEqual(outcome.analysis_run_record["status"], "failed")
+            self.assertEqual(outcome.diagnostics[0].code, "DA_ARTIFACT_PROVENANCE_REJECTED")
+            self.assertIn("does not match ArtifactRef", outcome.error)
+            self.assertIsNone(outcome.analysis_run_id)
             self.assertFalse(outcome.output_artifacts)
             self.assertFalse(any(call[0] == "register_derived_artifact" for call in api.calls))
 
