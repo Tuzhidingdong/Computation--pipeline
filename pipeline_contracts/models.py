@@ -195,7 +195,7 @@ class EvidenceRef:
 @dataclass(frozen=True)
 class AnalysisOutcome:
     task_id: str
-    analysis_run_id: str
+    analysis_run_id: str | None
     status: TaskStatus
     output_artifacts: tuple[ArtifactRef, ...]
     evidence_refs: tuple[EvidenceRef, ...]
@@ -205,11 +205,20 @@ class AnalysisOutcome:
     warnings: tuple[str, ...] = ()
     error: str | None = None
     execution_mode: str = "real"
+    result: Mapping[str, Any] = field(default_factory=dict)
+    analysis_run_record: Mapping[str, Any] = field(default_factory=dict)
+    evidence_package: Mapping[str, Any] | None = None
+    diagnostics: tuple[Diagnostic, ...] = ()
 
     def __post_init__(self) -> None:
         _require_text("analysis outcome.task_id", self.task_id)
-        _require_text("analysis_run_id", self.analysis_run_id)
+        if self.analysis_run_id is not None:
+            _require_text("analysis_run_id", self.analysis_run_id)
         _require_mapping("analysis.qc", self.qc)
+        _require_mapping("analysis.result", self.result)
+        _require_mapping("analysis_run_record", self.analysis_run_record)
+        if self.evidence_package is not None:
+            _require_mapping("evidence_package", self.evidence_package)
         if self.status == TaskStatus.FAILED and not self.error:
             raise ContractError("failed analysis outcome requires an error message")
         if self.status != TaskStatus.FAILED and self.error is not None:
