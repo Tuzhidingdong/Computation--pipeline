@@ -6,7 +6,7 @@ The computation workflow is driven by a versioned CalculationPlan, not by a prom
 
 **CalculationPlan → initial DAG → CST CP2K input → HPC Skill Job → output retrieval → CST QC → Data_analysis → result-driven DAG expansion → report**
 
-The plan contains the source structure reference, full method configuration, explicit CP2K kinds/basis/pseudopotentials, cell/boundary settings, tool version, backend/resource profile, output declarations, analysis settings and quality gates. Missing or inconsistent required fields block execution; the coordinator does not invent scientific settings or generate arbitrary Python.
+The plan contains the source structure reference, full method configuration, explicit CP2K kinds/basis/pseudopotentials, cell/boundary settings, tool version, backend/resource profile, output declarations, analysis settings and quality gates. Missing or inconsistent required fields block execution; the coordinator does not invent scientific settings or generate arbitrary Python. Required CP2K method fields include XC, basis/pseudopotential, cutoff and relative cutoff, SCF method/tolerance/iteration limit, charge, multiplicity, per-KIND definitions, basis/potential filenames, cell/Poisson periodicity and solver, UKS and coordinate-centering flags. Finite-system cell lengths and all three angles must be explicit; fields previously defaulted by the builder are now plan-validation errors.
 
 ## Dynamic GEO_OPT → ENERGY rule
 
