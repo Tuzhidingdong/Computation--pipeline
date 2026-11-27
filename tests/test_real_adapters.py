@@ -130,8 +130,8 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
     def _fixture(self, root: Path):
         source = root / "forces.tsv"
         source.write_text(
-            "displacement_id\\tatom_index\\tforce_x\\tforce_y\\tforce_z\\tforce_unit\\n"
-            "synthetic-1\\t0\\t0.0\\t0.1\\t0.2\\teV/angstrom\\n",
+            "displacement_id,atom_index,force_x,force_y,force_z,force_unit\n"
+            "synthetic-1,0,0.0,0.1,0.2,eV/angstrom\n",
             encoding="utf-8",
         )
         return source
@@ -204,6 +204,45 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
             self.assertEqual(outcome.qc_status, "blocked")
             self.assertIn("synthetic unavailable reader", outcome.error)
             self.assertIsNotNone(outcome.evidence_package)
+
+    def test_real_adapter_rejects_missing_artifact_hash_before_reading(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self._fixture(root)
+            project = root / "da-project"
+            project.mkdir()
+            api = FakeDataAnalysisAPI(project, "ART-NO-SHA", "0" * 64)
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
+                task_id="TASK-DA-NO-SHA",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef("ART-NO-SHA", uri=str(source)),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+            ))
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.qc["reason_code"], "ARTIFACT_RESOLUTION_FAILED")
+            self.assertFalse(any(call[0] == "read_dft_file" for call in api.calls))
+
+    def test_real_adapter_exposes_unsupported_format_status(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self._fixture(root)
+            project = root / "da-project"
+            project.mkdir()
+            artifact_id = "ART-SYNTHETIC-UNSUPPORTED"
+            digest = _sha(source)
+            api = FakeDataAnalysisAPI(project, artifact_id, digest)
+            api.reader_status = "unsupported_format"
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
+                task_id="TASK-DA-UNSUPPORTED",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef(
+                    artifact_id=artifact_id, sha256=digest,
+                    format_id="unknown_dft_format", uri=str(source)
+                ),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+            ))
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.diagnostics[0].code, "DFT_FORMAT_UNSUPPORTED")
 
     def test_real_adapter_does_not_resolve_paths_from_a_private_duplicate_registry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -298,8 +337,8 @@ class OptionalLiveUpstreamIntegrationTests(unittest.TestCase):
             root = Path(temp)
             source = root / "synthetic_forces.tsv"
             source.write_text(
-                "displacement_id\\tatom_index\\tforce_x\\tforce_y\\tforce_z\\tforce_unit\\n"
-                "fixture-1\\t0\\t0.1\\t0.2\\t0.3\\teV/angstrom\\n",
+                "displacement_id,atom_index,force_x,force_y,force_z,force_unit\n"
+                "fixture-1,0,0.1,0.2,0.3,eV/angstrom\n",
                 encoding="utf-8",
             )
             project = root / "da-project"
