@@ -96,6 +96,7 @@ def render_ucas_cp2k_script(
     resources: Mapping[str, Any],
     input_name: str,
     output_name: str,
+    cp2k_data_dir: str | None = None,
 ) -> str:
     """Adapt the installed UCAS CP2K template while keeping its module/launcher body."""
     _safe_token(input_name, "input filename")
@@ -148,6 +149,7 @@ def render_beilong_cp2k_script(
     input_name: str,
     output_name: str,
     cp2k_executable: str = "cp2k.psmp",
+    cp2k_data_dir: str | None = None,
 ) -> str:
     """Apply the upstream BSCC-A privacy header and its wcl directory rules."""
     root = _remote_path(allowed_workspace_root, "BeiLong allowed workspace")
@@ -185,10 +187,13 @@ def render_beilong_cp2k_script(
     ]
     if resources.get("qos"):
         directives.append(f"#SBATCH --qos={resources['qos']}")
+    data_dir = _remote_path(cp2k_data_dir, "remote CP2K data directory") if cp2k_data_dir else None
+    cp2k_data_export = f"export CP2K_DATA_DIR={shlex.quote(data_dir)}" if data_dir else 'export CP2K_DATA_DIR="$SLURM_SUBMIT_DIR"'
     body = f"""
 set -euo pipefail
 umask 077
 cd "$SLURM_SUBMIT_DIR"
+{cp2k_data_export}
 MODULE_INIT={shlex.quote(module_init_path)}
 test -r "$MODULE_INIT"
 source "$MODULE_INIT"
@@ -552,6 +557,7 @@ class SkillSlurmBackend:
         refs: list[ArtifactRef] = []
         for role in output_selection:
             filename = _safe_token(str(output_files[role]), "output filename")
+            filename = filename.replace("JOB_ID", job_reference.job_id)
             remote_file = workdir + "/" + filename
             remote_line = self._ssh(["sha256sum", "--", remote_file]).stdout.strip()
             expected = remote_line.split()[0].lower() if remote_line else ""
