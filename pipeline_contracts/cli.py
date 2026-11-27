@@ -1,4 +1,4 @@
-"""CLI: plan, validate, run, status, resume and report."""
+"""CLI: plan, validate, preflight, run, status, resume and report."""
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
@@ -21,12 +21,13 @@ def _runtime_path(plan, supplied):
 def main(argv=None):
     parser=argparse.ArgumentParser(prog="computation-pipeline")
     sub=parser.add_subparsers(dest="command",required=True)
-    for name in ("plan","validate","run"):
+    for name in ("plan","validate","preflight","run"):
         p=sub.add_parser(name); p.add_argument("plan_file")
+        if name in {"preflight","run"}:
+            p.add_argument("--runtime-config")
         if name=="run":
             p.add_argument("--mock",action="store_true")
             p.add_argument("--state-db")
-            p.add_argument("--runtime-config")
     for name in ("status","resume","report"):
         p=sub.add_parser(name); p.add_argument("run_id"); p.add_argument("--state-db",required=True)
         if name=="resume":
@@ -35,7 +36,7 @@ def main(argv=None):
         if name=="report": p.add_argument("--output")
     args=parser.parse_args(argv)
 
-    if args.command in {"plan","validate","run"}:
+    if args.command in {"plan","validate","preflight","run"}:
         plan=CalculationPlan.load(args.plan_file)
         issues=plan.validate()
         if args.command=="validate":
@@ -46,11 +47,20 @@ def main(argv=None):
             return 2
         if args.command=="plan":
             print(json.dumps({"plan_sha256":plan.sha256,"initial_tasks":compile_initial_tasks(plan),
-                              "dynamic_rule":"cp2k.energy is created only after GEO_OPT QC passes"},indent=2))
+                              "dynamic_rule":"cp2p.energy is created only after GEO_OPT QC passes"},indent=2))
             return 0
+        runtime_path=_runtime_path(plan,args.runtime_config)
+        if args.command=="preflight":
+            adapter=build_real_workflow_adapter(plan,plan.project_root,runtime_path)
+            task=compile_initial_tasks(plan)[0]
+            result=adapter.preflight(task)
+            payload={"execution_mode":"real","ready":bool(result.get("ready")),
+                     "backend":plan.execution.get("backend"),"runtime_config":str(runtime_path),
+                     "preflight":dict(result)}
+            print(json.dumps(payload,indent=2,ensure_ascii=False))
+            return 0 if result.get("ready") else 1
         state_path=Path(args.state_db).expanduser().resolve() if args.state_db else _state_path(plan)
         store=WorkflowStore(state_path)
-        runtime_path=_runtime_path(plan,args.runtime_config)
         adapter=MockCP2KWorkflowAdapter() if args.mock else build_real_workflow_adapter(plan,plan.project_root,runtime_path)
         ctl=WorkflowController(store,adapter); run_id=ctl.create(plan)
         status=ctl.run(run_id,plan)
