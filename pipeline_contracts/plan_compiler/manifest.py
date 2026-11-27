@@ -685,6 +685,63 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
             "source_text": " | ".join(item.get("text", "") for item in spin_cells),
         })
 
+        unresolved_structured_fields.extend([
+            {
+                "field": "systems.support_multiplicities", "status": "unresolved",
+                "reason": "Support spin values are present but cannot be assigned to a system without the table header mapping.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+            {
+                "field": "systems.complete_model_multiplicities", "status": "unresolved",
+                "reason": "Complete-model spin values are present but cannot be assigned to a system without the table header mapping.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+            {
+                "field": "systems.conditional_complete_model_multiplicity", "status": "unresolved",
+                "reason": "A conditional M=5 candidate is mentioned, but its system column cannot be confirmed from the available row evidence.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+            {
+                "field": "tasks.isolated_fragment_spin_candidate_count", "status": "unresolved",
+                "reason": "Spin candidates are listed, but the source row does not establish WP1 ownership.",
+                "evidence_ids": [item["evidence_id"] for item in spin_cells],
+                "source_text": " | ".join(item.get("text", "") for item in spin_cells),
+            },
+        ])
+
+
+    # Related DOCX text without a proven WP scope remains unresolved, never profile-filled.
+    for item in evidence:
+        text = item.get("text", "")
+        eid = item["evidence_id"]
+        if eid == "docx-block-000113" and re.search(r"\*HCCO.*4 原子.*\*H2CCO.*5 原子", text, re.S):
+            unresolved_structured_fields.append({
+                "field": "tasks.adsorbate_atom_counts_per_catalyst", "status": "unresolved",
+                "reason": "Adsorbate atom counts are explicit, but this paragraph does not identify a WP or per-catalyst mapping.",
+                "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+            })
+        if eid == "docx-block-000155":
+            if re.search(r"3[-–]4 chemically distinct candidate configurations", text, re.I):
+                unresolved_structured_fields.append({
+                    "field": "tasks.retained_structurally_distinct_candidates_per_catalyst", "status": "unresolved",
+                    "reason": "The candidate range is explicit, but the paragraph does not assign it to WP1.",
+                    "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                })
+            if re.search(r"protonation branches", text, re.I):
+                unresolved_structured_fields.append({
+                    "field": "tasks.protonation_products_per_catalyst", "status": "unresolved",
+                    "reason": "Two protonation branches are described, but the paragraph does not establish WP3 ownership or per-catalyst count.",
+                    "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                })
+                unresolved_structured_fields.append({
+                    "field": "tasks.gas_references", "status": "unresolved",
+                    "reason": "Gas-phase species are mentioned, but the paragraph does not establish the WP3 gas-reference field mapping.",
+                    "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
+                })
+
     # A system identifier in a source heading or explicit System/Catalyst label is
     # itself structured data with its own evidence. It is not supplied by the profile.
     for evidence_id, context in contexts.items():
