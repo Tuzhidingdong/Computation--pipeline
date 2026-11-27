@@ -160,12 +160,12 @@ def render_beilong_cp2k_script(
     _safe_token(cp2k_executable, "CP2K executable")
     header_lines = []
     for line in privacy_header.splitlines():
-        if re.match(r"^#SBATCH\\s+--output=", line):
+        if re.match(r"^#SBATCH\s+--output=", line):
             line = f"#SBATCH --output={root}/hpc/logs/wcl-%j.out"
-        elif re.match(r"^#SBATCH\\s+--error=", line):
+        elif re.match(r"^#SBATCH\s+--error=", line):
             line = f"#SBATCH --error={root}/hpc/logs/wcl-%j.err"
         header_lines.append(line)
-    header = "\\n".join(header_lines)
+    header = "\n".join(header_lines)
     if not re.search(r"(?m)^#SBATCH\s+--job-name=wcl\s*$", header):
         raise ContractError("BeiLong privacy header must set #SBATCH --job-name=wcl exactly")
     for key in ("output", "error"):
