@@ -231,7 +231,8 @@ class RealWorkflowArtifactLifecycleTests(unittest.TestCase):
             self.assertEqual(prepared["cp2k_input_sha256"],
                              hashlib.sha256(Path(paths["ART-CP2K-INPUT"]).read_bytes()).hexdigest())
             self.assertTrue(any(item["name"] == "job.slurm" for item in prepared["local_files"]))
-            self.assertIn("&TRAJECTORY", Path(prepared["local_files"][-1]["path"]).read_text(encoding="utf-8"))
+            input_file = next(item for item in prepared["local_files"] if item["name"] == prepared["input_filename"])
+            self.assertIn("&TRAJECTORY", Path(input_file["path"]).read_text(encoding="utf-8"))
 
     def test_retrieved_cp2k_output_registered_and_resolved_before_analysis(self):
         with tempfile.TemporaryDirectory() as tmp:
