@@ -201,7 +201,7 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
         ("poisson_solver", re.compile(r"\bMartyna[- ]Tuckerman\b", re.I), lambda m: "MT"),
         ("sccs_dielectric", re.compile(r"\bSCCS\b.{0,40}?ε\s*=\s*(\d+(?:\.\d+)?)", re.I | re.S), lambda m: m.group(1)),
         ("basis_sensitivity", re.compile(r"\b(TZV2P)(?:-MOLOPT-GTH)?\b", re.I), lambda m: "TZV2P"),
-        ("engine", re.compile(r"\bCP2K\b.{0,100}?\bQuickstep\b.{0,100}?\bGPW\b", re.I | re.S), lambda m: "CP2K Quickstep / GPW"),
+        ("engine", re.compile(r"\b(?:CP2K.{0,100}?Quickstep.{0,100}?GPW|Quickstep.{0,100}?CP2K.{0,100}?GPW)\b", re.I | re.S), lambda m: "CP2K Quickstep / GPW"),
         ("force_threshold_ev_per_angstrom", re.compile(r"(?:force threshold|MAX_FORCE).{0,100}?(?:~|<|≤)?\s*(0?\.\d+)\s*eV/Å", re.I | re.S), lambda m: f"{m.group(1)} eV/Å"),
         ("che_temperature_K", re.compile(r"\bT\s*=\s*(\d+(?:\.\d+)?)\s*K\b", re.I), lambda m: f"{m.group(1)} K"),
         ("potential_v_vs_rhe", re.compile(r"\bU\s*=\s*([+-]?\d+(?:\.\d+)?)\s*V\s*vs\.?\s*RHE\b", re.I), lambda m: f"{m.group(1)} V"),
@@ -233,7 +233,7 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
             if re.search(r"冻结(?:基底|支持体)|frozen support", text, re.I):
                 _append_inline_claim(claims, block, index, context, "frozen_support_and_Cu13", "true")
 
-        if re.search(r"(?:双盒子|cell|box|超胞).{0,100}(?:vs\.?|与|and)", text, re.I | re.S):
+        if re.search(r"\d+(?:\.\d+)?\s*Å\s*vs\.?\s*\d+(?:\.\d+)?\s*Å", text, re.I) or re.search(r"(?:双盒子|cell|box|超胞).{0,100}(?:vs\.?|与|and)", text, re.I | re.S):
             sizes = list(dict.fromkeys(re.findall(r"(\d+(?:\.\d+)?)\s*Å", text, re.I)))
             if len(sizes) >= 2:
                 _append_inline_claim(claims, block, index, context, "cell_sizes_angstrom", sizes[:2])
@@ -271,11 +271,14 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
         if not cells or not re.search(r"\bWP\s*4\b", cells[0][1].text, re.I):
             continue
         for index, block in cells[1:]:
-            match = re.search(r"(\d+)\s*次?\s*(?:快速)?单点力调用", block.text)
-            if match:
-                context = dict(contexts[f"docx-block-{index:06d}"])
-                context["work_package"] = "WP4"
-                _append_inline_claim(claims, block, index, context, "total_force_evaluations", match.group(1))
+            context = dict(contexts[f"docx-block-{index:06d}"])
+            context["work_package"] = "WP4"
+            calls = re.search(r"(\d+)\s*次?\s*(?:快速)?单点力调用", block.text)
+            if calls:
+                _append_inline_claim(claims, block, index, context, "total_force_evaluations", calls.group(1))
+            states = re.search(r"(\d+)\s*个吸附态", block.text)
+            if states:
+                _append_inline_claim(claims, block, index, context, "adsorbed_state_hessians", states.group(1))
 
 
 def detect_conflicts(claims: Iterable[dict]) -> list[CompilationDiagnostic]:
