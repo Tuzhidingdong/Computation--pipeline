@@ -47,7 +47,7 @@ def main(argv=None):
             return 2
         if args.command=="plan":
             print(json.dumps({"plan_sha256":plan.sha256,"initial_tasks":compile_initial_tasks(plan),
-                              "dynamic_rule":"cp2p.energy is created only after GEO_OPT QC passes"},indent=2))
+                              "dynamic_rule":"cp2k.energy is created only after GEO_OPT QC passes"},indent=2))
             return 0
         runtime_path=_runtime_path(plan,args.runtime_config)
         if args.command=="preflight":
