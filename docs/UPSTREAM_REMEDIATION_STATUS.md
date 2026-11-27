@@ -52,6 +52,7 @@ These are the exact branch heads supplied by the user and confirmed from the rem
 - New real-adapter tests use a small in-memory Data_analysis API double to validate actual function names/argument mapping and status/provenance behavior.
 - Optional live tests use temporary synthetic files and environment variables pointing at approved source trees. They do not execute CP2K or HPC.
 - Public CI must not check out the private Data_analysis repository or install its branch automatically.
+- Latest PR Actions run: [45930335174](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930335174), commit `42ecbcfd061d4093eca1f191ad0d2d60c2ea583a`: 19 unittest cases discovered; 17 passed and 2 opt-in live source-tree cases skipped because the upstream source-root environment variables were not set. Compileall passed. Matching push run: [45930329890](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45930329890).
 - Mock/adapter tests are not evidence of scientific algorithm correctness or scientific QC.
 
 ## Safety
