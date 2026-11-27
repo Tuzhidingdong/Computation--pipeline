@@ -35,6 +35,35 @@ def _run04_blocks() -> list[ExtractedBlock]:
     put(35, "二、两阶段门控实现逻辑与开源工具链（Implementation Logic）",
         location={"part": "word/document.xml", "paragraph": 9})
 
+    put(36, "2.1 先基态试算、后批量吸附的冻结执行路线",
+        location={"part": "word/document.xml", "paragraph": 10})
+    put(40, "2.2 开源工具链分工与技术使用边界",
+        location={"part": "word/document.xml", "paragraph": 14})
+    put(60, "三、70–71 原子基底建模、奇偶电子数与自旋规范（Modeling）",
+        location={"part": "word/document.xml", "paragraph": 16})
+    put(61, "3.1 四没食子酸双核配位局域结构（70–71 基底原子）",
+        location={"part": "word/document.xml", "paragraph": 17})
+    put(85, "3.2 非周期超胞与 MT 电子密度尾部校验（30.0 Å vs. 34.0 Å）",
+        location={"part": "word/document.xml", "paragraph": 20})
+    put(88, "四、计算方法与核心参数规范（Parameters）",
+        location={"part": "word/document.xml", "paragraph": 23})
+    put(89, "4.1 CP2K 电子结构、SCF 路线与几何优化参数（v4.1 锁定版本）",
+        location={"part": "word/document.xml", "paragraph": 24})
+    put(112, "4.2 ASE 有限位移 Sub-Hessian 与 CHE 热力学近似声明",
+        location={"part": "word/document.xml", "paragraph": 26})
+    put(115, "五、两阶段门控执行计划（Two-Stage Gate-Controlled Task Plan）",
+        location={"part": "word/document.xml", "paragraph": 29})
+    put(141, "六、基线冻结状态确认与结果分析判据（Frozen Baseline & Analysis）",
+        location={"part": "word/document.xml", "paragraph": 31})
+    put(147, "七、可视化规范、计算方法撰写与无预设英文报告模板",
+        location={"part": "word/document.xml", "paragraph": 36})
+    put(148, "7.1 科研可视化与图表规范",
+        location={"part": "word/document.xml", "paragraph": 37})
+    put(153, "7.2 论文《Computational Details》英文撰写模板（v4.1 基线冻结版）",
+        location={"part": "word/document.xml", "paragraph": 42})
+    put(157, "7.3 论文《Results and Discussion》无预设英文结果报告模板（v4.1 基线冻结版）",
+        location={"part": "word/document.xml", "paragraph": 44})
+
     # Real table 4 row 4: one row assertion with three independent cell sources.
     put(50, "ASE Vibrations\n+ CP2K 力接口", kind="table_cell",
         location={"part": "word/document.xml", "table": 4, "row": 4, "column": 1})
@@ -68,7 +97,7 @@ def _run04_blocks() -> list[ExtractedBlock]:
     put(86, "83–84 原子复合体的最大几何跨度（含范德华半径）约为 14.5–15.0 Å。为满足 CP2K Martyna-Tuckerman（MT）非周期泊松求解器对完整电子密度空间跨度（L > 2 D_max，含弥散尾部）的收敛要求，默认立方超胞设定为 30.0 Å × 30.0 Å × 30.0 Å，并在 WP2 试算门控中执行如下低成本验证：",
         location={"part": "word/document.xml", "paragraph": 21})
     put(87, "30.0 Å vs. 34.0 Å 双盒子静态单点校验：选取优化后的代表性完整催化剂模型（SnCu-20，84 原子），分别在 30.0³ Å³ 与 34.0³ Å³ 立方盒子（均开启 &CENTER_COORDINATES 与双重 PERIODIC NONE）下运行静态单点计算，检查电子密度在盒子边界处是否衰减至 < 10⁻⁶ e/Bohr³，且两盒子总能差 < 1–2 meV。",
-        location={"part": "word/document.xml", "paragraph": 22})
+        location={"part": "word/document.xml", "paragraph": 22}, style="ListBullet")
     put(113, "局部振动频率实现方式（ASE Vibrations + CP2K 力接口）：不使用 CP2K MODE_SELECTIVE，而是在高精度优化收敛构型上，利用 Python ASE 的 ase.vibrations.Vibrations 模块仅指定吸附质原子（*HCCO 为 4 原子，*H2CCO 与 *HCCOH 各为 5 原子）施加 ±0.01 Å 有限位移，每次调用 CP2K RUN_TYPE ENERGY_FORCE（复用基态 .wfn 波函数，EPS_SCF 1.0E-8 Ha），由 ASE 组装子空间 Hessian 并求解谐振频率。6 个吸附态合计需 2 × (25 + 31 + 31) = 174 次快速单点力调用。方法学上明确声明：此为冻结基底与 Cu13 条件下的局部振动近似，不包含吸附质与基底/团簇全部振动自由度的耦合。",
         location={"part": "word/document.xml", "paragraph": 27})
     put(114, "严格分离的 CHE 自由能与脱附近似公式（U = 0 V vs. RHE，T = 298.15 K）：ΔG1 = G(*H2CCO) − G(*HCCO) − 1/2 G(H2(g))；ΔG2 = G(*HCCOH) − G(*HCCO) − 1/2 G(H2(g))。",
@@ -194,6 +223,8 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
                             for s in headings))
         self.assertTrue(any(s["heading"].startswith("实验背景") and s["level"] == 2
                             for s in headings))
+        self.assertEqual(len(headings), 18)
+        self.assertFalse(any(s["heading"].startswith("30.0 Å") for s in headings))
         self.assertFalse(any("1. 局域结构" in s["heading"] for s in headings))
         wp4 = next(t for t in manifest["tasks"] if t["work_package"] == "WP4")
         self.assertEqual(set(wp4["evidence_ids"]),
