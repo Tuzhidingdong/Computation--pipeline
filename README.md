@@ -64,4 +64,4 @@ jobflow was evaluated for dynamic Flow expansion. It was not adopted because per
     python -m unittest discover -s tests -v
     python -m compileall -q pipeline_contracts tests examples
 
-Latest GitHub Actions evidence: 72 tests, 70 passed, 2 optional live upstream tests skipped; compileall passed. CI does not connect to either HPC system or run production calculations. See STATUS.md.
+Latest GitHub Actions evidence: 74 tests, 72 passed, 2 optional live upstream tests skipped; compileall passed. CI does not connect to either HPC system or run production calculations. See STATUS.md.
