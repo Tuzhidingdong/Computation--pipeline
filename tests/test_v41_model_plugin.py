@@ -43,6 +43,36 @@ class ModelPluginTests(unittest.TestCase):
             self.assertTrue(candidates[0].structure_path.exists())
             self.assertEqual(len(candidates[0].sha256), 64)
 
+    def test_candidate_id_cannot_escape_output_directory(self):
+        spec = self._spec()
+        raw = {
+            "schema_version":"1.0.0","project_id":"test","model_id":"test-model",
+            "atoms":[dict(x) for x in spec.atoms],"bonds":[dict(x) for x in spec.bonds],
+            "fragments":dict(spec.fragments),
+            "expected":dict(spec.expected),
+            "build_constraints":dict(spec.build_constraints),
+            "evidence":[dict(x) for x in spec.evidence],
+        }
+        raw["build_constraints"]["candidate_transforms"][0]["candidate_id"] = "../escape"
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                build_candidates(ModelSpec.from_mapping(raw), tmp, writer=SimpleWriter())
+
+    def test_nonfinite_transform_is_rejected(self):
+        spec = self._spec()
+        raw = {
+            "schema_version":"1.0.0","project_id":"test","model_id":"test-model",
+            "atoms":[dict(x) for x in spec.atoms],"bonds":[dict(x) for x in spec.bonds],
+            "fragments":dict(spec.fragments),
+            "expected":dict(spec.expected),
+            "build_constraints":dict(spec.build_constraints),
+            "evidence":[dict(x) for x in spec.evidence],
+        }
+        raw["build_constraints"]["candidate_transforms"][0]["translation"] = [float("nan"), 0, 0]
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                build_candidates(ModelSpec.from_mapping(raw), tmp, writer=SimpleWriter())
+
     def test_candidate_count_mismatch_fails_closed(self):
         spec = self._spec()
         raw = {
