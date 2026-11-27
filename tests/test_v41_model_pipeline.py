@@ -10,7 +10,7 @@ from projects.corr_dft_v4_1.model_plugin.pipeline import generate_validate_revie
 
 
 class TestWriter:
-    def write(self, path, symbols, positions):
+    def write(self, path, symbols, positions, atom_ids):
         path.write_text("test-only model bytes", encoding="utf-8")
 
 
@@ -43,7 +43,7 @@ class ModelPipelineTests(unittest.TestCase):
                         {"atom_id":"Cu1","element":"Cu","position":[0,0,0]},
                         {"atom_id":"O1","element":"O","position":[2,0,0]},
                     ],
-                    "bonds":[{"atom1":"Cu1","atom2":"O1","kind":"coordination"}],
+                    "bonds":[{"atom1":"Cu1","atom2":"O1","kind":"coordination","distance_range_angstrom":[1.8,2.2]}],
                     "fragments":{"ligand":{"atom_ids":["O1"]}},
                     "expected":{"atom_count":2,"composition":{"Cu":1,"O":1},
                                 "charge":0,"multiplicity":1,"candidate_count":1},
