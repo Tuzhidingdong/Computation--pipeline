@@ -192,6 +192,9 @@ def _extract_explicit_inline_claims(blocks: list[ExtractedBlock], contexts: dict
     patterns = [
         ("xc", re.compile(r"\bXC_FUNCTIONAL\s+(PBE)\b", re.I), lambda m: m.group(1).upper()),
         ("dispersion", re.compile(r"\bTYPE\s+DFTD3\s*\(\s*BJ\s*\)", re.I), lambda m: "D3(BJ)"),
+        ("xc", re.compile(r"Perdew-Burke-Ernzerhof\s*\(PBE\)\s+functional", re.I), lambda m: "PBE"),
+        ("dispersion", re.compile(r"DFT-D3\s*\(BJ\)\s+dispersion correction", re.I), lambda m: "D3(BJ)"),
+        ("spin_polarized", re.compile(r"spin-polarized\s+DFT", re.I), lambda m: "true"),
         ("cutoff_ry", re.compile(r"\b(?:CUTOFF|density cutoff of)\s*(\d+(?:\.\d+)?)\s*Ry\b", re.I), lambda m: f"{m.group(1)} Ry"),
         ("rel_cutoff_ry", re.compile(r"\b(?:REL_CUTOFF|relative cutoff of)\s*(\d+(?:\.\d+)?)\s*Ry\b", re.I), lambda m: f"{m.group(1)} Ry"),
         ("spin_polarized", re.compile(r"\bUKS\s+\.TRUE\.", re.I), lambda m: "true"),
