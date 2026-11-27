@@ -235,6 +235,40 @@ class PipelineRunner:
 
         mock_mode = getattr(self.data_analysis_adapter, "execution_mode", None) == "mock"
         inputs = self._input_refs(task_manifest, mock=mock_mode)
+        if not mock_mode:
+            resolver = getattr(self.data_analysis_adapter, "resolve_artifact_path", None)
+            if not callable(resolver) and any(item.sha256 is None for item in inputs):
+                message = (
+                    "ID-only manifests require a Data_analysis adapter exposing the official "
+                    "resolve_artifact_path(project_root, artifact_id) binding."
+                )
+                diagnostic = Diagnostic("ARTIFACT_RESOLVER_UNAVAILABLE", message, DiagnosticSeverity.ERROR)
+                stages.append(PipelineStageResult("resolve_inputs", TaskStatus.UNAVAILABLE, (diagnostic,), error=message))
+                return self._finish(task_manifest, TaskStatus.UNAVAILABLE, history, stages, inputs, error=message)
+            if callable(resolver):
+                try:
+                    verified = []
+                    for artifact in inputs:
+                        path = Path(resolver(artifact)).expanduser().resolve(strict=True)
+                        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                        if artifact.sha256 and digest.lower() != artifact.sha256.lower():
+                            raise ValueError(f"SHA-256 mismatch for input Artifact {artifact.artifact_id}")
+                        verified.append(replace(artifact, sha256=digest))
+                    inputs = tuple(verified)
+                    stages.append(PipelineStageResult(
+                        "resolve_inputs", TaskStatus.SUCCEEDED,
+                        summary={"verified_artifact_ids": [item.artifact_id for item in inputs]},
+                    ))
+                except (ImportError, ModuleNotFoundError) as exc:
+                    message = f"Data_analysis Artifact resolver unavailable: {type(exc).__name__}: {exc}"
+                    diagnostic = Diagnostic("ARTIFACT_RESOLVER_UNAVAILABLE", message, DiagnosticSeverity.ERROR)
+                    stages.append(PipelineStageResult("resolve_inputs", TaskStatus.UNAVAILABLE, (diagnostic,), error=message))
+                    return self._finish(task_manifest, TaskStatus.UNAVAILABLE, history, stages, inputs, error=message)
+                except Exception as exc:
+                    message = f"{type(exc).__name__}: {exc}"
+                    diagnostic = Diagnostic("INPUT_ARTIFACT_RESOLUTION_FAILED", message, DiagnosticSeverity.ERROR)
+                    stages.append(PipelineStageResult("resolve_inputs", TaskStatus.FAILED, (diagnostic,), error=message))
+                    return self._finish(task_manifest, TaskStatus.FAILED, history, stages, inputs, error=message)
         cst_outcome = None
         spec = task_manifest.cst_validation
 
