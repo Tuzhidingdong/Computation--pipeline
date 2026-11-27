@@ -1,52 +1,62 @@
 # Upstream Remediation Status
 
-**Current state:** Agent A is working on the upstream CST/DA requirements. Agent B has completed the separate Pipeline-side mock contract preparation; real upstream bindings remain pending.  
+**Current state:** Agent A supplied first-MVP development branch heads for Data_analysis and chem-scitoolkit. Agent B has added optional Pipeline-side real adapters against the inspected callable interfaces. Live upstream runtime tests are opt-in; the public CI uses synthetic fixtures and injected API doubles.  
 **Governing instruction:** [UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md](UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md)  
 **Audit:** [EXISTING_SKILL_CAPABILITY_AUDIT.md](EXISTING_SKILL_CAPABILITY_AUDIT.md)  
-**Agent B contract:** [SKILLS_ADAPTER_CONTRACT_V0.1.md](SKILLS_ADAPTER_CONTRACT_V0.1.md)
+**Adapter contract:** [SKILLS_ADAPTER_CONTRACT_V0.1.md](SKILLS_ADAPTER_CONTRACT_V0.1.md)  
+**Live binding notes:** [REAL_SKILLS_INTEGRATION_TODO.md](REAL_SKILLS_INTEGRATION_TODO.md)
 
-## Baseline revisions recorded by the existing audit
+## Upstream branches inspected
 
-| Repository | Audited revision | Work branch / PR | Status |
+| Repository | Agent A branch | Inspected HEAD | Agent B action |
 |---|---|---|---|
-| chem-scitoolkit | `87a061b309bbb9fdf4461d2d1d2873dbfd8681fb` | Agent A to report | Agent A implementation in progress; actual API binding pending |
-| Data_analysis | `5684c6a762ac09caf24661c987b2e7a97eb0e2e7` | Agent A to report | Agent A implementation in progress; actual API binding pending |
-| BeiLong_HPC (private) | `40ce15a9285e94f4abf1418361387e90e850a899` | No changes by Agent B | Mock adapter contract ready; exact per-Skill mapping remains read-only follow-up |
-| UCAS_hpc (private) | `ebde5c1e76432d7e0d6728da804fb62dc5f84583` | No changes by Agent B | Mock adapter contract ready; exact per-Skill mapping remains read-only follow-up |
+| chem-scitoolkit | `dft-finite-cluster-production-interfaces` | `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba` | Read-only source/signature inspection; bound Pipeline RealCSTAdapter |
+| Data_analysis | `cp2k-dft-artifact-and-evidence-support` | `22ad1290e0d78c6a98fbd6d2d194d3ad8e1c689a` | Read-only source/signature inspection; bound Pipeline RealDataAnalysisAdapter |
+| BeiLong_HPC (private) | unchanged | Existing historical audit revision only | Mock adapter remains; no real HPC invocation |
+| UCAS_hpc (private) | unchanged | Existing historical audit revision only | Mock adapter remains; no real HPC invocation |
 
-These are historical audit revisions, not refreshed upstream HEAD claims.
+These are the exact branch heads supplied by the user and confirmed from the remote refs during this task. They are not claims about merged default branches.
 
 ## Requirement tracker
 
-| ID | Requirement | Target | Status | Evidence |
+| ID | Requirement | Target | Status | Evidence / boundary |
 |---|---|---|---|---|
-| CST-1 | Finite/non-periodic CP2K input builder | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-2 | Task-aware CP2K output validation | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-3 | Distinguish true Bader from calibrated Hirshfeld estimate | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-4 | CP2K PDOS parsing and normalization | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-5 | Cube grid, density-difference and vacuum-reference validation | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-6 | ASE vibration/thermochemistry wrapper | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| CST-7 | Configurable publication figure profiles | chem-scitoolkit | AGENT A IN PROGRESS | Real API not yet bound in Pipeline |
-| DA-1 | DFT artifact format registration | Data_analysis | AGENT A IN PROGRESS | Real registry not yet bound in Pipeline |
-| DA-2 | Reader and operation registration | Data_analysis | AGENT A IN PROGRESS | Real registry not yet bound in Pipeline |
-| DA-3 | DFT provenance/evidence linking | Data_analysis | AGENT A IN PROGRESS | Must retain current Artifact/Analysis Run ownership; PR #4 remains an unmerged dependency |
-| HPC-1 | BeiLong adapter mapping | Computation--pipeline | MOCK CONTRACT READY | `pipeline_contracts/adapters.py`, `pipeline_contracts/mocks.py`; real mapping pending read-only confirmation |
-| HPC-2 | UCAS adapter mapping | Computation--pipeline | MOCK CONTRACT READY | `pipeline_contracts/adapters.py`, `pipeline_contracts/mocks.py`; real mapping pending read-only confirmation |
-| EXT-1 | External tool/license/version inventory | Computation--pipeline | EXISTING BASELINE — RUNTIME/LICENCE VERIFICATION PENDING | `EXTERNAL_TOOL_SELECTION.md`; outside Agent B scope |
-| INT-1 | Cross-repository mock contract tests | Computation--pipeline | COMPLETE — MOCK ONLY | `tests/test_contracts.py`, `tests/test_mock_integration.py` |
+| CST-1 | Finite/non-periodic CP2K input builder | chem-scitoolkit | REAL ADAPTER BOUND | Calls `CP2KInputBuilder.build_finite_system`; no CP2K execution |
+| CST-2 | Task-aware CP2K output validation | chem-scitoolkit | REAL ADAPTER BOUND | Calls `validate_cp2k_output`; status preserved, not scientific validation |
+| CST-3 | True Bader / calibrated Hirshfeld handling | chem-scitoolkit | REAL ADAPTER BOUND | Calls `validate_bader_true_results` / `estimate_hirshfeld_charges` |
+| CST-4 | PDOS parsing/normalization | chem-scitoolkit | REAL ADAPTER BOUND | Calls `normalize_cp2k_pdos`; optional `cp2k_pdos` executable remains required |
+| CST-5 | Cube grid and vacuum reference utilities | chem-scitoolkit | REAL ADAPTER BOUND | Calls cube/plateau/reference functions |
+| CST-6 | ASE thermochemistry wrapper | chem-scitoolkit | REAL ADAPTER BOUND | Calls `ase_harmonic_thermochemistry`; ASE remains optional |
+| CST-7 | Figure profile | chem-scitoolkit | REAL ADAPTER BOUND | Calls `apply_figure_profile` / `save_figure_profiled` |
+| DA-1 | DFT file format/reader registration | Data_analysis | REAL ADAPTER BOUND | Calls `list_dft_readers` / `read_dft_file`; reader status/hash retained |
+| DA-2 | Reader and operation registration | Data_analysis | REAL ADAPTER BOUND | Calls operation list/get/run APIs; operation availability checked |
+| DA-3 | DFT provenance/evidence linking | Data_analysis | REAL ADAPTER BOUND — PARTIAL OUTPUT SEMANTICS | Calls `create_dft_analysis_run_from_project`, `run_dft_operation`, and `build_evidence_package`; no derived output Artifact API is present in inspected branch |
+| HPC-1 | BeiLong adapter mapping | Computation--pipeline | MOCK CONTRACT ONLY | Real mapping remains read-only follow-up; no Slurm submission |
+| HPC-2 | UCAS adapter mapping | Computation--pipeline | MOCK CONTRACT ONLY | Real mapping remains read-only follow-up; no Slurm submission |
+| EXT-1 | External tool/license/version inventory | Computation--pipeline | EXISTING BASELINE — VERIFICATION PENDING | `EXTERNAL_TOOL_SELECTION.md` |
+| INT-1 | Cross-component mock integration | Computation--pipeline | COMPLETE — MOCK ONLY | `tests/test_mock_integration.py` |
+| INT-2 | Real adapter interface-boundary tests | Computation--pipeline | IMPLEMENTED — CI RESULT PENDING | `tests/test_real_adapters.py`; live source tests are opt-in |
 
-## Agent B scope and evidence (2026-11-27)
+## Data_analysis ownership and current limitation
 
-- Branch: `agent-b/pipeline-mock-contracts-20261127`.
-- Only `Computation--pipeline` is modified. No upstream Skill source, branch or PR was changed.
-- The mocks use opaque synthetic Artifact IDs and `mock://` URIs; no scientific values are generated.
-- The HPC mock separates scheduler completion from application success and output integrity. Its hash assertion explicitly does not hash bytes.
-- The standard-library test suite contains 10 contract/control-flow tests. Local scratch validation passed; the GitHub Actions run is reported separately after the branch push.
-- A passing mock contract is not a real Skill or HPC integration test and is not scientific validation.
+- Data_analysis remains the sole owner of Artifact records/storage, Analysis Runs, cache and Evidence Packages.
+- The inspected Data_analysis branch exposes DFT readers, operation registry/dispatcher, project-backed Analysis Run creation and DFT Evidence Package construction.
+- The inspected branch does not contain `data_analysis.artifact_store` or a public path resolver. Pipeline accepts a local Artifact URI or an injected owner-provided resolver; it does not inspect DA registry files itself.
+- Real DFT reading requires a supplied Artifact SHA-256 and checks the reader hash against it.
+- The current reader returns parsed output in memory and does not register a derived Artifact. Successful reading is therefore recorded as a `partial` Analysis Run with no fabricated output Artifact and `qc_status=not_assessed`. Pipeline returns a warning so this limitation is visible.
+- The adapter does not install the unmerged private branch or add DA as a mandatory public CI dependency.
 
-## Coordination notes
+## Validation boundary
 
-- `Data_analysis` Artifact, Analysis Run, cache and evidence ownership remains upstream. Do not create another Artifact Store, database, cache, or evidence registry in Pipeline.
-- Data_analysis PR #4 was inspected read-only and is open/unmerged. Do not copy its managed Artifact path/stream access implementation or rely on it before its owner-reviewed merge.
-- The HPC repositories are private. Do not place hosts, users, account names, keys, paths, connection commands or other operational configuration in this public repository.
-- No production DFT/HPC task has been submitted.
+- The existing 10 Mock tests remain unchanged.
+- New real-adapter tests use a small in-memory Data_analysis API double to validate actual function names/argument mapping and status/provenance behavior.
+- Optional live tests use temporary synthetic files and environment variables pointing at approved source trees. They do not execute CP2K or HPC.
+- Public CI must not check out the private Data_analysis repository or install its branch automatically.
+- Mock/adapter tests are not evidence of scientific algorithm correctness or scientific QC.
+
+## Safety
+
+- Only `Computation--pipeline` is modified by Agent B.
+- No private HPC host, user, account, path, key, credential or connection configuration is included.
+- No production DFT, AIMD, SSH/SCP, Slurm or production HPC task has been submitted.
+- PR #1 remains open and Draft; no merge or auto-merge is requested.
