@@ -31,3 +31,21 @@ Every output candidate is a complete model package: structure file, topology JSO
 ## Scientific blocker
 
 The checked-in v4.1 task plan records target compositions and electron counts, but the model builder still needs the frozen DOCX and explicit atom/bond/donor graph plus reproducible 3D construction constraints. These inputs are not fabricated by this implementation. Real v4.1 candidate construction and scientific validation remain blocked until those source definitions are supplied and parsed.
+
+
+## Public execution APIs
+
+- `pipeline_contracts.plan_compiler.compile_docx()` and `projects.corr_dft_v4_1.compile_v41_docx()` compile DOCX evidence into a versioned Manifest.
+- `confirm_manifest_claims()` records owner confirmation against evidence IDs without editing source text.
+- `confirm_v41_resolutions()` / CLI `resolve-v41-planning` require an explicit owner decision for both known WP1 ambiguities.
+- CLI commands: `compile-docx`, `compile-v41-docx`, `confirm-manifest`, `resolve-v41-planning`, and `compile-calculation-plan`.
+- `model_plugin.generate_validate_review()` runs the project lifecycle through candidate generation, validation, Data_analysis Artifact registration and review. It stops at `AWAITING_APPROVAL`; `approve_candidate()` creates the immutable approval record.
+- `ProjectLifecycle.create_calculation_run()` verifies the frozen record and hands the approved Artifact ID/SHA into the existing `WorkflowController`.
+
+## Dependencies and implementation boundary
+
+`requirements-model-plugin.txt` declares ASE for production structure I/O and RDKit for organic-fragment topology sanitization. `toolchain_report()` records exact installed package versions at runtime. The current builder does not yet call molSimplify or MACE; they are not falsely reported as active integrations. Candidate geometry is presently deterministic rigid transformation of a complete explicit graph, not automatic metal-cluster topology inference or conformer generation.
+
+## Verification boundary
+
+CI tests use synthetic DOCX packages and test-only structure/Artifact adapters. They verify parser contracts, blocking diagnostics, lifecycle state transitions, hash pinning, registration calls and the approval gate. They do not prove real v4.1 candidate geometry, actual CP2K pseudopotential electron counts, live Data_analysis registration, or HPC readiness. Those require the real Frozen DOCX, explicit v4.1 graph/construction inputs, and Agent A's live Artifact API.
