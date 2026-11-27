@@ -185,6 +185,9 @@ class WorkflowController:
                 self.store.update_task(rid,tid,"INTERRUPTED_RECOVERY" if existing or state in {"SUBMITTING","SUBMISSION_UNKNOWN"} else "READY",job_id=existing)
                 try:
                     result=self._execute(self.adapter,task,existing,runtime,on_intent,on_job)
+                    for observed in result.state_trace:
+                        if observed in {"SUBMITTED","QUEUED","RUNNING"}:
+                            self.store.update_task(rid,tid,observed,job_id=result.job_id)
                     payload={"status":result.status,"job_id":result.job_id,"scheduler_state":result.scheduler_state,
                         "application_exit_code":result.application_exit_code,"output_artifacts":[dict(x) for x in result.output_artifacts],
                         "converged":result.converged,"qc":dict(result.qc),"analysis_run_id":result.analysis_run_id,
