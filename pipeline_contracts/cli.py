@@ -6,6 +6,7 @@ from pathlib import Path
 from .calculation_plan import CalculationPlan, compile_initial_tasks
 from .real_workflow import build_real_workflow_adapter
 from .workflow import WorkflowController, WorkflowStore, MockCP2KWorkflowAdapter
+from .plan_compiler import compile_docx, confirm_manifest_claims, compile_confirmed_manifest, write_manifest
 
 
 def _state_path(plan):
@@ -21,6 +22,16 @@ def _runtime_path(plan, supplied):
 def main(argv=None):
     parser=argparse.ArgumentParser(prog="computation-pipeline")
     sub=parser.add_subparsers(dest="command",required=True)
+    for name in ("compile-docx", "compile-v41-docx"):
+        p=sub.add_parser(name); p.add_argument("docx_file")
+        p.add_argument("--plan-version"); p.add_argument("--output", required=True)
+        if name == "compile-docx": p.add_argument("--project-id", required=True)
+    p=sub.add_parser("confirm-manifest")
+    p.add_argument("manifest_file"); p.add_argument("--evidence-id", action="append", required=True)
+    p.add_argument("--confirmed-by", required=True); p.add_argument("--rationale", required=True)
+    p.add_argument("--output", required=True)
+    p=sub.add_parser("compile-calculation-plan")
+    p.add_argument("manifest_file"); p.add_argument("calculation_plan_file")
     for name in ("plan","validate","preflight","run"):
         p=sub.add_parser(name); p.add_argument("plan_file")
         if name in {"preflight","run"}:
@@ -35,6 +46,38 @@ def main(argv=None):
             p.add_argument("--runtime-config")
         if name=="report": p.add_argument("--output")
     args=parser.parse_args(argv)
+
+    if args.command == "compile-docx":
+        result = compile_docx(args.docx_file, project_id=args.project_id, plan_version=args.plan_version)
+        write_manifest(result, args.output)
+        print(json.dumps({"manifest":str(Path(args.output).resolve()),
+                          "compilation_status":result.manifest["compilation_status"],
+                          "diagnostics":list(result.diagnostics)}, indent=2, ensure_ascii=False))
+        return 2 if any(item.get("blocks_execution") for item in result.diagnostics) else 0
+    if args.command == "compile-v41-docx":
+        from projects.corr_dft_v4_1.plan_compiler import compile_v41_docx
+        result = compile_v41_docx(args.docx_file, plan_version=args.plan_version)
+        write_manifest(result, args.output)
+        print(json.dumps({"manifest":str(Path(args.output).resolve()),
+                          "compilation_status":result.manifest["compilation_status"],
+                          "diagnostics":list(result.diagnostics)}, indent=2, ensure_ascii=False))
+        return 2 if any(item.get("blocks_execution") for item in result.diagnostics) else 0
+    if args.command == "confirm-manifest":
+        manifest = json.loads(Path(args.manifest_file).read_text(encoding="utf-8"))
+        confirmed = confirm_manifest_claims(manifest, evidence_ids=args.evidence_id,
+                                            confirmer=args.confirmed_by, rationale=args.rationale)
+        write_manifest(confirmed, args.output)
+        print(json.dumps({"manifest":str(Path(args.output).resolve()),
+                          "remaining_unresolved":len(confirmed.get("unresolved_definitions", []))},
+                         indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "compile-calculation-plan":
+        manifest = json.loads(Path(args.manifest_file).read_text(encoding="utf-8"))
+        raw_plan = json.loads(Path(args.calculation_plan_file).read_text(encoding="utf-8"))
+        plan = compile_confirmed_manifest(manifest, raw_plan)
+        print(json.dumps({"calculation_plan":plan.as_dict(),"plan_sha256":plan.sha256},
+                         indent=2, ensure_ascii=False))
+        return 0
 
     if args.command in {"plan","validate","preflight","run"}:
         plan=CalculationPlan.load(args.plan_file)
