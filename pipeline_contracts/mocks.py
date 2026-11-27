@@ -37,6 +37,8 @@ def _mock_artifact(source: str, artifact_id: str, uri_suffix: str) -> ArtifactRe
 
 
 class MockCSTAdapter:
+    execution_mode = "mock"
+
     """Pass-through contract stub; it never evaluates a scientific operation."""
 
     def __init__(self, status: TaskStatus | str = TaskStatus.SUCCEEDED) -> None:
@@ -105,6 +107,8 @@ class MockCSTAdapter:
 
 
 class MockDataAnalysisAdapter:
+    execution_mode = "mock"
+
     """Returns synthetic IDs/references for orchestration tests; no Artifact Store is created."""
 
     def __init__(
