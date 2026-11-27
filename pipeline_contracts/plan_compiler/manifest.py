@@ -803,7 +803,7 @@ def build_project_manifest(blocks: list[ExtractedBlock], *, project_id: str,
                 "reason": "Adsorbate atom counts are explicit, but this paragraph does not identify a WP or per-catalyst mapping.",
                 "evidence_ids": [eid], "source": dict(item.get("source") or {}), "source_text": text,
             })
-        if eid == "docx-block-000087" and re.search(r"representative.*SnCu-20", text, re.I):
+        if eid == "docx-block-000087" and re.search(r"代表性.*SnCu-20", text, re.I):
             unresolved_structured_fields.append({
                 "field": "tasks.representative_sncu20_models", "status": "unresolved",
                 "reason": "A representative SnCu-20 model is named in the WP2 gate, but the source does not state a numeric model count.",
