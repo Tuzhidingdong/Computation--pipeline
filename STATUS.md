@@ -24,13 +24,13 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 | v4.1 planning ambiguity checks | IMPLEMENTED — CI-tested | Blocks unresolved 15-orientation scope and six detailed fragment-spin candidates versus four-item summary mismatch. |
 | CalculationPlan conversion | IMPLEMENTED — API added | Requires confirmed Manifest and registered/approved model Artifact ID plus SHA-256. Existing CalculationPlan validation is not weakened and no fake structure path is introduced. |
 | Explicit model graph contract | IMPLEMENTED — unit-tested | Requires atom IDs, elements, coordinates, bond type/order, fragments, expected count/charge/multiplicity/candidate count and source evidence. |
-| Candidate generation | PARTIAL — contract tested | Deterministic rigid transforms of an explicit supplied graph; exact candidate count enforced. This does not infer missing topology or create the real Cu/Sn support graph from formulas. |
+| Candidate generation | PARTIAL — orchestration CI-tested | Project pipeline runs deterministic rigid transforms over an explicit supplied graph and enforces exact candidate count, global candidate IDs, donor mapping and recorded seed. It does not infer missing topology or create the real Cu/Sn support graph from formulas. |
 | ASE structure output | IMPLEMENTED — dependency-gated | Production writer requires ASE and emits non-periodic extxyz. CI uses an explicitly test-only writer for contract tests. |
 | RDKit topology validation | PARTIAL — optional and explicit | Declared organic fragments are checked when RDKit is installed and formal charges are supplied; no complete v4.1 graph has been validated. |
 | Model validation | PARTIAL — API implemented | Checks composition, formula, atom count, pseudopotential valence electron count, spin parity, periodicity, overlaps, donor/bond mapping, coordination ranges and readback. No real candidate run because source graph/coordinates are unavailable. |
 | Artifact registration | IMPLEMENTED — adapter bridge and CI fake | Registers structure, topology, metadata and validation report through Data_analysis `register_derived_artifact`, then re-resolves and re-hashes every file; format IDs are explicit. Not yet exercised against Agent A's live source checkout. |
-| Model review package | PARTIAL — API implemented | Produces structured candidate review index; package remains blocked unless an injected real renderer creates a preview for every candidate. No real preview has been produced. |
-| Approval freeze | IMPLEMENTED — CI-tested | Requires explicit approval, registered Artifact ID, passing report and matching SHA-256; approval record is write-once. |
+| Model review package | PARTIAL — orchestration CI-tested | Produces structured candidate review index and blocks approval unless an injected real renderer creates a preview for every candidate. No real preview has been produced. |
+| Approval freeze | IMPLEMENTED — orchestration CI-tested | Requires explicit approval, Data_analysis-verified ArtifactRef, passing report and matching SHA-256; approval record is write-once and integrity-checked. |
 | Project lifecycle DAG | IMPLEMENTED — CI-tested | Pre-model stages persisted in the existing WorkflowStore database; stage order enforced; approved model is handed to existing CalculationPlan workflow. |
 
 ## Known v4.1 blockers preserved by the project profile
@@ -44,7 +44,7 @@ Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. Th
 ## CI verification
 
 Latest successful Actions run observed on this branch:
-- 94 tests passed, 2 optional upstream integration tests skipped.
+- 96 tests passed, 2 optional upstream integration tests skipped.
 - `python -m compileall -q pipeline_contracts tests examples` passed.
 - This evidence is software-only; the suite uses synthetic DOCX and test-only structure writers. It does not establish actual v4.1 chemistry or a real Artifact Registry integration.
 
