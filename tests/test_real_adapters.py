@@ -26,6 +26,7 @@ class FakeDataAnalysisAPI:
         self.expected_artifact_id = expected_artifact_id
         self.expected_hash = expected_hash
         self.calls = []
+        self.fail_registration = False
         self.run_path = project_root / "registry" / "analysis_runs" / "RUN-DFT-TEST.json"
         self.run_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -71,6 +72,8 @@ class FakeDataAnalysisAPI:
     def create_dft_analysis_run_from_project(self, **kwargs):
         self.calls.append(("create_dft_analysis_run_from_project", kwargs))
         self.assert_registered_input(kwargs["input_artifact_ids"])
+        if self.fail_registration:
+            raise FileNotFoundError("registered Artifact record not found: " + self.expected_artifact_id)
         run_status = kwargs["status"]
         record = {
             "schema_version": "1.0.0",
@@ -204,6 +207,51 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
             self.assertEqual(outcome.qc_status, "blocked")
             self.assertIn("synthetic unavailable reader", outcome.error)
             self.assertIsNotNone(outcome.evidence_package)
+
+    def test_missing_registered_artifact_is_a_specific_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self._fixture(root)
+            project = root / "da-project"
+            project.mkdir()
+            artifact_id = "ART-NOT-REGISTERED"
+            digest = _sha(source)
+            api = FakeDataAnalysisAPI(project, artifact_id, digest)
+            api.fail_registration = True
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
+                task_id="TASK-DA-UNREGISTERED",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef(
+                    artifact_id=artifact_id, sha256=digest,
+                    format_id="finite_displacement_force_table", uri=str(source)
+                ),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+            ))
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.qc["reason_code"], "DA_ARTIFACT_NOT_REGISTERED_OR_SOURCE_MISSING")
+            self.assertIn("registered Artifact record not found", outcome.error)
+
+    def test_artifact_hash_mismatch_is_not_promoted_to_parsed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self._fixture(root)
+            project = root / "da-project"
+            project.mkdir()
+            artifact_id = "ART-HASH-MISMATCH"
+            api = FakeDataAnalysisAPI(project, artifact_id, _sha(source))
+            wrong_reference_hash = "f" * 64
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
+                task_id="TASK-DA-HASH-MISMATCH",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef(
+                    artifact_id=artifact_id, sha256=wrong_reference_hash,
+                    format_id="finite_displacement_force_table", uri=str(source)
+                ),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+            ))
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.diagnostics[0].code, "DFT_ARTIFACT_HASH_MISMATCH")
+            self.assertEqual(outcome.analysis_run_record["status"], "failed")
 
     def test_real_adapter_rejects_missing_artifact_hash_before_reading(self):
         with tempfile.TemporaryDirectory() as temp:
