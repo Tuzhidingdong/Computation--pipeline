@@ -69,7 +69,7 @@ def load_runtime_config(path: str | Path) -> dict[str, Any]:
             raise RuntimeConfigError(f"hpc_backends.{backend_name} must be an object")
         for key in (
             "ssh_executable", "scp_executable", "ssh_config", "skill_root",
-            "job_record_script", "slurm_template", "privacy_header_template", "module_init_path",
+            "job_record_script", "slurm_template", "privacy_header_template",
         ):
             if profile.get(key):
                 profile[key] = str(_resolve(profile[key], base=base))
