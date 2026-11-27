@@ -266,9 +266,15 @@ class PipelineRunner:
                     return self._finish(task_manifest, TaskStatus.UNAVAILABLE, history, stages, inputs, error=message)
                 except Exception as exc:
                     message = f"{type(exc).__name__}: {exc}"
-                    diagnostic = Diagnostic("INPUT_ARTIFACT_RESOLUTION_FAILED", message, DiagnosticSeverity.ERROR)
-                    stages.append(PipelineStageResult("resolve_inputs", TaskStatus.FAILED, (diagnostic,), error=message))
-                    return self._finish(task_manifest, TaskStatus.FAILED, history, stages, inputs, error=message)
+                    if "unavailable" in message.lower() or "missing callable" in message.lower():
+                        state = TaskStatus.UNAVAILABLE
+                        code = "ARTIFACT_RESOLVER_UNAVAILABLE"
+                    else:
+                        state = TaskStatus.FAILED
+                        code = "INPUT_ARTIFACT_RESOLUTION_FAILED"
+                    diagnostic = Diagnostic(code, message, DiagnosticSeverity.ERROR)
+                    stages.append(PipelineStageResult("resolve_inputs", state, (diagnostic,), error=message))
+                    return self._finish(task_manifest, state, history, stages, inputs, error=message)
         cst_outcome = None
         spec = task_manifest.cst_validation
 
