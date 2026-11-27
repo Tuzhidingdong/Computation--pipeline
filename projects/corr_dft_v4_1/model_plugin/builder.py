@@ -26,7 +26,7 @@ class ModelCandidate:
 
 
 class StructureWriter(Protocol):
-    def write(self, path: Path, symbols: list[str], positions: list[list[float]]) -> None: ...
+    def write(self, path: Path, symbols: list[str], positions: list[list[float]], atom_ids: list[str]) -> None: ...
 
 
 def _rotate(point, origin, axis, angle_degrees):
@@ -51,12 +51,14 @@ def _ase_writer():
     try:
         from ase import Atoms
         from ase.io import write
+        import numpy as np
     except ImportError as exc:
         raise RuntimeError("ASE is required to write real model candidates") from exc
 
     class Writer:
-        def write(self, path, symbols, positions):
+        def write(self, path, symbols, positions, atom_ids):
             atoms = Atoms(symbols=symbols, positions=positions, pbc=False)
+            atoms.new_array("atom_id", np.asarray(atom_ids, dtype=str))
             write(str(path), atoms, format="extxyz")
     return Writer()
 
@@ -108,7 +110,8 @@ def build_candidates(
         folder = root / candidate_id
         folder.mkdir(parents=True, exist_ok=False)
         structure_path = folder / "structure.extxyz"
-        writer.write(structure_path, symbols, positions)
+        writer.write(structure_path, symbols, positions,
+                     [str(atom["atom_id"]) for atom in spec.atoms])
         topology = {
             "schema_version": "1.0.0", "model_id": spec.model_id,
             "atoms": [dict(atom, position=positions[i]) for i, atom in enumerate(spec.atoms)],
