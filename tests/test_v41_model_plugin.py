@@ -22,7 +22,7 @@ class ModelPluginTests(unittest.TestCase):
             ],
             "bonds": [{"atom1":"Cu1","atom2":"O1","kind":"coordination"}],
             "fragments": {"ligand": {"atom_ids": ["O1"]}},
-            "expected": {"atom_count": 2, "composition": {"Cu":1,"O":1}, "charge":0,"multiplicity":1},
+            "expected": {"atom_count": 2, "composition": {"Cu":1,"O":1}, "charge":0,"multiplicity":1,"candidate_count":1},
             "build_constraints": {
                 "candidate_transforms": [{
                     "candidate_id":"candidate-001","fragment_id":"ligand",
