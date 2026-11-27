@@ -24,6 +24,10 @@ class ModelSpec:
         missing = [key for key in required if key not in raw]
         if missing:
             raise ValueError("model spec missing fields: " + ", ".join(missing))
+        expected = dict(raw["expected"])
+        for key in ("atom_count", "charge", "multiplicity", "candidate_count"):
+            if key not in expected:
+                raise ValueError(f"expected.{key} must be explicit")
         atoms = tuple(dict(item) for item in raw["atoms"])
         bonds = tuple(dict(item) for item in raw["bonds"])
         if not atoms:
@@ -55,5 +59,5 @@ class ModelSpec:
         if not isinstance(raw["build_constraints"], Mapping):
             raise ValueError("build_constraints must be an object")
         return cls("1.0.0", str(raw["project_id"]), str(raw["model_id"]), atoms, bonds,
-                   dict(raw["fragments"]), dict(raw["expected"]),
+                   dict(raw["fragments"]), expected,
                    dict(raw["build_constraints"]), tuple(dict(x) for x in raw["evidence"]))
