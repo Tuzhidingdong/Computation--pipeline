@@ -226,6 +226,13 @@ class PipelineRunner:
             stages.append(PipelineStageResult("data_analysis", TaskStatus.UNAVAILABLE, (diagnostic,), error=message))
             return self._finish(task_manifest, TaskStatus.UNAVAILABLE, history, stages, ())
 
+        adapter_root = getattr(self.data_analysis_adapter, "project_root", None)
+        if adapter_root is not None and Path(adapter_root).expanduser().resolve() != Path(task_manifest.project_root).expanduser().resolve():
+            message = "PipelineTaskManifest.project_root does not match the injected Data_analysis adapter project_root."
+            diagnostic = Diagnostic("PIPELINE_PROJECT_ROOT_MISMATCH", message, DiagnosticSeverity.ERROR)
+            stages.append(PipelineStageResult("preflight", TaskStatus.FAILED, (diagnostic,), error=message))
+            return self._finish(task_manifest, TaskStatus.FAILED, history, stages, (), error=message)
+
         mock_mode = getattr(self.data_analysis_adapter, "execution_mode", None) == "mock"
         inputs = self._input_refs(task_manifest, mock=mock_mode)
         cst_outcome = None
