@@ -7,6 +7,8 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -211,7 +213,7 @@ class FakeHPC:
 
     def verify_hashes(self, manifest):
         for artifact in manifest:
-            path = Path(__import__("urllib.parse", fromlist=["urlparse"]).urlparse(artifact.uri).path)
+            path = Path(url2pathname(urlparse(artifact.uri).path))
             if hashlib.sha256(path.read_bytes()).hexdigest() != artifact.sha256:
                 return HashVerification(False, (), ("hash mismatch",))
         return HashVerification(True, tuple(item.artifact_id for item in manifest))
