@@ -1,63 +1,64 @@
 # Development Status — Computation--pipeline v4.1 integration
 
-This status distinguishes software contracts from real-source, chemistry, Artifact and HPC evidence.
-
-## Current branch and protection
+## Current branch protection
 
 - Repository: Tuzhidingdong/Computation--pipeline
 - Branch: agent-b/plan-compiler-v41-model-plugin-20261127
-- Development base: 5e6e26fdf94efbac54182f819f4879c1aafb1d4d
-- PR #3 remains Draft and unmerged.
-- main, PR #1, PR #2 and all upstream Skill repositories remain untouched.
-- No HPC/Slurm submission or production CP2K/DFT execution was performed.
+- This compiler/provenance change is based on PR #3 HEAD dccebf72403aa3b20139507ca2350a9504cbcb6c.
+- PR #3 remains Draft and unmerged. Its base branch is unchanged.
+- main, PR #1, PR #2 and all upstream Skill repositories are out of scope and remain untouched.
+- No resolve-v41-planning command was run. No CP2K, HPC, Slurm or production DFT task was started.
 
-## Real Frozen DOCX source
+## Frozen DOCX access and real-input evidence
 
-The exact owner-side source already exists at:
+The owner-provided source is on the local Windows machine:
 
-`F:\cp2k practical\hyy\CORR_DFT_Computational_Plan_v4.1_Frozen.docx`
+F:\cp2k practical\hyy\CORR_DFT_Computational_Plan_v4.1_Frozen.docx
 
-A prior local run under `F:\cp2k practical\hyy\pipeline_real_test_20261127_01\` extracted 45 body paragraphs and 10 tables and produced `plan_extracted.md`, `plan_parameters.json`, `source_manifest.json` and the complete extracted text. This PR's new compiler has not yet been run against that exact file. The source DOCX is not copied into the repository.
+A prior local extraction was reported at:
 
-## Implemented software contracts and their current limits
+F:\cp2k practical\hyy\pipeline_real_test_20261127_01\
 
-| Capability | Current status | Boundary |
+That prior extraction contains 45 paragraph blocks and 10 table locations. The current Agent B development environment cannot access either Windows path, and the original DOCX/extraction artifacts were not available from the connected file library. Consequently, this branch revision has not been run against the exact Frozen DOCX. The 45-paragraph / 10-table counts are inherited from the prior local extraction report, not re-verified by this branch's compiler.
+
+In particular, the actual source claims for ase_vibrations__cp2k and copyready_english_text have not been inspected in this environment. New tests exercise machine-style labelled claim parsing with synthetic examples; they do not adjudicate the actual Frozen DOCX values. Local Agent real-input comparison remains required.
+
+## Compiler and Manifest changes in this revision
+
+| Capability | Current behavior | Evidence status |
 |---|---|---|
-| Generic DOCX reader | Implemented; synthetic DOCX CI-tested | Extracts body paragraphs, heading levels, numbering metadata, table cells and source coordinates. It has not yet been validated against the owner-side Frozen DOCX in this branch. |
-| Evidence-backed Manifest | Implemented; synthetic DOCX CI-tested | Preserves source blocks and labelled claims, keeps unconfirmed claims unresolved, blocks conflicting labelled values, and records source filename, byte size, SHA-256 and parser identity. |
-| v4.1 project profile | Implemented as a project-specific reference profile | Contains system/method/task values maintained in the repo. The compiler currently overlays this profile; it does not yet reconcile every profile field to exact evidence from the Frozen DOCX. |
-| Known WP1 ambiguity controls | Implemented; CI-tested | Requires an explicit orientation scope. Spin-count mismatch now permits either owner-confirmed retention of all six named candidates or explicit selection of four named candidates; it no longer silently fixes one scientific interpretation. |
-| CalculationPlan conversion | Partial | Existing CalculationPlan validation is preserved. Current CLI requires a separate CalculationPlan JSON; the full DOCX/Manifest-to-CalculationPlan compiler is not yet implemented. |
-| v4.1 explicit model spec | Implemented as a strict input contract | Requires explicit atom IDs, elements, positions, bonds, donor IDs, expected composition/count/charge/spin and per-bond distance windows. These requirements do not create the missing chemistry graph. |
-| Candidate builder | Partial — transform-only | Performs deterministic rigid transforms over a complete, externally supplied atom graph and coordinates. It does not yet construct Cu-20, SnCu-20, SnCu-20 support, Cu13 or their chemistry from project sources. |
-| ASE writer | Implemented, dependency-gated | Production path writes non-periodic extxyz with persistent atom IDs. Current CI uses test-only writers; no production ASE model output has been validated. |
-| RDKit / molSimplify / MACE | Not yet integrated in the production builder | `toolchain_report()` reports installed package versions only. It does not invoke RDKit sanitization, molSimplify coordination construction, or MACE pre-screening. |
-| Model validator | Improved contract; not real-model validated | Checks composition, count, charge, pseudopotential electron count, spin parity, atom identity/order, coordinate mapping, explicit covalent/coordination distance windows, donor mapping, overlaps and structure readback. No real v4.1 graph has passed it. |
-| Artifact registration | Adapter bridge only; fake API CI-tested | Registers structure/topology/metadata/report via the Data_analysis API and resolves/re-hashes registered files. Live Agent A checkout integration is untested. |
-| Model review | Partial | Requires a preview for every candidate before review is ready. The renderer is injected; no production 3D renderer or real preview has been demonstrated. |
-| Approval freeze and CalculationPlan handoff | Contract implemented; fake/in-memory CI-tested | Pins Artifact ID and SHA and blocks handoff if approved bytes differ. Live Data_analysis Artifact registration/approval has not been verified. |
-| Project lifecycle | Implemented; SQLite contract CI-tested | Reuses WorkflowStore for persisted stages. Real run recovery and live end-to-end integration remain unverified. |
+| Conflict identity | Claims are grouped by normalized field plus system and WP scope. Different fields or different model/WP scopes do not conflict with one another. | Synthetic software tests added; CI pending. |
+| Value comparison | Normalizes Unicode compatibility forms, case, whitespace, formatting around common operators/delimiters, and whitespace between a numeric value and a known unit. Numeric magnitude and unit tokens remain distinct; e.g. 500 Ry and 500 Ha remain different. | Synthetic software tests added; CI pending. |
+| Duplicate statements | Semantically identical values remain as separate original claims and separate evidence records; they are not reported as conflicts. | Synthetic CHARGE=0 regression added; CI pending. |
+| True conflicts | Reports each raw value group with evidence ID, source location and original source text; the diagnostic remains blocking. | Paragraph and table-row conflict regressions added; CI pending. |
+| Table evidence | A row-derived claim links every cell that contributes to its label/value pair, not just the label cell. | Synthetic regression added; CI pending. |
+| DOCX sections and WP tasks | Extracts headings and WP-labelled task content blocks with source coordinates and evidence IDs. | Synthetic software tests added; real DOCX pending. |
+| Systems and model fields | Creates source-linked system identifiers and model properties only when a DOCX heading/claim supplies the required context. | Synthetic software tests added; real DOCX pending. |
+| Method parameters | Recognizes explicit labelled values including machine-style entries such as ADDED_MOS 80. Related prose without a reliable value relation remains unresolved. | Synthetic software tests added; real DOCX pending. |
+| Dependencies / inputs / outputs / resources | Extracts explicit supported dependency phrases/arrows and labelled input/output/resource claims. Unsupported relations are retained as source evidence rather than guessed. | Synthetic software tests added; real DOCX pending. |
+| Field provenance | Every top-level structured category is marked docx_evidence, unresolved or absent; evidence-backed entries carry evidence IDs. | Schema and synthetic tests added; CI pending. |
+| Profile values | Kept separately under profile_overlay; each profile leaf has profile provenance and per-field DOCX comparison (consistent, conflict, needs_review, profile_only). Profile values do not populate DOCX systems, models, method, tasks or evidence. | Synthetic software tests added; real DOCX reconciliation pending. |
 
-## v4.1 planning facts and unresolved decisions
+## Scientific decisions that remain blocked
 
-- Current project profile records Cu-20 as 83 atoms / 417 explicit valence electrons and SnCu-20 as 84 atoms / 426 explicit valence electrons. These values must still be reconciled with the exact Frozen DOCX during the branch's real-input test.
-- The 15 docking orientations are not explicitly scoped as per catalyst or across both systems.
-- The detailed isolated-fragment spin list has six candidates (Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2), while the summary states four. The code now requires an explicit owner decision and preserves the exact selected candidate IDs.
-- The atom/bond/donor graph, formal charges and reproducible 3D construction constraints for all complete support/ligand/cluster assemblies are not yet available as executable model input. Formulas alone are insufficient.
+- WP1_ORIENTATION_SCOPE_UNRESOLVED remains an execution blocker. The code does not choose between per_catalyst and across_both_systems.
+- WP1_FRAGMENT_SPIN_COUNT_MISMATCH remains an execution blocker. The detailed six-candidate list and summary count of four remain unreconciled by this code. The existing owner-only options remain retain_all_six and select_four_explicitly; this revision does not choose either.
+- The profile's 15 docking-orientation count is not inserted as DOCX-backed data. The prior source audit found no corresponding statement in the Frozen DOCX. Until the actual branch run confirms this against the exact source bytes, it is explicitly profile-only / requires real-input reconciliation, not a Frozen-DOCX fact.
+- No atom/bond/donor topology has been inferred or created from these fields.
 
-## CI evidence
+## Automated verification
 
-- Successful Actions run #398 tested PR merge commit `cab002a`, which included branch commit `ede316918fe814e84fe13a382eaced11147c495a`.
-- Result: 100 tests passed, 2 optional upstream integration tests skipped; `compileall` passed.
-- The suite includes candidate path-traversal / non-finite transform checks and DOCX source-hash provenance assertions.
-- All current CI evidence is software/contract evidence. It is not a real Frozen DOCX parse, a real v4.1 chemistry build, live Artifact registration, or HPC calculation.
+- Fresh CI for the compiler/provenance revision: pending.
+- A test count, skipped count and failure count will be recorded here only after the Actions run for the new branch HEAD completes.
+- Existing CI before this revision had 100 passed, 2 optional upstream tests skipped and compileall passed. That result is historical and is not evidence for this revision.
+- All test fixtures in this revision are synthetic. Software regression success must not be represented as real Frozen DOCX acceptance.
 
-## Next validation gates
+## Required next gates
 
-1. Run this branch's compiler against the existing owner-side Frozen DOCX and compare evidence, manifest claims and profile fields against the previously extracted 45 paragraphs / 10 tables.
-2. Resolve WP1 orientation scope and six-versus-four fragment spin discrepancy with the owner; do not guess.
-3. Identify source-backed atom/bond/donor topology and construction constraints for actual model assembly. If they are not available, preserve the blocker rather than manufacture a structure.
-4. Complete production model construction, ASE/RDKit/appropriate geometry-tool integration, real preview generation and Data_analysis registration.
-5. Verify the live approved-model-to-CalculationPlan handoff. Only after this review can the local Agent proceed to the explicitly authorized real-environment preflight; no HPC submission is currently authorized.
+1. Run the new branch against the exact Frozen DOCX and compare its evidence blocks and Manifest to the prior 45-paragraph / 10-table extraction.
+2. Inspect actual claims for CHARGE, ase_vibrations__cp2k, and copyready_english_text; confirm repeated-equal statements are retained and real differing values still block.
+3. Audit every profile reconciliation entry, especially the orientation count, against source evidence. Do not create an evidence ID for a profile-only value.
+4. Keep both WP1 blockers until the owner explicitly decides. Do not call resolve-v41-planning during this work.
+5. Complete real model source/topology, live Artifact registration and approval integration only under their separately authorized gates.
 
 No production HPC calculation is authorized or performed.

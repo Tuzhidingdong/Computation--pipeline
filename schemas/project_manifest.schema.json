@@ -14,7 +14,12 @@
     "evidence",
     "diagnostics",
     "compilation_status",
-    "source_document"
+    "source_document",
+    "field_provenance",
+    "profile_overlay",
+    "profile_field_provenance",
+    "profile_reconciliation",
+    "unresolved_structured_fields"
   ],
   "properties": {
     "schema_version": {
@@ -170,6 +175,192 @@
         }
       },
       "additionalProperties": true
+    },
+    "field_provenance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status",
+          "source_kind",
+          "evidence_ids"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "docx_evidence",
+              "profile",
+              "unresolved",
+              "absent"
+            ]
+          },
+          "source_kind": {
+            "enum": [
+              "docx_evidence",
+              "profile",
+              "unresolved",
+              "absent"
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "raw_values": {
+            "type": "array"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "profile_field": {
+            "type": "string"
+          },
+          "reconciliation_status": {
+            "enum": [
+              "consistent",
+              "conflict",
+              "needs_review",
+              "profile_only",
+              "not_compared"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "profile_overlay": {
+      "type": "object",
+      "required": [
+        "source_kind",
+        "profile_source",
+        "profile_version",
+        "values"
+      ],
+      "properties": {
+        "source_kind": {
+          "const": "profile"
+        },
+        "profile_source": {
+          "type": "string"
+        },
+        "profile_version": {
+          "type": "string"
+        },
+        "values": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "profile_field_provenance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status",
+          "source_kind",
+          "evidence_ids"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "docx_evidence",
+              "profile",
+              "unresolved",
+              "absent"
+            ]
+          },
+          "source_kind": {
+            "enum": [
+              "docx_evidence",
+              "profile",
+              "unresolved",
+              "absent"
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "raw_values": {
+            "type": "array"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "profile_field": {
+            "type": "string"
+          },
+          "reconciliation_status": {
+            "enum": [
+              "consistent",
+              "conflict",
+              "needs_review",
+              "profile_only",
+              "not_compared"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "profile_reconciliation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "field",
+          "profile_value",
+          "profile_source",
+          "docx_status",
+          "docx_evidence_ids",
+          "status"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "profile_source": {
+            "type": "string"
+          },
+          "docx_status": {
+            "enum": [
+              "docx_evidence",
+              "unresolved",
+              "absent"
+            ]
+          },
+          "docx_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "consistent",
+              "conflict",
+              "needs_review",
+              "profile_only",
+              "not_compared"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "unresolved_structured_fields": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
     }
   },
   "additionalProperties": true
