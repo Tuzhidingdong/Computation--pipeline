@@ -1,6 +1,6 @@
 # Real Skills Integration — Agent B Handoff Checklist
 
-**Status:** Data_analysis resolver and derived Artifact registration are now bound in the Pipeline branch; live source integration remains opt-in.
+**Status:** Data_analysis resolver/derived registration and the minimal synchronous Pipeline runner are implemented on the existing Draft PR #1; live source integration remains opt-in.
 **Updated:** 2026-11-27
 
 ## Upstream revisions inspected
@@ -27,6 +27,18 @@
 - API-double tests assert the required order: resolver → reader → JSON persistence → derived registration → Analysis Run with output → normalized-result packaging → Evidence Package.
 - Optional live tests use temporary synthetic source data and are enabled only by explicit `DATA_ANALYSIS_SOURCE_ROOT` / `CHEM_SCI_TOOLKIT_SOURCE_ROOT`. They do not run CP2K, AIMD, Slurm or production HPC.
 - Public CI uses API doubles and does not install or check out Agent A's private branches automatically.
+
+## Minimal Pipeline runner (Agent B MVP)
+
+The package now exports `PipelineRunner`, `PipelineTaskManifest`, `PipelineTaskResult` and `CSTValidationSpec` from `pipeline_contracts`.
+
+- The runner executes one linear flow: resolve input Artifact IDs → optional CST validation → Data_analysis Reader and derived Artifact registration → Analysis Run → normalized-result packaging → Evidence Package.
+- Task manifests require `task_id`, `project_root`, `input_artifact_ids` and `operation`; reader parameters, formats, expected hashes and CST validation are optional.
+- Before dispatch, a RealDataAnalysisAdapter's official resolver verifies the registered input and the runner pins the resolved SHA-256 onto the request. No local URI is required from the caller.
+- Missing adapters/dependencies are represented as `unavailable`; failed CST/Reader/registration steps stop or downgrade the task appropriately. CST warnings can continue into Data_analysis. A nominally successful Data_analysis response missing the run/output/evidence closure is downgraded to warning.
+- Scientific QC remains `not_assessed`. Mock records/evidence are tagged as mock and are not scientific validation.
+- Python example: `examples/postprocess_existing_cp2k_output.py`; user instructions are in the README's “Minimal Pipeline MVP” section.
+- This is a synchronous single-workflow coordinator only. It does not include DAG scheduling, persistent task databases, queues, a service/API server or real HPC submission.
 
 ## Remaining boundaries
 
