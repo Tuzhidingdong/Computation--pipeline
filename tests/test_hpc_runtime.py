@@ -26,6 +26,8 @@ class FakeCommandRunner:
         args = list(argv)
         self.calls.append((args, timeout))
         joined = " ".join(args)
+        if "--version" in joined:
+            return CommandOutput(0, "CP2K version 2025.2 (Development Version)\\n", "")
         if "sbatch --parsable" in joined:
             if self.sbatch_mode == "lost":
                 return CommandOutput(255, "", "connection lost after dispatch")
@@ -162,7 +164,7 @@ class SkillBackendTests(unittest.TestCase):
         profile = {
             "alias":"bscc-a", "ssh_executable":str(ssh), "scp_executable":str(scp),
             "ssh_config":str(config), "job_record_script":str(record),
-            "remote_root":"/configured/wcl", "allowed_workspace_root":"/configured/wcl",
+            "remote_root":"/configured/wcl", "allowed_workspace_root":"/configured/wcl", "required_cp2k_version":"2025.2",
             "module_init_path":"/site/modules/module.sh",
             "resource_profile":{"module":"cp2k/2025.2","nodes":1,"ntasks":4,
                "cpus_per_task":1,"mem":"8G","time":"00:30:00","partition":"cpu","account":"account"},
@@ -173,7 +175,7 @@ class SkillBackendTests(unittest.TestCase):
         ssh, scp, record, config = make_files(root)
         profile = {
             "alias":"hpc", "ssh_executable":str(ssh), "scp_executable":str(scp),
-            "job_record_script":str(record), "remote_root":"/gpfs/project",
+            "job_record_script":str(record), "remote_root":"/gpfs/project", "required_cp2k_version":"2025.2",
             "resource_profile":{"module":"cp2k/2025.2-openmpi","nodes":1,"ntasks":4,
                "cpus_per_task":1,"mem":"8G","time":"00:30:00","partition":"node","account":"research"},
         }
@@ -244,6 +246,23 @@ class SkillBackendTests(unittest.TestCase):
             job=adapter.submit(manifest)
             self.assertEqual(job.job_id,"13579")
             self.assertEqual(sum("sbatch --parsable" in " ".join(x[0]) for x in runner.calls),1)
+
+    def test_read_only_preflight_checks_declared_cp2k_version_without_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
+            result=adapter.preflight()
+            self.assertTrue(result.ready, result.diagnostics)
+            self.assertIn("sha256", result.capabilities)
+            self.assertFalse(any("sbatch --parsable" in " ".join(args) for args, _ in runner.calls))
+            self.assertTrue(any("--version" in " ".join(args) for args, _ in runner.calls))
+
+    def test_read_only_preflight_rejects_cp2k_version_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); runner=FakeCommandRunner(); adapter=self._ucas(root,runner)
+            adapter.config["required_cp2k_version"]="2026.1"
+            result=adapter.preflight()
+            self.assertFalse(result.ready)
+            self.assertTrue(result.diagnostics)
 
     def test_scheduler_status_is_not_scientific_success(self):
         with tempfile.TemporaryDirectory() as tmp:
