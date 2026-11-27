@@ -474,6 +474,7 @@ class RealCP2KWorkflowAdapter:
         if _sha(resolved_input).lower() != derived_input_ref.sha256.lower():
             raise RealWorkflowUnavailable("registered CP2K input failed Data_analysis SHA256 verification")
 
+        runtime_files = dict(self.runtime.get("input_files") or {})
         input_check = self.cst.execute(CSTTaskRequest(
             task_id=str(task["task_id"]) + "-input-qc",
             operation="cp2k.validate_input",
@@ -486,7 +487,6 @@ class RealCP2KWorkflowAdapter:
                 str(input_check.error or input_check.structured_result)
             )
 
-        runtime_files = dict(self.runtime.get("input_files") or {})
         staged = [
             {"path": str(resolved_input), "name": input_name},
         ]
