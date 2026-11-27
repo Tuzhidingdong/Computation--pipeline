@@ -97,13 +97,13 @@ A real adapter must not invent missing fields or claim `scientific_validation=pa
 
 An `EvidenceRef` preserves its source Artifact IDs and known hashes. An absent source hash, locator, Observation ID or evidence field stays absent; Pipeline must not synthesize source evidence.
 
-### Data_analysis ownership and PR #4 dependency
+### Data_analysis ownership and Artifact API binding
 
-The existing architecture assigns Artifact, Analysis Run, SHA-256, cache and evidence ownership to `Data_analysis`. Pipeline stores only references and orchestration state. **Do not add an Artifact Store, artifact database, content cache or competing evidence registry here.**
+The architecture assigns Artifact records/storage, Analysis Runs, SHA-256 verification, derived Artifact registration and Evidence ownership to `Data_analysis`. Pipeline stores only references and orchestration state. **Do not add an Artifact Store, artifact database, content cache or competing evidence registry to Pipeline.**
 
-As inspected on 2026-11-27, `Tuzhidingdong/Data_analysis` PR #4 (“Add read-only managed Artifact interoperability and evidence export contract”) is open and unmerged. Its proposed scope includes read-only external managed references (without copying managed bytes), Artifact path/stream access, Artifact schema compatibility, and `scientific-evidence-export@1.0.0` provenance fields. The PR describes `data_analysis.artifact_store.resolve_artifact_path(...)` and `open_artifact(...)` as candidate access functions. They are **not treated here as merged/main-branch APIs**. Do not copy PR #4 code into Pipeline. After its owner-reviewed merge, bind the real DA adapter to the merged, tested interface and preserve its Artifact IDs/hashes and external-reference custody model.
+The Agent A branch `cp2k-dft-artifact-and-evidence-support` at `b71c9e90e65af0f8a7a377ab37159dc60fed3a97` exposes `data_analysis.artifact_store.resolve_artifact_path(project_root, artifact_id)` and `register_derived_artifact(project_root, file_path, ...)`. These are optional, lazy-loaded runtime bindings; this Pipeline branch does not install the private upstream branch or require it in public CI. Do not copy the upstream registry or path-safety implementation into Pipeline.
 
-The current main-branch capability audit records DA's Artifact and Analysis Run schemas as reusable, and DA-1/DA-2 DFT format/reader/operation registration as upstream work. This contract does not assume those DFT registrations already exist.
+The resolver is called first for an existing Artifact ID and owns registry lookup, project path containment, symlink checks and registered SHA-256 verification. A caller URI is not required. The explicit URI compatibility fallback or injected resolver is used only if the official resolver API is unavailable; an error from the official resolver must never be bypassed.
 
 ## 5. HPC adapter
 
@@ -155,7 +155,7 @@ The following signatures were read from the exact upstream branch heads listed h
 
 | Upstream | Branch | Inspected HEAD |
 |---|---|---|
-| `Tuzhidingdong/Data_analysis` | `cp2k-dft-artifact-and-evidence-support` | `22ad1290e0d78c6a98fbd6d2d194d3ad8e1c689a` |
+| `Tuzhidingdong/Data_analysis` | `cp2k-dft-artifact-and-evidence-support` | `b71c9e90e65af0f8a7a377ab37159dc60fed3a97` |
 | `Tuzhidingdong/chem-scitoolkit` | `dft-finite-cluster-production-interfaces` | `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba` |
 
 ### 8.1 Data_analysis
@@ -172,11 +172,13 @@ The following signatures were read from the exact upstream branch heads listed h
 
 The current branch also implements the `dft.artifact.read` and `dft.normalized_result.package` operation IDs. The adapter checks the operation registry before reading, calls the reader for each input reference, records reader catalogue/selection and statuses, creates the run with the upstream project provenance function, packages the normalized result through `run_dft_operation`, and builds an Evidence Package from the persisted Analysis Run record.
 
-**Artifact ownership / path rule:** this inspected branch does not contain `data_analysis.artifact_store` or a public Artifact resolver. Pipeline therefore does not inspect Data_analysis registry JSON, locate files itself, or create a parallel Artifact Store. The adapter accepts a caller-supplied local path/file URI in `ArtifactRef.uri`, or an injected `artifact_path_resolver(project_root, artifact_id)`. A resolver can be bound to a future owner-provided public Data_analysis API after that API is present. The Analysis Run creation call still delegates Artifact-ID registration and SHA-256 verification to Data_analysis using its own `project_root`.
+**Artifact ownership / path rule:** the current branch exposes `data_analysis.artifact_store.resolve_artifact_path(project_root, artifact_id)`. The adapter invokes this official resolver before the reader, so an existing Artifact ID does not require `ArtifactRef.uri`. Data_analysis retains responsibility for registry lookup, root containment, symlink rejection and registered file SHA verification; Pipeline does not parse registry files. If the official resolver is unavailable, an injected owner resolver or an explicit local URI may be used as compatibility fallback, but an official resolver rejection is never bypassed. The legacy URI fallback is restricted to the project tree, rejects symlink path components and verifies bytes against `ArtifactRef.sha256`; the subsequent DA registration and Analysis Run path still validates source Artifact custody.
 
-A real Data_analysis request must include a valid 64-character `ArtifactRef.sha256`. A missing hash is rejected before reading; a reader hash that differs from the reference hash is a failed input. Only a local URI or an injected/upstream resolver is accepted. Remote URI schemes are not fetched by Pipeline.
+A real Data_analysis request must include a valid 64-character `ArtifactRef.sha256`. A missing hash is rejected before resolution; the resolver verifies the registered bytes, and a reader-reported hash that differs from the reference hash is a failed input. Remote URI schemes are not fetched by Pipeline.
 
-**Partial-result semantics:** `read_dft_file` currently returns parsed content in memory. The inspected API does not register a new derived Artifact from these returned bytes. To avoid inventing output IDs or storing bytes in Pipeline, the adapter creates an Analysis Run with `status=partial`, no output Artifact IDs, and `qc_status=not_assessed` when all reads succeed. It returns the normalized reader data, persisted Analysis Run record/ID and Evidence Package, with Pipeline `TaskStatus.WARNING` to make the absence of a registered derived Artifact explicit. Reader failures are recorded as failed Analysis Runs (where the upstream API permits) and surfaced as `TaskStatus.FAILED`; unavailable reader, unsupported format, source missing, parse failure and hash mismatch have distinct diagnostic codes.
+**Derived-output lifecycle:** after successful reading, JSON-serializable structured results are written atomically to a unique file under project `data/derived/` (first-stage format `json_records`). The file is then passed to Data_analysis `register_derived_artifact()` with the original source Artifact IDs, reader/parser identity and version, `parse_status="parsed"`, and quality/eligibility explicitly `not_assessed`. The descriptor returned by Data_analysis is supplied as `output_artifacts=[derived]` to `create_dft_analysis_run_from_project()`. Pipeline checks that the persisted Analysis Run contains the returned output Artifact ID and SHA-256 before calling `dft.normalized_result.package`; `build_evidence_package(dft_analysis_runs=[record_path])` follows the persisted run. The output ID/hash, record and locator are retained in `AnalysisOutcome.output_artifacts`, `analysis_run_record`, `ProvenanceRecord` and `EvidenceRef`.
+
+Serialization or derived registration failure is not promoted to success: the adapter creates a failed Analysis Run without output Artifact IDs and returns a warning while preserving the in-memory reader result and explicit persistence error. A file written before registration failure remains in `data/derived/` for recovery, but no Artifact ID is invented. Reader failures are recorded as failed Analysis Runs without outputs. Scientific QC always remains `not_assessed`; parsing success is not a scientific QC pass.
 
 ### 8.2 chem-scitoolkit
 
