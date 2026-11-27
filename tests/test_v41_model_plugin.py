@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from projects.corr_dft_v4_1.model_plugin import ModelSpec, build_candidates, create_approval_record, verify_approval_record
+from projects.corr_dft_v4_1.model_plugin.artifacts import register_candidate_structure
 
 
 class SimpleWriter:
@@ -53,6 +54,31 @@ class ModelPluginTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
                 build_candidates(ModelSpec.from_mapping(raw), tmp, writer=SimpleWriter())
+
+    def test_candidate_artifact_uses_data_analysis_register_and_resolve(self):
+        import hashlib
+        class FakeDataAnalysis:
+            def __init__(self, path):
+                self.path = path
+                self.calls = []
+            def register_derived_artifact(self, project_root, file_path, *, source_artifact_ids, format_id, provenance):
+                digest = hashlib.sha256(Path(file_path).read_bytes()).hexdigest()
+                self.calls.append((source_artifact_ids, format_id, dict(provenance)))
+                return {"artifact_id":"da-artifact-1","sha256":digest}
+            def resolve_artifact_path(self, project_root, artifact_id):
+                self.asserted_id = artifact_id
+                return str(self.path)
+        with tempfile.TemporaryDirectory() as tmp:
+            structure = Path(tmp) / "model.extxyz"
+            structure.write_text("model bytes", encoding="utf-8")
+            api = FakeDataAnalysis(structure)
+            result = register_candidate_structure(
+                structure, project_root=tmp, data_analysis_api=api, format_id="extxyz",
+                parent_artifact_ids=["source-1"], provenance={"candidate_id":"candidate-1"},
+            )
+            self.assertEqual(result["artifact_id"], "da-artifact-1")
+            self.assertTrue(result["verified"])
+            self.assertEqual(api.calls[0][0], ["source-1"])
 
     def test_missing_3d_position_fails_closed(self):
         raw = {
