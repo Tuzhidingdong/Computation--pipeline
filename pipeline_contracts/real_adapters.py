@@ -417,7 +417,11 @@ class RealDataAnalysisAdapter:
                         format_id="json_records",
                         parser_id=parser_id,
                         parser_version=parser_version,
-                        parse_status="parsed",
+                        parse_status=(
+                            "parsed"
+                            if all(item.get("status") == "parsed" for item in reader_results)
+                            else "partial"
+                        ),
                         parse_assurance="unverified",
                         quality_status="not_assessed",
                         analysis_eligibility="not_assessed",
