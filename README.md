@@ -127,3 +127,8 @@ When optional CST dependencies are unavailable, the runner records a warning and
 
 Inject MockCSTAdapter() and MockDataAnalysisAdapter() to exercise the same orchestration and reference chain without reading project data or generating scientific values. Mock Analysis Run / Evidence objects are marked execution_mode="mock" and qc_status="not_evaluated".
 
+
+
+## Workflow Engine
+
+A calculation-plan-driven workflow engine is now under development on this branch.
