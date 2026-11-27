@@ -220,7 +220,18 @@ class RealCP2KWorkflowAdapter:
                     "Data_analysis CP2K output reader is unavailable: " +
                     str(selected_readers[0].get("availability_reason") or reader_id)
                 )
-            for operation_id in ("dft.artifact.read", "dft.normalized_result.package"):
+            required_operations = {"dft.artifact.read", "dft.normalized_result.package"}
+            listed_operations = {
+                str(item.get("operation_id"))
+                for item in self.da_api.list_dft_operations()
+                if isinstance(item, Mapping)
+            }
+            missing_operations = required_operations - listed_operations
+            if missing_operations:
+                raise RealWorkflowUnavailable(
+                    "Data_analysis DFT operation registry is missing: " + ", ".join(sorted(missing_operations))
+                )
+            for operation_id in sorted(required_operations):
                 descriptor = self.da_api.get_dft_operation(operation_id)
                 if not isinstance(descriptor, Mapping) or descriptor.get("status") != "implemented":
                     raise RealWorkflowUnavailable(
