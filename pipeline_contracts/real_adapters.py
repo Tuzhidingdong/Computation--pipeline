@@ -465,6 +465,12 @@ class RealDataAnalysisAdapter:
             )
         except ContractError as exc:
             return self._failure(request, "ARTIFACT_RESOLUTION_FAILED", str(exc))
+        except FileNotFoundError as exc:
+            return self._failure(
+                request, "DA_ARTIFACT_NOT_REGISTERED_OR_SOURCE_MISSING", str(exc)
+            )
+        except ValueError as exc:
+            return self._failure(request, "DA_ARTIFACT_PROVENANCE_REJECTED", str(exc))
         except (ImportError, ModuleNotFoundError) as exc:
             return self._failure(request, "OPTIONAL_DEPENDENCY_UNAVAILABLE", str(exc))
         except Exception as exc:
