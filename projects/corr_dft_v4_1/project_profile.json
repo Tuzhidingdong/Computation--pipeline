@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "corr_dft_v4_1",
+  "description": "Project-specific frozen CO electroreduction thermodynamic selectivity protocol; values transcribed from TASK_PLAN_v1.0.0.md and subject to DOCX evidence reconciliation.",
+  "systems": {
+    "Cu-20": {
+      "support_motif": "[Cu2(C7H5O5)4]^0",
+      "support_atom_count": 70,
+      "complete_formula": "Cu15C28H20O20",
+      "complete_atom_count": 83,
+      "explicit_valence_electrons": 417,
+      "charge": 0,
+      "cluster": {
+        "formula": "Cu13",
+        "atom_count": 13,
+        "multiplicities": [
+          2,
+          4,
+          6
+        ]
+      },
+      "support_multiplicities": [
+        1,
+        3
+      ],
+      "complete_model_multiplicities": [
+        2,
+        4
+      ]
+    },
+    "SnCu-20": {
+      "support_motif": "[CuSn(C7H5O5)2(C7H4O5)2(H2O)]^0",
+      "support_atom_count": 71,
+      "complete_formula": "Cu14SnC28H20O21",
+      "complete_atom_count": 84,
+      "explicit_valence_electrons": 426,
+      "charge": 0,
+      "support_multiplicities": [
+        2
+      ],
+      "complete_model_multiplicities": [
+        1,
+        3
+      ],
+      "conditional_complete_model_multiplicity": 5
+    }
+  },
+  "method": {
+    "engine": "CP2K Quickstep / GPW",
+    "xc": "PBE",
+    "dispersion": "D3(BJ)",
+    "cutoff_ry": 500,
+    "rel_cutoff_ry": 60,
+    "spin_polarized": true,
+    "smearing_temperature_K": 300,
+    "periodicity": "NONE",
+    "poisson_solver": "MT",
+    "cell_sizes_angstrom": [
+      30,
+      34
+    ],
+    "force_threshold_ev_per_angstrom": 0.01,
+    "scf_eps_scf_ha": {
+      "geometry_optimization": 0.000001,
+      "local_hessian_force": 1e-8
+    },
+    "local_hessian": {
+      "displacement_angstrom": 0.01,
+      "frozen_support_and_Cu13": true
+    },
+    "che": {
+      "temperature_K": 298.15,
+      "potential_v_vs_rhe": 0
+    },
+    "sccs_dielectric": 78.4,
+    "basis_sensitivity": "TZV2P"
+  },
+  "tasks": {
+    "WP1": {
+      "support_cluster_docking_orientation_count": 15,
+      "orientation_scope": null,
+      "retained_structurally_distinct_candidates_per_catalyst": {
+        "min": 3,
+        "max": 4
+      },
+      "mace_fmax_ev_per_angstrom": 0.05,
+      "isolated_fragment_spin_candidates": {
+        "Cu13": [
+          2,
+          4,
+          6
+        ],
+        "Cu20_support": [
+          1,
+          3
+        ],
+        "SnCu20_support": [
+          2
+        ]
+      },
+      "isolated_fragment_spin_candidate_count": 6,
+      "summary_fragment_single_point_count": 4
+    },
+    "WP2": {
+      "cell_sizes_angstrom": [
+        30,
+        34
+      ],
+      "representative_sncu20_models": 1
+    },
+    "WP3": {
+      "hcco_candidates_per_catalyst": 3,
+      "protonation_products_per_catalyst": 2,
+      "gas_references": [
+        "H2",
+        "H2CCO"
+      ]
+    },
+    "WP4": {
+      "adsorbed_state_hessians": 6,
+      "adsorbate_atom_counts_per_catalyst": [
+        4,
+        5,
+        5
+      ],
+      "total_force_evaluations": 174
+    },
+    "WP5": {
+      "sccs_single_points": 6,
+      "tzv2p_single_points": 4,
+      "optional_alternative_sn_coordination_models_max": 1
+    }
+  },
+  "scientific_scope": {
+    "reaction_intermediate": "*HCCO",
+    "protonation_products": [
+      "*H2CCO",
+      "*HCCOH"
+    ],
+    "thermodynamic_only": true,
+    "prohibited": [
+      "NEB",
+      "transition-state search",
+      "microkinetics",
+      "desorbed-ketene alkaline hydrolysis",
+      "acetate Faradaic-efficiency prediction"
+    ]
+  },
+  "known_blockers": [
+    {
+      "code": "WP1_ORIENTATION_SCOPE_UNRESOLVED",
+      "field": "tasks.WP1.orientation_scope",
+      "values": [
+        "per catalyst",
+        "across both systems"
+      ],
+      "blocks_execution": true
+    },
+    {
+      "code": "WP1_FRAGMENT_SPIN_COUNT_MISMATCH",
+      "field": "tasks.WP1.isolated_fragment_spin_candidate_count",
+      "detailed_list_count": 6,
+      "summary_count": 4,
+      "blocks_execution": true
+    }
+  ],
+  "topology_requirements": {
+    "explicit_atom_ids": true,
+    "explicit_elements": true,
+    "explicit_covalent_bonds_and_orders": true,
+    "explicit_coordination_bonds": true,
+    "explicit_donor_atoms": true,
+    "explicit_formal_charges": true,
+    "explicit_spin_candidates": true,
+    "explicit_3d_construction_constraints": true,
+    "formula_alone_is_insufficient": true
+  }
+}
