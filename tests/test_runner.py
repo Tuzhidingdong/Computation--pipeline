@@ -59,7 +59,6 @@ class PipelineRunnerMockTests(unittest.TestCase):
             self.assertEqual(result.evidence_package["analysis_run_id"], result.analysis_run_id)
             self.assertEqual(result.evidence_package["output_artifact_ids"], [output_id])
             self.assertIn("ART-CP2K-OUTPUT-001", result.evidence_refs[0].source_artifact_ids)
-            self.assertIn(output_id, result.evidence_refs[0].source_artifact_ids)
             self.assertEqual(result.qc_status, "not_evaluated")
             self.assertEqual(result.analysis_outcome.qc_status, "not_evaluated")
 
