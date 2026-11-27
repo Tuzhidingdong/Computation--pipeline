@@ -19,16 +19,31 @@ def _sha(path: Path) -> str:
 
 
 class FakeDataAnalysisAPI:
-    """Small API double with the exact function-level boundary of Agent A's DA branch."""
+    """API double for the new resolver, derived registration, provenance and evidence boundary."""
 
-    def __init__(self, project_root: Path, expected_artifact_id: str, expected_hash: str):
+    def __init__(self, project_root: Path, expected_artifact_id: str, expected_hash: str, source_path: Path):
         self.project_root = project_root
         self.expected_artifact_id = expected_artifact_id
         self.expected_hash = expected_hash
+        self.source_path = source_path
         self.calls = []
-        self.fail_registration = False
+        self.fail_resolve = False
+        self.fail_derived_registration = False
+        self.unserializable_result = False
+        self.reader_status = "parsed"
         self.run_path = project_root / "registry" / "analysis_runs" / "RUN-DFT-TEST.json"
         self.run_path.parent.mkdir(parents=True, exist_ok=True)
+        self.derived_record_path = project_root / "registry" / "artifacts" / "ART-DERIVED-TEST.json"
+
+    def resolve_artifact_path(self, project_root, artifact_id):
+        self.calls.append(("resolve_artifact_path", str(project_root), artifact_id))
+        if self.fail_resolve:
+            raise FileNotFoundError(f"registered Artifact record not found: {artifact_id}")
+        if artifact_id != self.expected_artifact_id:
+            raise FileNotFoundError(f"registered Artifact record not found: {artifact_id}")
+        if _sha(self.source_path) != self.expected_hash:
+            raise ValueError(f"registered Artifact SHA-256 mismatch: {artifact_id}")
+        return self.source_path
 
     def list_dft_readers(self, format_id=None):
         self.calls.append(("list_dft_readers", format_id))
@@ -43,6 +58,9 @@ class FakeDataAnalysisAPI:
     def read_dft_file(self, path, *, format_id=None, reader_id=None, **kwargs):
         self.calls.append(("read_dft_file", Path(path).resolve(), format_id, reader_id, kwargs))
         payload = Path(path).read_text(encoding="utf-8")
+        data = {"row_count": 1, "result_kind": "synthetic-fixture"}
+        if self.unserializable_result:
+            data["non_json_value"] = object()
         return {
             "schema_version": "1.0.0",
             "status": self.reader_status,
@@ -51,12 +69,10 @@ class FakeDataAnalysisAPI:
             "reader_version": "Python standard library",
             "source_path": str(Path(path).resolve()),
             "source_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
-            "data": {"row_count": 1, "result_kind": "synthetic-fixture"},
+            "data": data,
             "warnings": [],
             "error": "synthetic unavailable reader" if self.reader_status != "parsed" else None,
         }
-
-    reader_status = "parsed"
 
     def list_dft_operations(self):
         self.calls.append(("list_dft_operations",))
@@ -69,34 +85,67 @@ class FakeDataAnalysisAPI:
         self.calls.append(("get_dft_operation", operation_id))
         return next((item for item in self.list_dft_operations() if item["operation_id"] == operation_id), None)
 
+    def register_derived_artifact(self, project_root, file_path, **kwargs):
+        self.calls.append(("register_derived_artifact", str(file_path), kwargs))
+        if self.fail_derived_registration:
+            raise RuntimeError("synthetic derived Artifact registration failure")
+        path = Path(file_path)
+        if not path.is_file() or path.parent != self.project_root / "data" / "derived":
+            raise ValueError("derived result must already exist under project data/derived")
+        digest = _sha(path)
+        artifact_record = {
+            "artifact_id": "ART-DERIVED-TEST",
+            "sha256": digest,
+            "format_id": kwargs["format_id"],
+            "relative_path": path.relative_to(self.project_root).as_posix(),
+            "parent_artifact_ids": list(kwargs["source_artifact_ids"]),
+            "quality_status": kwargs.get("quality_status", "not_assessed"),
+        }
+        self.derived_record_path.parent.mkdir(parents=True, exist_ok=True)
+        self.derived_record_path.write_text(json.dumps(artifact_record), encoding="utf-8")
+        return {
+            "artifact_id": artifact_record["artifact_id"],
+            "sha256": digest,
+            "format_id": kwargs["format_id"],
+            "source_locator": {
+                "stored_relative_path": artifact_record["relative_path"],
+                "original_name": path.name,
+            },
+            "relative_path": artifact_record["relative_path"],
+            "stored_relative_path": artifact_record["relative_path"],
+            "artifact": artifact_record,
+            "record_path": str(self.derived_record_path),
+        }
+
     def create_dft_analysis_run_from_project(self, **kwargs):
         self.calls.append(("create_dft_analysis_run_from_project", kwargs))
-        self.assert_registered_input(kwargs["input_artifact_ids"])
-        if self.fail_registration:
-            raise FileNotFoundError("registered Artifact record not found: " + self.expected_artifact_id)
-        run_status = kwargs["status"]
+        if kwargs["input_artifact_ids"] != [self.expected_artifact_id]:
+            raise ValueError("adapter changed the owning input Artifact ID")
+        output_ids = [item["artifact_id"] for item in kwargs["output_artifacts"]]
+        output_hashes = {item["artifact_id"]: item["sha256"] for item in kwargs["output_artifacts"]}
         record = {
             "schema_version": "1.0.0",
             "analysis_run_id": "RUN-DFT-TEST",
             "operation_id": kwargs["operation_id"],
             "operation_version": kwargs["operation_version"],
             "input_artifact_ids": list(kwargs["input_artifact_ids"]),
-            "output_artifact_ids": [],
+            "output_artifact_ids": output_ids,
             "input_hashes": {self.expected_artifact_id: self.expected_hash},
-            "output_hashes": {},
+            "output_hashes": output_hashes,
             "parameters": dict(kwargs["parameters"]),
             "software": dict(kwargs["software"]),
-            "status": run_status,
+            "status": kwargs["status"],
             "warnings": list(kwargs.get("warnings", [])),
             "assumptions": [],
-            "dft_provenance": {"qc_status": kwargs["qc_status"], "units": {}},
+            "dft_provenance": {
+                "qc_status": kwargs["qc_status"],
+                "units": {},
+                "input_artifacts": [{"artifact_id": self.expected_artifact_id, "sha256": self.expected_hash}],
+                "output_artifacts": list(kwargs["output_artifacts"]),
+            },
         }
         self.run_path.write_text(json.dumps(record), encoding="utf-8")
         return {"analysis_run": record, "record_path": str(self.run_path)}
-
-    def assert_registered_input(self, artifact_ids):
-        if artifact_ids != [self.expected_artifact_id]:
-            raise ValueError("adapter changed the owning Artifact ID")
 
     def run_dft_operation(self, operation_id, **kwargs):
         self.calls.append(("run_dft_operation", operation_id, kwargs))
@@ -109,6 +158,7 @@ class FakeDataAnalysisAPI:
             "result": {
                 "result_type": "normalized_dft_result",
                 "analysis_run_id": kwargs["analysis_run"]["analysis_run_id"],
+                "output_artifact_ids": kwargs["analysis_run"]["output_artifact_ids"],
                 "normalized_result": dict(kwargs["normalized_result"]),
             },
         }
@@ -123,7 +173,9 @@ class FakeDataAnalysisAPI:
             "dft_reports": [{
                 "analysis_run_id": record["analysis_run_id"],
                 "input_artifact_ids": record["input_artifact_ids"],
+                "output_artifact_ids": record["output_artifact_ids"],
                 "input_hashes": record["input_hashes"],
+                "output_hashes": record["output_hashes"],
                 "qc_status": record["dft_provenance"]["qc_status"],
             }],
         }
@@ -139,174 +191,193 @@ class DataAnalysisRealAdapterTests(unittest.TestCase):
         )
         return source
 
-    def test_real_adapter_calls_da_read_operation_provenance_and_evidence(self):
+    def _setup(self, root: Path, artifact_id="ART-SYNTHETIC-INPUT"):
+        source = self._fixture(root)
+        project = root / "da-project"
+        project.mkdir()
+        digest = _sha(source)
+        api = FakeDataAnalysisAPI(project, artifact_id, digest, source)
+        request = AnalysisRequest(
+            task_id="TASK-DA-REAL-1",
+            operation="dft.artifact.read",
+            input_artifacts=(ArtifactRef(
+                artifact_id=artifact_id,
+                sha256=digest,
+                format_id="finite_displacement_force_table",
+                source_system="Data_analysis",
+            ),),
+            analysis_task={"operation_id": "dft.artifact.read", "question": "Synthetic interface test"},
+            parameters={"reader_id": "python-csv", "max_records": 10},
+            structure_metadata={"units": {"force": "eV/angstrom"}},
+            upstream_job_reference="job-ref-synthetic",
+        )
+        return source, project, api, request
+
+    def test_resolver_registration_analysis_run_and_evidence_form_complete_chain(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            artifact_id = "ART-SYNTHETIC-INPUT"
-            digest = _sha(source)
-            api = FakeDataAnalysisAPI(project, artifact_id, digest)
-            adapter = RealDataAnalysisAdapter(project, api=api)
+            source, project, api, request = self._setup(root)
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
 
-            outcome = adapter.analyze(AnalysisRequest(
-                task_id="TASK-DA-REAL-1",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef(
-                    artifact_id=artifact_id,
-                    sha256=digest,
-                    format_id="finite_displacement_force_table",
-                    uri=str(source),
-                    source_system="Data_analysis",
-                ),),
-                analysis_task={"operation_id": "dft.artifact.read", "question": "Synthetic interface test"},
-                parameters={"reader_id": "python-csv", "max_records": 10},
-                structure_metadata={"units": {"force": "eV/angstrom"}},
-                upstream_job_reference="job-ref-synthetic",
-            ))
-
-            self.assertEqual(outcome.status, TaskStatus.WARNING)
+            self.assertEqual(outcome.status, TaskStatus.SUCCEEDED, outcome.error)
             self.assertEqual(outcome.analysis_run_id, "RUN-DFT-TEST")
-            self.assertEqual(outcome.analysis_run_record["input_artifact_ids"], [artifact_id])
-            self.assertEqual(outcome.provenance.input_artifacts[0].artifact_id, artifact_id)
-            self.assertEqual(outcome.provenance.upstream_job_reference, "job-ref-synthetic")
-            self.assertEqual(outcome.evidence_package["evidence_package_id"], "EV-TEST-DFT")
-            self.assertEqual(outcome.evidence_refs[0].source_hashes[artifact_id], digest)
             self.assertEqual(outcome.qc_status, "not_assessed")
-            self.assertFalse(outcome.output_artifacts)
-            self.assertTrue(any(call[0] == "list_dft_readers" for call in api.calls))
-            self.assertTrue(any(call[0] == "list_dft_operations" for call in api.calls))
-            self.assertTrue(any(call[0] == "get_dft_operation" for call in api.calls))
-            self.assertTrue(any(call[0] == "read_dft_file" for call in api.calls))
-            self.assertTrue(any(call[0] == "create_dft_analysis_run_from_project" for call in api.calls))
-            self.assertTrue(any(call[0] == "run_dft_operation" for call in api.calls))
-            self.assertTrue(any(call[0] == "build_evidence_package" for call in api.calls))
+            self.assertEqual(outcome.qc["scientific_qc"], "not_assessed")
+            self.assertEqual(len(outcome.output_artifacts), 1)
+            derived_ref = outcome.output_artifacts[0]
+            self.assertEqual(derived_ref.artifact_id, "ART-DERIVED-TEST")
+            self.assertEqual(derived_ref.sha256, outcome.analysis_run_record["output_hashes"]["ART-DERIVED-TEST"])
+            self.assertEqual(outcome.analysis_run_record["output_artifact_ids"], ["ART-DERIVED-TEST"])
+            self.assertEqual(outcome.provenance.output_artifacts[0].artifact_id, "ART-DERIVED-TEST")
 
-    def test_reader_unavailable_is_returned_as_failure_and_recorded(self):
+            derived_file = Path(outcome.result["derived_file_path"])
+            self.assertTrue(derived_file.is_file())
+            self.assertEqual(derived_file.parent, project / "data" / "derived")
+            persisted = json.loads(derived_file.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["source_artifact_ids"], ["ART-SYNTHETIC-INPUT"])
+            self.assertEqual(persisted["reader_results"][0]["status"], "parsed")
+            self.assertEqual(_sha(derived_file), derived_ref.sha256)
+
+            evidence = outcome.evidence_package
+            self.assertEqual(evidence["dft_reports"][0]["analysis_run_id"], outcome.analysis_run_id)
+            self.assertEqual(evidence["dft_reports"][0]["output_artifact_ids"], ["ART-DERIVED-TEST"])
+            self.assertEqual(outcome.evidence_refs[0].source_artifact_ids, (
+                "ART-SYNTHETIC-INPUT", "ART-DERIVED-TEST"
+            ))
+            self.assertEqual(
+                outcome.evidence_refs[0].source_hashes["ART-DERIVED-TEST"],
+                derived_ref.sha256,
+            )
+
+            call_names = [call[0] for call in api.calls]
+            self.assertLess(call_names.index("resolve_artifact_path"), call_names.index("read_dft_file"))
+            self.assertLess(call_names.index("read_dft_file"), call_names.index("register_derived_artifact"))
+            self.assertLess(call_names.index("register_derived_artifact"), call_names.index("create_dft_analysis_run_from_project"))
+            self.assertLess(call_names.index("create_dft_analysis_run_from_project"), call_names.index("run_dft_operation"))
+            self.assertLess(call_names.index("run_dft_operation"), call_names.index("build_evidence_package"))
+
+    def test_official_resolver_rejects_registered_input_hash_mismatch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            artifact_id = "ART-SYNTHETIC-UNAVAILABLE"
-            digest = _sha(source)
-            api = FakeDataAnalysisAPI(project, artifact_id, digest)
-            api.reader_status = "reader_unavailable"
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-REAL-2",
+            source, project, api, request = self._setup(root)
+            api.expected_hash = "f" * 64
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.diagnostics[0].code, "DA_ARTIFACT_PROVENANCE_REJECTED")
+            self.assertIn("SHA-256 mismatch", outcome.error)
+            self.assertFalse(any(call[0] == "read_dft_file" for call in api.calls))
+            self.assertFalse(any(call[0] == "register_derived_artifact" for call in api.calls))
+
+    def test_reader_reported_hash_mismatch_is_failed_and_never_registered(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, request = self._setup(root)
+            wrong_hash = "e" * 64
+            request = AnalysisRequest(
+                task_id="TASK-DA-HASH-MISMATCH",
                 operation="dft.artifact.read",
                 input_artifacts=(ArtifactRef(
-                    artifact_id=artifact_id, sha256=digest,
-                    format_id="finite_displacement_force_table", uri=str(source)
+                    artifact_id="ART-SYNTHETIC-INPUT",
+                    sha256=wrong_hash,
+                    format_id="finite_displacement_force_table",
                 ),),
                 analysis_task={"operation_id": "dft.artifact.read"},
-            ))
+            )
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
             self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.diagnostics[0].code, "DFT_ARTIFACT_HASH_MISMATCH")
             self.assertEqual(outcome.analysis_run_record["status"], "failed")
-            self.assertEqual(outcome.qc_status, "blocked")
-            self.assertIn("synthetic unavailable reader", outcome.error)
-            self.assertIsNotNone(outcome.evidence_package)
+            self.assertFalse(outcome.output_artifacts)
+            self.assertFalse(any(call[0] == "register_derived_artifact" for call in api.calls))
+
+    def test_missing_sha_is_rejected_before_resolver_or_reader(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, request = self._setup(root)
+            request = AnalysisRequest(
+                task_id="TASK-DA-NO-SHA",
+                operation="dft.artifact.read",
+                input_artifacts=(ArtifactRef("ART-SYNTHETIC-INPUT"),),
+                analysis_task={"operation_id": "dft.artifact.read"},
+            )
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.qc["reason_code"], "ARTIFACT_RESOLUTION_FAILED")
+            self.assertFalse(any(call[0] == "resolve_artifact_path" for call in api.calls))
+            self.assertFalse(any(call[0] == "read_dft_file" for call in api.calls))
 
     def test_missing_registered_artifact_is_a_specific_failure(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            artifact_id = "ART-NOT-REGISTERED"
-            digest = _sha(source)
-            api = FakeDataAnalysisAPI(project, artifact_id, digest)
-            api.fail_registration = True
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-UNREGISTERED",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef(
-                    artifact_id=artifact_id, sha256=digest,
-                    format_id="finite_displacement_force_table", uri=str(source)
-                ),),
-                analysis_task={"operation_id": "dft.artifact.read"},
-            ))
+            source, project, api, request = self._setup(root, "ART-NOT-REGISTERED")
+            api.fail_resolve = True
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
             self.assertEqual(outcome.status, TaskStatus.FAILED)
-            self.assertEqual(outcome.qc["reason_code"], "DA_ARTIFACT_NOT_REGISTERED_OR_SOURCE_MISSING")
+            self.assertEqual(outcome.diagnostics[0].code, "DA_ARTIFACT_NOT_REGISTERED_OR_SOURCE_MISSING")
             self.assertIn("registered Artifact record not found", outcome.error)
-
-    def test_artifact_hash_mismatch_is_not_promoted_to_parsed(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            artifact_id = "ART-HASH-MISMATCH"
-            api = FakeDataAnalysisAPI(project, artifact_id, _sha(source))
-            wrong_reference_hash = "f" * 64
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-HASH-MISMATCH",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef(
-                    artifact_id=artifact_id, sha256=wrong_reference_hash,
-                    format_id="finite_displacement_force_table", uri=str(source)
-                ),),
-                analysis_task={"operation_id": "dft.artifact.read"},
-            ))
-            self.assertEqual(outcome.status, TaskStatus.FAILED)
-            self.assertEqual(outcome.diagnostics[0].code, "DFT_ARTIFACT_HASH_MISMATCH")
-            self.assertEqual(outcome.analysis_run_record["status"], "failed")
-
-    def test_real_adapter_rejects_missing_artifact_hash_before_reading(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            api = FakeDataAnalysisAPI(project, "ART-NO-SHA", "0" * 64)
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-NO-SHA",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef("ART-NO-SHA", uri=str(source)),),
-                analysis_task={"operation_id": "dft.artifact.read"},
-            ))
-            self.assertEqual(outcome.status, TaskStatus.FAILED)
-            self.assertEqual(outcome.qc["reason_code"], "ARTIFACT_RESOLUTION_FAILED")
             self.assertFalse(any(call[0] == "read_dft_file" for call in api.calls))
 
-    def test_real_adapter_exposes_unsupported_format_status(self):
+    def test_reader_unavailable_is_returned_as_failed_analysis_run(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            source = self._fixture(root)
-            project = root / "da-project"
-            project.mkdir()
-            artifact_id = "ART-SYNTHETIC-UNSUPPORTED"
-            digest = _sha(source)
-            api = FakeDataAnalysisAPI(project, artifact_id, digest)
+            source, project, api, request = self._setup(root)
+            api.reader_status = "reader_unavailable"
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+            self.assertEqual(outcome.status, TaskStatus.FAILED)
+            self.assertEqual(outcome.analysis_run_record["status"], "failed")
+            self.assertFalse(outcome.analysis_run_record["output_artifact_ids"])
+            self.assertEqual(outcome.qc_status, "blocked")
+            self.assertIn("synthetic unavailable reader", outcome.error)
+            self.assertIsNotNone(outcome.evidence_package)
+            self.assertFalse(outcome.output_artifacts)
+
+    def test_unsupported_format_is_preserved_as_failed_reader_status(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, request = self._setup(root)
             api.reader_status = "unsupported_format"
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-UNSUPPORTED",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef(
-                    artifact_id=artifact_id, sha256=digest,
-                    format_id="unknown_dft_format", uri=str(source)
-                ),),
-                analysis_task={"operation_id": "dft.artifact.read"},
-            ))
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
             self.assertEqual(outcome.status, TaskStatus.FAILED)
             self.assertEqual(outcome.diagnostics[0].code, "DFT_FORMAT_UNSUPPORTED")
+            self.assertEqual(outcome.analysis_run_record["status"], "failed")
 
-    def test_real_adapter_does_not_resolve_paths_from_a_private_duplicate_registry(self):
+    def test_json_serialization_failure_keeps_in_memory_result_without_fake_output(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            project = root / "da-project"
-            project.mkdir()
-            api = FakeDataAnalysisAPI(project, "ART-NO-URI", "0" * 64)
-            outcome = RealDataAnalysisAdapter(project, api=api).analyze(AnalysisRequest(
-                task_id="TASK-DA-NO-URI",
-                operation="dft.artifact.read",
-                input_artifacts=(ArtifactRef("ART-NO-URI", sha256="0" * 64),),
-                analysis_task={"operation_id": "dft.artifact.read"},
-            ))
-            self.assertEqual(outcome.status, TaskStatus.FAILED)
-            self.assertEqual(outcome.qc["reason_code"], "ARTIFACT_RESOLUTION_FAILED")
-            self.assertIsNone(outcome.analysis_run_id)
+            source, project, api, request = self._setup(root)
+            api.unserializable_result = True
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
+            self.assertEqual(outcome.status, TaskStatus.WARNING)
+            self.assertIsNone(outcome.error)
+            self.assertEqual(outcome.qc_status, "not_assessed")
+            self.assertIn("not JSON serializable", outcome.qc["persistence_error"])
+            self.assertIsNone(outcome.result["derived_file_path"])
+            self.assertFalse(outcome.output_artifacts)
+            self.assertEqual(outcome.analysis_run_record["status"], "failed")
+            self.assertFalse(outcome.analysis_run_record["output_artifact_ids"])
+            self.assertTrue(outcome.result["reader_results"][0]["data"]["non_json_value"])
+            self.assertFalse(any(call[0] == "register_derived_artifact" for call in api.calls))
+
+    def test_registration_failure_keeps_written_file_but_no_fake_artifact(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, project, api, request = self._setup(root)
+            api.fail_derived_registration = True
+            outcome = RealDataAnalysisAdapter(project, api=api).analyze(request)
+
+            self.assertEqual(outcome.status, TaskStatus.WARNING)
+            self.assertIsNone(outcome.error)
+            self.assertEqual(outcome.qc_status, "not_assessed")
+            self.assertIn("synthetic derived Artifact registration failure", outcome.qc["persistence_error"])
+            persisted_file = Path(outcome.result["derived_file_path"])
+            self.assertTrue(persisted_file.is_file())
+            self.assertEqual(persisted_file.parent, project / "data" / "derived")
+            self.assertFalse(outcome.output_artifacts)
+            self.assertFalse(outcome.analysis_run_record["output_artifact_ids"])
+            self.assertEqual(outcome.analysis_run_record["status"], "failed")
 
 
 class CSTRealAdapterTests(unittest.TestCase):
@@ -406,10 +477,12 @@ class OptionalLiveUpstreamIntegrationTests(unittest.TestCase):
                 analysis_task={"operation_id": "dft.artifact.read"},
                 parameters={"reader_id": "python-csv"},
             ))
-            self.assertEqual(outcome.status, TaskStatus.WARNING)
+            self.assertEqual(outcome.status, TaskStatus.SUCCEEDED, outcome.error)
             self.assertTrue(outcome.analysis_run_id)
             self.assertTrue(outcome.evidence_package)
             self.assertEqual(outcome.analysis_run_record["input_artifact_ids"], [artifact_id])
+            self.assertEqual(len(outcome.output_artifacts), 1)
+            self.assertEqual(outcome.analysis_run_record["output_artifact_ids"], [outcome.output_artifacts[0].artifact_id])
 
     @unittest.skipUnless(
         __import__("os").environ.get("CHEM_SCI_TOOLKIT_SOURCE_ROOT"),
