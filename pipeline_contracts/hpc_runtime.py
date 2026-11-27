@@ -578,7 +578,10 @@ class SkillSlurmBackend:
             if parsed.scheme != "file":
                 failures.append(f"{artifact.artifact_id}: no local file URI")
                 continue
-            local = Path(__import__("urllib.parse", fromlist=["unquote"]).unquote(parsed.path))
+            local_value = __import__("urllib.parse", fromlist=["unquote"]).unquote(parsed.path)
+            if os.name == "nt" and len(local_value) >= 3 and local_value[0] == "/" and local_value[2] == ":":
+                local_value = local_value[1:]
+            local = Path(local_value)
             try:
                 digest = sha256_file(local)
                 if artifact.sha256 is None or digest.lower() != artifact.sha256.lower():
