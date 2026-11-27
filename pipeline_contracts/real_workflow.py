@@ -187,13 +187,25 @@ class RealCP2KWorkflowAdapter:
         raw_path = structure.get("path")
         if not raw_path:
             raise RealWorkflowUnavailable("CalculationPlan structure.path or structure.artifact_id is required")
-        source = Path(str(raw_path)).expanduser()
-        if not source.is_absolute():
-            source = (self.project_root / source).resolve()
-        else:
-            source = source.resolve()
-        if source.is_symlink() or not source.is_file():
+        supplied_path = Path(str(raw_path)).expanduser()
+        if not supplied_path.is_absolute():
+            supplied_path = self.project_root / supplied_path
+        if supplied_path.is_symlink():
+            raise RealWorkflowUnavailable(f"structure input must not be a symlink: {supplied_path}")
+        source = supplied_path.resolve(strict=True)
+        if not source.is_file():
             raise RealWorkflowUnavailable(f"structure input is not a regular file: {source}")
+        managed_originals = (self.da_project_root / "data" / "original_received").resolve()
+        try:
+            source.relative_to(managed_originals)
+        except ValueError:
+            pass
+        else:
+            raise RealWorkflowUnavailable(
+                "structure path is already inside Data_analysis original_received. "
+                "Because the public Data_analysis API has no path/hash-to-Artifact lookup, "
+                "supply its registered Artifact ID in structure.artifact_id to avoid duplicate intake."
+            )
         # Public Data_analysis does not expose lookup-by-path/hash. Register the
         # incoming file through its supported intake API and use the returned ID.
         receipt = self.register_inputs(
