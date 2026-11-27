@@ -1,67 +1,50 @@
 # Development Status — coordination-dft-publication-pipeline
 
-> This file records implementation progress. The governing objective remains TASK_PLAN_v1.0.0.md; architecture ownership is documented under docs/.
+Governing objective: TASK_PLAN_v1.0.0.md (preserved unchanged). This status separates implemented control-flow code from real scientific/HPC validation.
 
-## Repository and baseline
+## Repository
+- Repository: Tuzhidingdong/Computation--pipeline
+- Branch: agent-b/pipeline-mock-contracts-20261127
+- Existing PR #1: Open / Draft / unmerged.
+- This work modifies this repository only. Upstream Skill repositories remain read-only.
+- No production DFT/AIMD, remote HPC, SSH/SCP, Slurm preflight or Slurm submission was performed.
 
-- Repository: `Tuzhidingdong/Computation--pipeline`
-- Default branch: `main`
-- Agent B branch: `agent-b/pipeline-mock-contracts-20261127`
-- Existing PR: https://github.com/Tuzhidingdong/Computation--pipeline/pull/1 (Open / Draft; do not merge automatically)
-- Data_analysis source inspected: `cp2k-dft-artifact-and-evidence-support` @ `b71c9e90e65af0f8a7a377ab37159dc60fed3a97`
-- chem-scitoolkit source inspected: `dft-finite-cluster-production-interfaces` @ `dc1290a6c58aa9291b1b5d28503ac9a95ffbc4ba`
-- Only Computation--pipeline is modified. Upstream repositories remain read-only.
-- No production DFT, AIMD, SSH/SCP, Slurm or HPC task has been submitted.
+## Workflow Engine increment
 
-## Pipeline MVP — synchronous post-processing runner
+| Capability | Status | Evidence / limitation |
+|---|---|---|
+| Versioned CalculationPlan JSON v1.0 | IMPLEMENTED | pipeline_contracts/calculation_plan.py |
+| YAML plan input | IMPLEMENTED — optional dependency | Requires PyYAML; JSON works with standard library |
+| Scientific parameter validation | IMPLEMENTED — schema-level | Required method fields checked; scientific appropriateness is not certified |
+| Deterministic initial DAG | IMPLEMENTED — CP2K GEO_OPT | Stable task key includes plan/structure/method hash |
+| Dynamic GEO_OPT → ENERGY | IMPLEMENTED — Mock tested | ENERGY created only after convergence gate and hashed optimized-structure Artifact |
+| SQLite Workflow Run/task/attempt/event ledger | IMPLEMENTED | workflow-control state only, not Artifact/Evidence |
+| Resume without duplicate submit | IMPLEMENTED — Mock tested | Persisted Job ID passed to adapter after simulated network interruption |
+| CLI plan/validate/run/status/resume/report | IMPLEMENTED | python -m pipeline_contracts.cli |
+| Mock scheduler/application/QC lifecycle | IMPLEMENTED — synthetic | No CP2K binary, HPC or scientific data |
+| Real CST input generation/output QC | NOT YET INTEGRATED | Existing RealCSTAdapter exists; controller binding incomplete |
+| Real HPC lifecycle for BeiLong / UCAS | BLOCKED — upstream callable interface gap | Job-record scripts provide create/update/sync/show/list; no complete stage/submit/poll/selective-retrieve CLI/API |
+| Real Data_analysis in full GEO_OPT→ENERGY run | NOT YET INTEGRATED | Existing RealDataAnalysisAdapter remains available for post-processing; workflow binding outstanding |
+| Automated infrastructure retry policy | NOT IMPLEMENTED | Policy retained/validated in plan; automatic retry loop not implemented |
+| PDOS/charge/other result branches | NOT IMPLEMENTED | Current bounded graph is CP2K GEO_OPT→ENERGY |
 
-Implemented in `pipeline_contracts/runner.py` and exported from the package:
+## External workflow library decision
 
-- `PipelineTaskManifest`: task ID, project root, input Artifact IDs, operation, parameters, optional Artifact hash/format metadata and optional CST validation specification.
-- `PipelineRunner.run(manifest)`: synchronous linear execution; it does not create a DAG, queue, database, service or scheduler.
-- `PipelineTaskResult`: final state, state history, stage summaries, input/output ArtifactRefs, Analysis Run ID/record, Evidence refs/package, QC status, diagnostics, warnings and error.
-- `CSTValidationSpec`: select optional CP2K input/output validation and choose whether an unavailable validator is blocking.
-- Explicit adapter injection is required. A missing Data_analysis or required CST adapter is returned as `unavailable`; the runner never silently selects Mock or Real.
-- Status aggregation preserves `succeeded`, `warning`, `failed` and `unavailable`. CST warning results continue to Data_analysis; required CST failure/unavailability stops the workflow. Reader/provenance failure never reports task success.
-- HPC is not invoked in this workflow; existing Mock HPC remains unchanged.
+jobflow is not added. It supports dynamic Response/Flow expansion, but default MemoryStore is process-local; persistent stores typically use Maggma-backed databases. Remote queue execution requires a separate manager (e.g. FireWorks/jobflow-remote) and does not directly bind existing HPC Skill interfaces. A lightweight SQLite control ledger is a better fit. Rationale and official references are in docs/WORKFLOW_ENGINE_MVP.md.
 
-## Input custody and Data_analysis handoff
+## HPC Skill read-only findings
+- BeiLong_HPC inspected at HEAD 40ce15a9285e94f4abf1418361387e90e850a899.
+- UCAS_hpc inspected at HEAD ebde5c1e76432d7e0d6728da804fb62dc5f84583.
+- Job-record tools are useful for records/status sync after a Job ID exists. Skill-level staging/submission/retrieval procedures are not exposed as a complete programmatic API. No new SSH/SCP/Slurm implementation was added.
 
-- A manifest may contain only input Artifact IDs. When a real Data_analysis adapter exposes its official resolver, the runner calls it first, lets Data_analysis verify project containment, symlinks and registered SHA-256, then pins the verified file SHA onto the Pipeline ArtifactRef before passing it downstream.
-- A caller-provided SHA, when supplied, must match the resolved bytes. The RealDataAnalysisAdapter also retains its strict SHA requirement when called directly.
-- Optional RealCST validation receives the same resolved input file path through a file URI; the analysis request retains the Artifact ID and verified SHA.
-- Data_analysis remains the owner of Artifact registry/storage, derived Artifact registration, Analysis Runs, hashes and Evidence. Pipeline never reads DA registry files.
-- JSON-compatible reader results are atomically written below project `data/derived/`, registered through `register_derived_artifact()`, and passed to `create_dft_analysis_run_from_project(output_artifacts=[...])`.
-- The Analysis Run output ID and SHA are verified before normalized-result packaging and Evidence Package construction.
-- Scientific QC remains `not_assessed`; parser success is not scientific validation.
-- Serialization/registration failure creates no fake output Artifact and cannot produce a successful task state. A file already written before registration failure remains on disk for recovery.
+## Tests
+Previous baseline CI run 45936035658 tested the earlier 37-test version only. New workflow tests are in tests/test_workflow.py; current increment CI verification is pending.
 
-## Adapter boundaries
+## Workflow states
+PENDING, READY, SUBMITTED, QUEUED, RUNNING, POSTPROCESSING, QC_PASSED, COMPLETED, RETRY_WAIT, BLOCKED, FAILED_PERMANENT, CANCELLED and INTERRUPTED_RECOVERY. COMPLETED requires scheduler completion, application exit code 0, output references and applicable result/QC gate. Scheduler COMPLETED alone is insufficient.
 
-- `RealDataAnalysisAdapter`: official Artifact resolver, DFT Reader, derived Artifact registration, Analysis Run, normalized result and Evidence.
-- `RealCSTAdapter`: finite CP2K builder, CP2K input/output assessment, charge/PDOS/Cube/vacuum/thermochemistry/figure helpers. The runner only invokes CST validation when the task manifest requests it.
-- Mock CST / Data_analysis / HPC adapters remain available. Mock Analysis Run and Evidence objects are synthetic and clearly marked `execution_mode="mock"`; no scientific values are generated.
-
-## Example and tests
-
-- Runnable Python example: `examples/postprocess_existing_cp2k_output.py`.
-- Usage documentation: README section “Minimal Pipeline MVP — existing CP2K output post-processing”.
-- Original 10 Mock contract tests are retained.
-- Runner tests cover a complete Mock end-to-end chain, optional CST warning, Reader failure, Artifact hash error, derived registration failure, missing/unavailable adapters, optional validator skip and non-terminal stage state.
-- Real Data_analysis boundary tests cover Artifact-ID-only resolver access, SHA rejection, derived JSON persistence/registration, Analysis Run output ID/hash and Evidence ordering.
-- Latest verified CI: run [45936035658](https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/45936035658), implementation/test commit `4453d1d51526eae70f92dd3b04bf4f64f81a7326`: 37 tests run, 35 passed, 2 optional live upstream source tests skipped; `python -m compileall -q pipeline_contracts tests examples` passed.
-- Mock tests validate orchestration and reference propagation only, not CP2K, scientific algorithms or scientific QC.
-
-## Remaining boundaries
-
-1. Live upstream execution remains opt-in and was not run in public CI; source-root variables and approved runtime dependencies must be supplied by the owner.
-2. Derived JSON persistence is the first supported format. Large arrays/binary Reader outputs need a separately specified storage format.
-3. This is one synchronous post-processing path, not a general DAG/controller, workflow server or queue.
-4. Real HPC is deferred; no scheduler adapter is invoked.
-
-## Safety
-
-- No private Data_analysis branch is installed automatically or made a required public CI dependency.
-- No changes to Data_analysis, chem-scitoolkit, BeiLong_HPC or UCAS_hpc.
-- No production DFT, AIMD, Slurm or HPC submission.
-- PR #1 remains Open / Draft and unmerged.
+## Next blockers
+1. Obtain/approve callable stage/submit/poll/selective-retrieve interfaces from each HPC Skill without modifying them here.
+2. Bind RealCSTAdapter to actual CP2K input generation and GEO_OPT/ENERGY output validation.
+3. Bind RealDataAnalysisAdapter to retrieved ArtifactRefs and require real Analysis Run/Evidence references.
+4. Implement bounded infrastructure retry; never alter scientific settings without explicit authorization.
