@@ -591,7 +591,7 @@ class RealCP2KWorkflowAdapter:
             raise RealWorkflowUnavailable(f"registered {role} Artifact SHA does not match retrieved bytes")
         return ArtifactRef(
             artifact_id=artifact_id, sha256=actual_hash,
-            format_id=("cp2k_output" if role == "cp2k_output" else "extxyz" if role == "optimized_structure" else "slurm_log"),
+            format_id=("cp2k_output" if role == "cp2k_output" else "extxyz" if role == "optimized_structure" else None),
             uri=resolved.as_uri(), source_system="Data_analysis",
         )
 
