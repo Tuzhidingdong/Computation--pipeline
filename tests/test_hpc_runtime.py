@@ -202,7 +202,8 @@ class SkillBackendTests(unittest.TestCase):
             ssh_calls=[x for x in calls if x[0].endswith("ssh.exe")]
             scp_calls=[x for x in calls if x[0].endswith("scp.exe")]
             self.assertTrue(ssh_calls); self.assertTrue(scp_calls)
-            self.assertTrue(all("hpc" in x for x in ssh_calls+scp_calls))
+            self.assertTrue(all("hpc" in x for x in ssh_calls))
+            self.assertTrue(all(any(str(arg).startswith("hpc:") for arg in x) for x in scp_calls))
             self.assertTrue(all("-F" not in x for x in ssh_calls+scp_calls))
 
     def test_sbatch_job_id_is_persisted_by_callback_before_job_record_command(self):
