@@ -84,8 +84,12 @@ def validate_runtime_for_backend(
         )
     required_backend = ("ssh_executable", "scp_executable", "alias", "remote_root", "skill_root", "job_record_script")
     missing = [key for key in required_backend if not backend.get(key)]
-    if backend_id == "beilong" and not backend.get("ssh_config"):
-        missing.append("ssh_config")
+    if backend_id == "beilong":
+        for key in ("ssh_config", "allowed_workspace_root", "privacy_header_template", "module_init_path"):
+            if not backend.get(key):
+                missing.append(key)
+    if backend_id == "ucas" and not backend.get("slurm_template"):
+        missing.append("slurm_template")
     if missing:
         raise RuntimeConfigError(
             f"HPC backend {backend_id!r} is missing local setting(s): {', '.join(missing)}"
@@ -95,8 +99,13 @@ def validate_runtime_for_backend(
             raise RuntimeConfigError(
                 f"Resource profile {resource_profile!r} is missing required field {field!r}"
             )
-    if backend_id == "ucas" and not (resources.get("account") or backend.get("account")):
-        raise RuntimeConfigError("UCAS resource profile/backend requires an explicit Slurm account")
-    if backend_id == "beilong" and not (resources.get("account") or backend.get("account")):
-        raise RuntimeConfigError("BeiLong resource profile/backend requires an explicit Slurm account")
+    if backend_id not in {"ucas", "beilong"}:
+        raise RuntimeConfigError(f"unsupported backend alias {backend_id!r}")
+    if not (resources.get("account") or backend.get("account")):
+        raise RuntimeConfigError(f"{backend_id} resource profile/backend requires an explicit Slurm account")
+    resources.setdefault("account", backend.get("account"))
+    if not resources.get("module"):
+        resources["module"] = backend.get("module")
+    if not resources.get("module"):
+        raise RuntimeConfigError(f"resource profile {resource_profile!r} requires a CP2K module name")
     return backend, resources
