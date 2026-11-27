@@ -1,68 +1,89 @@
 # Development Status — coordination-dft-publication-pipeline
 
-> This file records execution progress only. The governing development objective is `TASK_PLAN_v1.0.0.md`; architecture ownership and the approved prerequisite are documented in `docs/`.
+Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. This status separates code/test evidence from real-cluster and scientific verification.
 
-## Repository and baseline
+## Repository and branch protection
 
-- **Repository:** `Tuzhidingdong/Computation--pipeline`
-- **Repository URL:** https://github.com/Tuzhidingdong/Computation--pipeline
-- **Visibility:** Public
-- **Default branch:** `main`
-- **Governing plan:** `TASK_PLAN_v1.0.0.md`
-- **Latest Task Plan commit:** `576be61310ea3cc6e185bb11b065455f22025970`
-- **Architecture:** `docs/ARCHITECTURE_OWNERSHIP.md`
-- **Capability audit:** `docs/EXISTING_SKILL_CAPABILITY_AUDIT.md`
-- **Authorized prerequisite:** `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md`
-- **External tools:** `docs/EXTERNAL_TOOL_SELECTION.md`
-- **Remediation tracker:** `docs/UPSTREAM_REMEDIATION_STATUS.md`
-- **Current state:** Architecture and source-level gap audit published. Upstream remediation instruction published. Agent implementation has not started.
-- **Current phase:** Pre-implementation prerequisite — upstream Skill gap remediation
-- **Implementation branch policy:** Use dedicated branches and PRs in upstream repos; do not work directly on their default branches and do not merge automatically.
-- **No production DFT or HPC task has been submitted.**
+- Repository: Tuzhidingdong/Computation--pipeline
+- Branch: agent-b/pipeline-mock-contracts-20261127
+- Existing PR #1: Open / Draft / unmerged.
+- PR base and main are at the original base SHA cf5adb90cd2e1fc24da2d08fcff160d63cf3574a.
+- BeiLong_HPC, UCAS_hpc, Data_analysis and chem-scitoolkit are read-only dependencies in this phase.
+- No live cluster SSH/SCP, sbatch, production CP2K/DFT/AIMD, cancellation or real output retrieval was performed.
 
-## Completed in this preparation
+## Real CP2K GEO_OPT → ENERGY
 
-| Item | Status | Evidence |
+| Capability | Status | Evidence / boundary |
 |---|---|---|
-| Responsibility split across the new pipeline and four Skills | COMPLETE | `docs/ARCHITECTURE_OWNERSHIP.md` |
-| Source-level audit of all four Skills | COMPLETE | `docs/EXISTING_SKILL_CAPABILITY_AUDIT.md` |
-| Scoped upstream remediation instruction | COMPLETE | `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md` |
-| External tool selection baseline | COMPLETE — version/license confirmation pending | `docs/EXTERNAL_TOOL_SELECTION.md` |
-| Remediation tracker scaffold | COMPLETE | `docs/UPSTREAM_REMEDIATION_STATUS.md` |
-| Task Plan updated to reference architecture and prerequisite | COMPLETE | Commit `576be61310ea3cc6e185bb11b065455f22025970` |
+| Real adapter factory | IMPLEMENTED | build_real_workflow_adapter(plan, project_root, runtime_config); explicit UNAVAILABLE reason; no Mock fallback |
+| Local-only runtime config | IMPLEMENTED | .pipeline/runtime.local.example.json; private runtime.local.json is Git-ignored; relative local paths resolved from config location |
+| Real CST CP2K input generation | IMPLEMENTED — fake API tested | Reuses RealCSTAdapter and chem-scitoolkit CP2KInputBuilder.build_finite_system(); CalculationPlan now requires relative cutoff, Poisson solver, UKS/centering and full cell angles instead of accepting builder defaults. |
+| CST input lint | IMPLEMENTED — fake API tested | Calls upstream validate_cp2k_input(); local ASE and cp2klint are required |
+| BeiLong_HPC backend | IMPLEMENTED — injected subprocess tested | Dedicated SSH config for both SSH/SCP, wcl privacy header/job name, opaque workspace, external Skill log directory, upstream Job Record script |
+| UCAS_hpc backend | IMPLEMENTED — injected subprocess tested | Existing hpc alias, CP2K Slurm template/module setup, configured account/resources, upstream Job Record script |
+| Staged input SHA-256 | IMPLEMENTED — injected subprocess tested | Local and remote per-file digests compared before submission |
+| Submission intent + Job ID persistence | IMPLEMENTED — SQLite callback tested | Intent and input hashes committed before sbatch; returned Job ID committed immediately |
+| Lost sbatch response reconciliation | IMPLEMENTED — fake subprocess tested | Search by opaque work directory; uncertain result becomes SUBMISSION_UNKNOWN; no duplicate sbatch |
+| Known Job ID resume | IMPLEMENTED — fake real-adapter test | Reattaches prepared context and checks original Job ID, without second submission for the same task |
+| Scheduler/application separation | IMPLEMENTED — tests | Slurm COMPLETED alone is not success; exit code must be known and zero |
+| Output retrieval and integrity | IMPLEMENTED — fake adapter/runner tests | Selective CP2K output, optimized geometry and scheduler logs; local/remote hashes checked |
+| Data_analysis intake and derived input | IMPLEMENTED — injected API test | register_inputs → resolve; derived input under data/derived → register_derived_artifact(parent structure Artifact ID) → resolve |
+| Retrieved Data_analysis source Artifacts | IMPLEMENTED — injected API test | Output/logs first staged outside Data_analysis; then register_inputs and resolver/SHA verification |
+| CST output QC/version | IMPLEMENTED — fake CST test | Normal termination, SCF, GEO_OPT completion and CP2K version must match plan |
+| Dynamic ENERGY | IMPLEMENTED — fake Real adapter E2E | Only after GEO_OPT convergence and registered optimized-structure Artifact SHA; ENERGY reads the final trajectory frame |
+| Analysis Run / Evidence | IMPLEMENTED — injected Data_analysis test | Existing DFT operation/reader/provenance/evidence APIs; true Job ID and Artifact IDs/SHA passed |
+| CLI real mode | IMPLEMENTED | plan/validate/preflight/run/status/resume/report; --mock must be explicit |
+| SQLite run lock | IMPLEMENTED — unit test | Prevents two processes/controllers from executing one Workflow Run concurrently |
+| Automatic retry loop | NOT IMPLEMENTED | No automatic retry; terminal failures are not restarted by ordinary resume |
+| Real cluster execution | NOT YET VERIFIED | Requires user local config, read-only preflight and separately approved run |
 
-## Upstream remediation status
+## Data_analysis Artifact lookup boundary
 
-| Repository | Work required | Current status |
-|---|---|---|
-| chem-scitoolkit | CST-1 through CST-7: finite CP2K builder, strict parser, truthful Bader handling, PDOS, density/vacuum checks, ASE thermochemistry wrapper, configurable plot profiles | NOT STARTED |
-| Data_analysis | DA-1 through DA-3: DFT file formats, reader/operation registry, provenance/evidence | NOT STARTED |
-| BeiLong_HPC | Reuse existing scheduler/job record/transfer tools; adapter audit only unless a blocker is demonstrated | AUDIT REQUIRED |
-| UCAS_hpc | Reuse existing scheduler/job record/transfer tools; adapter audit only unless a blocker is demonstrated | AUDIT REQUIRED |
+- A supplied Artifact ID is resolved using Data_analysis and its registered bytes are re-hashed.
+- An external source file is registered through register_inputs(); the returned Artifact ID is resolved and re-hashed.
+- Data_analysis exposes no public lookup-by-path/SHA operation that returns the already registered Artifact ID. For a path already under data/original_received/, the user must supply the existing Artifact ID. The adapter refuses to re-intake this managed path.
+- Pipeline does not read/write Data_analysis registry JSON and does not copy its path-safety or SHA implementation.
+- Generated CP2K input is stored under data/derived/ with a task-specific unique filename and parent Artifact ID. Remote task filenames and Slurm-visible labels remain generic.
+- HPC outputs are staged outside Data_analysis raw intake and then registered through register_inputs().
 
-## Computation--pipeline implementation phases
+## HPC Skill revisions inspected
 
-| Phase | Status | Blocker / prerequisite |
-|---|---|---|
-| Upstream Skill remediation | NOT STARTED | Agent must execute the dedicated remediation instruction; upstream PRs require owner review |
-| Phase 1 — contracts, schemas, workflow skeleton | NOT STARTED | Complete prerequisite and review/merge necessary upstream PRs |
-| Phase 2 — model builder and review gate | NOT STARTED | Phase 1 |
-| Phase 3 — CP2K/HPC and Stage 1 | NOT STARTED | Phase 2 |
-| Phase 4 — Stage 2 adsorption/vibration/CHE | NOT STARTED | Phase 3 |
-| Phase 5 — analysis and publication visualization | NOT STARTED | Phase 4 |
-| Phase 6 — reports, integration acceptance, delivery | NOT STARTED | Phase 5 |
+- BeiLong_HPC: read-only skill/scripts/templates inspected. Dedicated config_bscc_a, fixed wcl name, opaque remote workspace and external hpc/logs path are retained.
+- UCAS_hpc: read-only skill/scripts/templates inspected. The existing hpc alias, module initialization, account/partition/resource profile and selective retrieval behavior are retained.
+- Neither repository was modified. The adapter uses subprocess with timeout/return code/bounded diagnostics and invokes the existing Job Record scripts. No Paramiko/AsyncSSH or parallel Slurm implementation was introduced.
 
-## Decisions / blockers
+## Verification
 
-- `Computation--pipeline` owns orchestration, state/DAG, model approval and immutability, scientific gates, cross-backend routing, report assembly and final delivery.
-- `chem-scitoolkit` owns reusable chemistry/DFT utilities, CP2K support, electronic-structure post-processing, thermochemistry wrappers and plotting primitives.
-- `Data_analysis` owns generic artifact/data schemas, inventory, hashes, cache, parse/evidence/provenance records.
-- `BeiLong_HPC` and `UCAS_hpc` continue to own their cluster-specific operational behavior. No wholesale HPC rewrite is planned.
-- The user authorized only the bounded changes listed in `docs/UPSTREAM_SKILL_GAP_REMEDIATION_TASK_v1.0.0.md`. Other changes require separate approval.
-- No production DFT/HPC work is authorized during prerequisite remediation.
-- No project-specific test chemistry or results may be embedded in generic Skills.
-- No private HPC configuration or credentials may be committed to the public repository.
+Latest successful Actions run before the final docs/runtime-config test commit: 74 tests, 72 passed, 2 optional upstream tests skipped; compileall passed.
 
-## Required progress report
+The suite uses injected command runners and fake HPC/CST/Data_analysis implementations. Tests cover:
+- BeiLong/UCAS command construction and SSH config differences;
+- script privacy, upload hash checks and Job Record commands;
+- submission intent, Job ID persistence, lost-response reconciliation and resume;
+- one-controller lock, terminal failure/resume rules and application/scheduler failure classification;
+- Data_analysis intake/derived registration order and Analysis Run/Evidence mapping;
+- fake Real adapter GEO_OPT → ENERGY, non-convergence, missing output/hash failure and known-job resume.
 
-Every Agent update must identify requirement IDs, repository, branch, commit SHA, changed-file links, PR URL, exact tests/results, implementation vs. scientific-validation status, blockers, and confirmation that no production DFT/HPC tasks were submitted.
+No test connects to a real cluster or runs a real CP2K calculation. The two optional upstream-source tests are skipped unless the owner configures those source checkouts in CI.
+
+## Workflow states and safety
+
+Persisted states include PENDING, READY, SUBMITTING, SUBMITTED, QUEUED, RUNNING, POSTPROCESSING, QC_PASSED, COMPLETED, RETRY_WAIT, BLOCKED, FAILED_PERMANENT, FAILED_INFRASTRUCTURE, CANCELLED, INTERRUPTED_RECOVERY, SUBMISSION_UNKNOWN and UNAVAILABLE.
+
+- Submission intent and remote working directory are durable before sbatch.
+- Known Job IDs are queried on resume, never resubmitted.
+- A lost sbatch response is reconciled; unresolved state blocks instead of risking a duplicate submission.
+- Slurm COMPLETED alone is not scientific success.
+- FAILED_PERMANENT, FAILED_INFRASTRUCTURE and CANCELLED are terminal for ordinary resume.
+- Scientific parameters are never automatically changed.
+- Monitoring is a single remote status check per resume invocation, not a resident background poller.
+
+## Remaining real-environment checks
+
+1. Copy .pipeline/runtime.local.example.json to the local Data_analysis project and fill the paths/aliases/resources already approved for the chosen backend.
+2. Ensure the approved Data_analysis and chem-scitoolkit Python environments, ASE and cp2klint are available.
+3. Run the documented read-only CLI preflight and inspect every UNAVAILABLE diagnostic.
+4. Review the actual CalculationPlan and resource profile.
+5. Only after user approval, execute GEO_OPT → ENERGY and inspect its real Analysis Run, Evidence Package and workflow report.
+
+No production job is submitted automatically by CI or by the development agent.

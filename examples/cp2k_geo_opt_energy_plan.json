@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "cp2k-geo-opt-energy-example",
+  "title": "CP2K GEO_OPT then ENERGY",
+  "scientific_question": "Optimize the supplied structure and evaluate its single-point energy using the same declared method.",
+  "project_root": "./example-project",
+  "structure": {
+    "path": "./structures/input.xyz",
+    "format": "xyz",
+    "cell": {"a": 18.0, "b": 18.0, "c": 18.0, "alpha": 90.0, "beta": 90.0, "gamma": 90.0}
+  },
+  "method": {
+    "xc": "PBE",
+    "basis_set": "DZVP-MOLOPT-SR-GTH",
+    "pseudopotential": "GTH-PBE",
+    "kind_definitions": {
+      "H": {"element": "H", "basis_set": "DZVP-MOLOPT-SR-GTH", "potential": "GTH-PBE", "valence_electrons": 1}
+    },
+    "basis_file_name": "BASIS_MOLOPT",
+    "potential_file_name": "GTH_POTENTIALS",
+    "cell_periodicity": "NONE",
+    "poisson_periodicity": "NONE",
+    "poisson_solver": "MT",
+    "cutoff_ry": 600,
+    "rel_cutoff_ry": 60,
+    "scf": {"method": "OT", "eps_scf": 1e-6, "max_scf": 100},
+    "charge": 0,
+    "multiplicity": 1,
+    "uks": false,
+    "center_coordinates": true
+  },
+  "calculations": [
+    {"id": "relax", "operation": "cp2k.geo_opt", "tool_version": "2025.2",
+     "output_files": {"cp2k_output": "cp2k.out", "optimized_structure": "optimized_structure.xyz"}},
+    {"id": "single-point", "operation": "cp2k.energy", "tool_version": "2025.2",
+     "output_files": {"cp2k_output": "cp2k.out"}}
+  ],
+  "execution": {"backend": "ucas", "resources": {"profile": "ucas-cpu"}},
+  "analysis": {"operation": "dft.artifact.read", "reader_id": "cp2k-output-tools"},
+  "quality_gates": {"geo_opt_converged": {"source": "cst.cp2k.validate_output", "required": true}},
+  "retry_policy": {"infrastructure_retries": 0, "scientific_parameter_changes": false},
+  "metadata": {"example_only": true, "note": "All values are illustrative and must be replaced with the user's approved method and resource choices."}
+}
