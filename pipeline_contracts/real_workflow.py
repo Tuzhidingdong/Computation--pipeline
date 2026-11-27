@@ -255,6 +255,24 @@ class RealCP2KWorkflowAdapter:
         )
         return self.initial_structure_ref
 
+    def _artifact_from_task_input(self, value: Mapping[str, Any]) -> ArtifactRef:
+        artifact_id = str(value.get("artifact_id") or "")
+        expected_sha = str(value.get("sha256") or "")
+        if not artifact_id or not expected_sha:
+            raise RealWorkflowUnavailable("real task input must carry a registered Artifact ID and SHA256")
+        reference = ArtifactRef(
+            artifact_id=artifact_id, sha256=expected_sha,
+            format_id=value.get("format_id"), source_system="Data_analysis",
+        )
+        resolved = Path(self.da.resolve_artifact_path(reference)).expanduser().resolve(strict=True)
+        actual = _sha(resolved)
+        if actual.lower() != expected_sha.lower():
+            raise RealWorkflowUnavailable(f"Artifact {artifact_id} changed after plan compilation; SHA256 mismatch")
+        return ArtifactRef(
+            artifact_id=artifact_id, sha256=actual, format_id=value.get("format_id"),
+            uri=resolved.as_uri(), source_system="Data_analysis",
+        )
+
     def _read_structure(self, artifact: ArtifactRef) -> tuple[list[tuple[str, float, float, float]], dict[str, float]]:
         path = Path(self.da.resolve_artifact_path(artifact))
         try:
@@ -317,17 +335,14 @@ class RealCP2KWorkflowAdapter:
             return cached
 
         stage = self._stage_spec(task)
-        structure = self._register_structure() if task["operation"] == "cp2k.geo_opt" else None
-        if task["operation"] == "cp2k.energy":
-            parent = dict(task.get("input") or {})
-            structure_id = str(parent.get("artifact_id") or "")
-            structure = ArtifactRef(
-                artifact_id=structure_id, sha256=str(parent.get("sha256") or ""),
-                source_system="Data_analysis",
-            )
-            structure_path = Path(self.da.resolve_artifact_path(structure))
+        input_descriptor = dict(task.get("input") or {})
+        if input_descriptor.get("artifact_id"):
+            structure = self._artifact_from_task_input(input_descriptor)
+            if task["operation"] == "cp2k.geo_opt":
+                self.initial_structure_ref = structure
         else:
-            structure_path = Path(self.da.resolve_artifact_path(structure))
+            structure = self._register_structure()
+        structure_path = Path(self.da.resolve_artifact_path(structure))
         atoms, cell = self._read_structure(structure)
         method = dict(self.plan.method)
         kind_defs = dict(method["kind_definitions"])
