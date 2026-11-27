@@ -1,41 +1,91 @@
-# Calculation-plan workflow engine MVP
+# Calculation-plan workflow engine and real CP2K execution
 
-## Implemented
+## Workflow model
 
-- JSON CalculationPlan v1.0; YAML when PyYAML is installed. Plan fields include scientific question, structure path/Artifact ID, full method, calculations and tool versions, backend alias, resource profile, outputs, analysis, QC and retry policy.
-- Deterministic validation rejects missing XC/basis/pseudopotential/cutoff/SCF/charge/multiplicity and unregistered operations. It never generates Python or changes scientific settings.
-- Initial DAG contains GEO_OPT only. ENERGY is dynamically added only after structured convergence QC passes and an optimized-structure Artifact with SHA256 is returned.
-- SQLite persists plan snapshot/hash, DAG nodes, task states, HPC Job ID, attempts, events, results and recovery state. It is a workflow-control ledger only; Artifact/Evidence remain Data_analysis-owned.
-- Resume passes an existing Job ID to the adapter; it does not resubmit the same task. Input/method changes alter deterministic task identity.
-- CLI: plan, validate, run, status, resume, report.
-- Mock E2E covers convergence/non-convergence, dynamic ENERGY insertion, network interruption with durable Job ID, recovery and Analysis Run/Evidence references.
+The computation workflow is driven by a versioned CalculationPlan, not by a prompt that directly executes arbitrary code.
 
-## State and success rules
+**CalculationPlan → initial DAG → CST CP2K input → HPC Skill Job → output retrieval → CST QC → Data_analysis → result-driven DAG expansion → report**
 
-PENDING → READY → SUBMITTED → POSTPROCESSING → QC_PASSED → COMPLETED
+The plan contains the source structure reference, full method configuration, explicit CP2K kinds/basis/pseudopotentials, cell/boundary settings, tool version, backend/resource profile, output declarations, analysis settings and quality gates. Missing or inconsistent required fields block execution; the coordinator does not invent scientific settings or generate arbitrary Python.
 
-Network loss after submission becomes INTERRUPTED_RECOVERY. Scheduler COMPLETED without application exit code 0 and expected output references is not success. A failed GEO_OPT QC does not create ENERGY. Execution is sequential under one visible coordinator.
+## Dynamic GEO_OPT → ENERGY rule
 
-## Real HPC integration blocker
+The initial plan compiles to a GEO_OPT task. ENERGY is not pre-created as a runnable task.
 
-Read-only upstream heads inspected: BeiLong_HPC 40ce15a9285e94f4abf1418361387e90e850a899; UCAS_hpc ebde5c1e76432d7e0d6728da804fb62dc5f84583.
+The real GEO_OPT executor must confirm:
+- Slurm reports the terminal COMPLETED state;
+- allocation exit code is known and equals zero;
+- CP2K reports normal termination and SCF convergence;
+- output CP2K version matches the version declared in the plan;
+- CP2K reports geometry optimization completed;
+- the optimized geometry file is selectively retrieved, hash-verified, registered in Data_analysis and resolved through its Artifact ID/SHA-256.
 
-Their job-record scripts expose create/update/sync/show/list. The Skills describe safe staging/submission/monitoring/retrieval, but neither repository exposes a stable callable Python API or CLI for complete stage-inputs → submit → poll → selective-retrieve. The record scripts assume a Slurm Job ID already exists; they do not stage or submit. Their sync subcommand queries an existing Job ID. A natural-language Skill instruction is not a programmatic endpoint.
+Only then does the controller persist the optimized-structure Artifact as the dependency and create the ENERGY node. ENERGY consumes the final frame of the optimized geometry trajectory, builds and validates a distinct CP2K input, then follows the same stage/submit/monitor/retrieve/verify/register path.
 
-This increment therefore adds no parallel SSH/SCP/Slurm code and invents no upstream CLI commands. A real adapter cannot be enabled until an owner-approved machine-callable interface is supplied or identified. Without an injected adapter, production CLI returns UNAVAILABLE. No cluster preflight, SSH, SCP, Slurm submission, cancellation or retrieval was run. Per-backend credentials, paths and security rules remain in private upstream repositories.
+The GEO_OPT → ENERGY edge is tested with an injected fake HPC/CST/Data_analysis stack. It is not a scientific calculation result.
 
-## jobflow decision
+## Persistence and recovery
 
-jobflow supports Job, Flow and dynamic Response expansion. It is not adopted because official documentation says its default MemoryStore is process-local; persistent production use generally requires a Maggma store such as MongoDB. Remote queue execution uses separate managers such as FireWorks or jobflow-remote, which do not directly bind the existing HPC Skill interfaces. Introducing a separate JobStore and remote manager would add infrastructure beside the required SQLite control ledger and Skill-owned HPC operations.
+SQLite persists the Workflow Run, plan snapshot/hash, task identities, dependency edges, attempts, status transitions, remote work directory, input byte hashes, submission timestamp, Job ID, output Artifact references and diagnostics.
 
-We reuse the dynamic result-driven graph concept and implement the narrowly scoped SQLite controller. No jobflow, AiiDA, FireWorks, Parsl or atomate2 dependency is added. Official references:
+- The workflow run is protected by a SQLite transaction-backed process lock.
+- A submission intent is committed before sbatch.
+- The Job ID callback commits the returned Slurm Job ID immediately, before creating or synchronizing the upstream Job Record.
+- Resume with a known Job ID queries that job and does not re-submit.
+- A lost sbatch response is reconciled using the opaque remote work directory and backend-specific Slurm accounting. If submission existence cannot be established, the task becomes SUBMISSION_UNKNOWN and stops.
+- Scheduler/transport failures are distinguished from CP2K application failures.
+- FAILED_PERMANENT, FAILED_INFRASTRUCTURE and CANCELLED are terminal for ordinary resume. No science parameter is changed by recovery.
+- There is no automatic retry loop or continuous background polling service. Each CLI resume performs a status/recovery pass; a running task returns RUNNING/QUEUED/SUBMITTED without being reported completed.
+
+## Real adapter ownership
+
+The public real Adapter Factory is:
+
+    build_real_workflow_adapter(plan, project_root, runtime_config)
+
+It binds the existing RealCSTAdapter, the selected HPC Runtime Adapter and the RealDataAnalysisAdapter. Missing configuration or dependencies produce a concrete UNAVAILABLE response. Real mode never falls back to Mock.
+
+HPC Runtime Adapter backends:
+- BeiLong_HPC: uses its dedicated Windows OpenSSH config for SSH and SCP, existing Skill privacy header, fixed wcl job name, permitted root, opaque work directories, Slurm commands and bscc_a_job_record.py.
+- UCAS_hpc: uses the existing hpc SSH alias, existing CP2K Slurm template, configured Account/Partition/resources/modules and hpc_job_record.py.
+- Both use bounded subprocess calls and explicit file selection. The two upstream HPC repositories are read-only; no SSH/SCP/Slurm clone or alternative Job Record format is created here.
+
+Data_analysis remains the sole owner of Artifacts and Evidence:
+- external structure file → register_inputs() → resolve_artifact_path();
+- generated CP2K input under data/derived/ → register_derived_artifact(parent structure Artifact ID) → resolve_artifact_path();
+- retrieved raw CP2K outputs/geometry/logs → register_inputs() → resolve_artifact_path();
+- ENERGY output → existing RealDataAnalysisAdapter → Analysis Run + normalized derived Artifact + Evidence Package.
+
+Data_analysis currently exposes no public lookup-by-path/SHA returning an existing Artifact ID. A structure already in data/original_received/ must be referenced by its existing Artifact ID; Pipeline does not inspect registry JSON. This limitation is explicit in the integration guide.
+
+## CLI
+
+    python -m pipeline_contracts.cli plan PLAN.json
+    python -m pipeline_contracts.cli validate PLAN.json
+    python -m pipeline_contracts.cli preflight PLAN.json --runtime-config RUNTIME.json
+    python -m pipeline_contracts.cli run PLAN.json --mock
+    python -m pipeline_contracts.cli run PLAN.json --runtime-config RUNTIME.json
+    python -m pipeline_contracts.cli status WORKFLOW_RUN_ID --state-db STATE_DB
+    python -m pipeline_contracts.cli resume WORKFLOW_RUN_ID --state-db STATE_DB --runtime-config RUNTIME.json
+    python -m pipeline_contracts.cli report WORKFLOW_RUN_ID --state-db STATE_DB --output report.json
+
+Only --mock starts the simulator. preflight is read-only with respect to Slurm submission; it checks local APIs/files and remote executable/module/Slurm command availability. It does not submit a job.
+
+Detailed Windows local configuration, both backend examples and read-only preflight shell commands: docs/REAL_CP2K_HPC_INTEGRATION.md.
+
+## jobflow evaluation
+
+jobflow supports Job, Flow and dynamic Response expansion. It was evaluated but is not added as a dependency. Persistent operation would require a persistent Maggma store and a remote manager/queue integration; these would introduce additional infrastructure without binding the existing HPC Skill interfaces. The narrow SQLite controller reuses the dynamic result-driven graph concept while preserving a single workflow-control ledger and existing Artifact/Evidence ownership.
+
+Official references:
 - https://materialsproject.github.io/jobflow/tutorials/5-dynamic-flows.html
 - https://materialsproject.github.io/jobflow/stores.html
 - https://github.com/materialsproject/jobflow
 
-## Not yet validated
+## Validation evidence and limits
 
-- No real CP2K input generation/calculation, real CST QC, real HPC Skill lifecycle, real Data_analysis Reader, scientific QC or production report has run end-to-end.
-- Mock Artifact references/hashes are synthetic, not hashes of real output bytes.
-- Retry policy is retained/validated but automatic retry execution is not implemented.
-- Only GEO_OPT → ENERGY is supported; PDOS/charge branches and arbitrary user-declared branches remain future registered operations.
+Latest Actions run on this branch: 69 tests, 67 passed, 2 optional upstream-source tests skipped; compileall passed. Tests cover the Mock DAG, injected SSH/SCP/Slurm command construction, submission reconciliation, process locking, Data_analysis API order, fake real-adapter GEO_OPT → ENERGY execution, failure gates, hashes and Evidence handoff.
+
+GitHub Actions does not access real HPC. The actual user's SSH profile, cluster configuration, resource permissions, module availability, CP2K runtime, Data_analysis checkout and resulting scientific outputs remain unverified until a read-only local preflight and separately approved execution are performed.
+
+Only GEO_OPT → ENERGY is supported by the bounded real adapter. PDOS, charge analysis, AIMD, arbitrary branching and automatic retry remain outside this increment.
