@@ -1,134 +1,59 @@
-- **Detailed Agent execution prompt:** [Upstream remediation task instructions](docs/AGENT_EXECUTION_PROMPT_UPSTREAM_REMEDIATION_v1.0.0.md)
-
 # Coordination DFT Publication Pipeline
 
-An independent, reusable Skill and deterministic workflow engine for coordinating atomistic model review, CP2K DFT calculations on HPC systems, reproducible numerical analysis, publication-quality figures, transferable visualization data, and manuscript-ready computational reports.
+An independent, reusable Skill and deterministic workflow engine for coordinating atomistic model review, CP2K DFT calculations on existing HPC Skills, reproducible numerical analysis, publication-quality figures and manuscript-ready computational reports.
 
-## Project status
+## Governing objective
 
-The governing development baseline is [`TASK_PLAN_v1.0.0.md`](TASK_PLAN_v1.0.0.md). Execution progress belongs in [`STATUS.md`](STATUS.md).
+TASK_PLAN_v1.0.0.md remains the authoritative and unchanged project baseline. The intended lifecycle is:
 
-Architecture ownership is defined in [`docs/ARCHITECTURE_OWNERSHIP.md`](docs/ARCHITECTURE_OWNERSHIP.md). Source-level findings are in [`docs/EXISTING_SKILL_CAPABILITY_AUDIT.md`](docs/EXISTING_SKILL_CAPABILITY_AUDIT.md). The upstream gap-remediation baseline remains the prerequisite for extending the current MVP into a broader workflow engine; progress is tracked in [`docs/UPSTREAM_REMEDIATION_STATUS.md`](docs/UPSTREAM_REMEDIATION_STATUS.md). External tool choices are recorded in [`docs/EXTERNAL_TOOL_SELECTION.md`](docs/EXTERNAL_TOOL_SELECTION.md).
+Calculation plan → compiled task DAG → real calculation execution → monitoring/retrieval → CST validation → Data_analysis → result-driven next tasks → complete report.
 
-The first validation workflow is a user-frozen CO-reduction ketene-selectivity protocol (v4.1). Its chemistry and numerical settings must remain in a separate validation-project configuration; they are not generic defaults of this Skill.
+The existing synchronous PipelineRunner is the foundational post-processing MVP only. It is one node in the larger workflow and is not the final workflow engine.
 
-## Design principles
+## Current implementation
 
-- Reuse the user's existing `chem-scitoolkit`, `BeiLong_HPC`, `UCAS_hpc`, and `Data_analysis` Skills through audited interfaces.
-- Present one complete model-review package before production calculations.
-- Freeze approved models by SHA256.
-- Use deterministic scripts for calculations, numerical analysis, QC, and plotting.
-- Orchestrate HPC jobs through existing backends with bounded submission, provenance, and recovery.
-- Do not silently change scientific methods or thresholds.
-- Deliver publication figures together with transferable data and regeneration scripts.
-- Generate manuscript text only from validated execution records and results.
+See docs/WORKFLOW_ENGINE_MVP.md:
+- Versioned JSON CalculationPlan v1.0; optional YAML when PyYAML is installed.
+- Deterministic validation and initial GEO_OPT task compilation.
+- SQLite Workflow Run/task/attempt/event persistence.
+- Result-driven ENERGY expansion only after convergence QC and an optimized-structure Artifact hash.
+- Resume with the persisted Job ID; no duplicate submission on the recovery path.
+- CLI: plan, validate, run, status, resume, report.
+- Mock lifecycle tests; Mock mode does not run CP2K or validate science.
 
-## Planned user-facing deliverables
+Real HPC is not enabled. Both HPC Skills have job-record scripts, but the scripts start after a Slurm Job ID exists and do not expose complete machine-callable stage/submit/poll/retrieve APIs. Pipeline will not reimplement SSH/SCP/Slurm or pretend this gap is solved.
 
-1. Article-ready Computational Details.
-2. Publication-ready figures and their transferable data/scripts.
-3. Article-ready Results and Discussion.
-4. Supplementary numerical tables, QC reports, and provenance package.
+## Quick start
 
-## Agent handoff
+    python -m pipeline_contracts.cli plan examples/cp2k_geo_opt_energy_plan.json
+    python -m pipeline_contracts.cli validate examples/cp2k_geo_opt_energy_plan.json
+    python -m pipeline_contracts.cli run examples/cp2k_geo_opt_energy_plan.json --mock
+    python -m pipeline_contracts.cli run examples/cp2k_geo_opt_energy_plan.json
 
-Start with [`AGENT_START_HERE.md`](AGENT_START_HERE.md). The scoped upstream API work and narrow synchronous post-processing MVP are in place; further workflow-engine phases still require owner-reviewed upstream interfaces.
+The example plan contains demonstration method/resource values only. Replace them with the approved scientific configuration and existing backend resource-profile alias before use. Validation does not certify scientific appropriateness.
 
-## Parallel adapter preparation
+SQLite defaults to <project_root>/.pipeline/workflow.sqlite. Use --state-db to choose another path. Do not place secrets or private HPC configuration in the plan or repository.
 
-The Pipeline-side contract and Mock adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). Optional real adapters bind the Agent A Data_analysis and chem-scitoolkit APIs without copying upstream code. Data_analysis remains the Artifact/Analysis Run/Evidence owner; the DFT reader adapter resolves source Artifact IDs through the official Data_analysis resolver, persists JSON-compatible reader results under `data/derived/`, registers them with `register_derived_artifact()`, then creates an Analysis Run that references the registered output before normalization and Evidence packaging.
+## Existing post-processing MVP
 
-- `RealDataAnalysisAdapter`: DFT reader discovery/read, operation discovery/dispatch, project-backed Analysis Run creation, normalized-result packaging and DFT Evidence Package.
-- `RealCSTAdapter`: finite CP2K builder, task-aware output validation, charge/PDOS/Cube/vacuum/ASE helpers and figure-profile functions.
-- `MockCSTAdapter`, `MockDataAnalysisAdapter` and `MockHpcAdapter` remain available and unchanged for contract tests.
+PipelineRunner remains available for already registered CP2K outputs:
+input Artifact → optional CST validation → Data_analysis Reader → derived Artifact → Analysis Run / Evidence.
 
-Real Data_analysis use requires a registered source Artifact, its SHA-256 and the DA project root. `resolve_artifact_path()` and `register_derived_artifact()` own input resolution, custody checks and derived registration; Pipeline never reads DA registry files. Explicit local URI support is a compatibility fallback only when no official/injected resolver exists and remains subject to input-hash and DA provenance verification. Non-JSON-serializable results or registration failures remain visible as warnings with no invented output Artifact. Scientific QC stays `not_assessed`. Optional live source tests require explicitly supplied `DATA_ANALYSIS_SOURCE_ROOT` and/or `CHEM_SCI_TOOLKIT_SOURCE_ROOT`; public CI does not check out private source branches.
+See examples/postprocess_existing_cp2k_output.py. It is not a substitute for the workflow controller.
 
-Run the standard-library test suite with:
+## Architecture and safety
 
-```bash
-python -m unittest discover -s tests -v
-python -m compileall -q pipeline_contracts tests
-```
+- Computation--pipeline owns plan validation, task DAG, task identity, workflow state, routing, QC gates and report assembly.
+- chem-scitoolkit owns CP2K construction/validation and specialist scientific utilities.
+- Data_analysis owns Artifact registration/storage, Analysis Runs, provenance and Evidence.
+- BeiLong_HPC and UCAS_hpc own their respective authentication, transfer, Slurm and job-record procedures.
+- Scientific parameters are never modified automatically without an explicit authorized recovery rule.
+- One coordinator; no hidden worker orchestration.
+- Public CI runs no production calculations.
 
 ## Development
 
-Implementation must follow the phases and acceptance criteria in `TASK_PLAN_v1.0.0.md`. Do not treat the presence of a script as proof that its scientific function is validated.
+    python -m unittest discover -s tests -v
+    python -m compileall -q pipeline_contracts tests examples
 
-## Minimal Pipeline MVP — existing CP2K output post-processing
-
-The first synchronous coordinator is available as a Python API. It runs one linear task:
-
-\`\`\`text
-input Artifact IDs
-    → optional CST validation
-    → Data_analysis Reader
-    → derived JSON Artifact
-    → Analysis Run / Provenance
-    → Evidence Package
-    → PipelineTaskResult
-\`\`\`
-
-It does not submit CP2K, AIMD, Slurm or HPC jobs. The runner requires explicit adapter injection; it never silently falls back to Mock adapters.
-
-### Real Data_analysis example
-
-See [examples/postprocess_existing_cp2k_output.py](examples/postprocess_existing_cp2k_output.py). The example reads an already registered CP2K output Artifact by ID, optionally calls RealCSTAdapter output validation, and returns the Analysis Run ID, derived Artifact ID and Evidence Package ID.
-
-The environment must already expose the owner-approved Data_analysis source/API and any selected Reader/CST dependencies; Pipeline does not install the private upstream branch automatically. For PowerShell:
-
-\`\`\`powershell
-$env:DATA_ANALYSIS_PROJECT_ROOT = "E:\Data_analysis_Project"
-$env:CP2K_OUTPUT_ARTIFACT_ID = "ART-..."
-$env:CP2K_RUN_TYPE = "ENERGY"
-python examples/postprocess_existing_cp2k_output.py
-\`\`\`
-
-The example uses only the Artifact ID; resolve_artifact_path(project_root, artifact_id) resolves the registered input. Input SHA-256 and format metadata are optional manifest fields. The real Data_analysis resolver and Analysis Run creator verify the registered Artifact and SHA-256.
-
-### Python API
-
-\`\`\`python
-from pathlib import Path
-from pipeline_contracts import (
-    PipelineRunner, PipelineTaskManifest,
-    RealCSTAdapter, RealDataAnalysisAdapter,
-)
-
-project_root = Path(r"E:\Data_analysis_Project")
-artifact_id = "ART-CP2K-OUTPUT"
-
-runner = PipelineRunner(
-    data_analysis_adapter=RealDataAnalysisAdapter(project_root),
-    cst_adapter=RealCSTAdapter(),
-)
-task = PipelineTaskManifest(
-    task_id="CP2K-POSTPROCESS-001",
-    project_root=project_root,
-    input_artifact_ids=(artifact_id,),
-    operation="dft.artifact.read",
-    parameters={"reader_id": "cp2k-output-tools"},
-    input_artifact_formats={artifact_id: "cp2k_output"},
-    cst_validation={
-        "operation": "cp2k.validate_output",
-        "parameters": {"run_type": "ENERGY"},
-        "required": False,
-    },
-)
-result = runner.run(task)
-print(result.status, result.analysis_run_id)
-print([item.artifact_id for item in result.output_artifacts])
-print((result.evidence_package or {}).get("evidence_package_id"))
-\`\`\`
-
-When optional CST dependencies are unavailable, the runner records a warning and continues to Data_analysis. A required CST stage that is unavailable stops the workflow. A failed Reader or failed derived registration never returns a successful task result.
-
-### Mock end-to-end example
-
-Inject MockCSTAdapter() and MockDataAnalysisAdapter() to exercise the same orchestration and reference chain without reading project data or generating scientific values. Mock Analysis Run / Evidence objects are marked execution_mode="mock" and qc_status="not_evaluated".
-
-
-
-## Workflow Engine
-
-A calculation-plan-driven workflow engine is now under development on this branch.
+STATUS.md records implementation and real-integration gaps. Mock tests are not scientific validation.
