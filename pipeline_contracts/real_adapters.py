@@ -212,6 +212,30 @@ class RealDataAnalysisAdapter:
         self.artifact_path_resolver = artifact_path_resolver
         self.data_analysis_version = data_analysis_version or _package_version("scientific-data-analysis")
 
+    def resolve_artifact_path(self, artifact: ArtifactRef) -> Path:
+        """Resolve an Artifact ID through Data_analysis for downstream validators.
+
+        The official resolver validates registry custody, project containment,
+        symlinks and the registered file SHA. A caller-provided SHA, when present,
+        is additionally compared with the resolved bytes.
+        """
+        if artifact.mock:
+            raise ContractError("real Data_analysis resolver refuses mock Artifact references")
+        api = self.api or load_data_analysis_api()
+        path = _local_artifact_path(
+            artifact,
+            project_root=self.project_root,
+            resolver=self.artifact_path_resolver,
+            api=api,
+        )
+        if artifact.sha256:
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual.lower() != artifact.sha256.lower():
+                raise ValueError(
+                    f"resolved Artifact SHA-256 does not match ArtifactRef for {artifact.artifact_id}"
+                )
+        return path
+
     def _failure(
         self,
         request: AnalysisRequest,
@@ -301,16 +325,7 @@ class RealDataAnalysisAdapter:
             reader_results: list[dict[str, Any]] = []
             reader_catalogues: list[dict[str, Any]] = []
             for artifact in request.input_artifacts:
-                if not artifact.sha256:
-                    raise ContractError(
-                        f"Artifact {artifact.artifact_id} must carry a verified SHA-256 before real DFT reading"
-                    )
-                path = _local_artifact_path(
-                    artifact,
-                    project_root=self.project_root,
-                    resolver=self.artifact_path_resolver,
-                    api=api,
-                )
+                path = self.resolve_artifact_path(artifact)
                 format_id = artifact.format_id or request.parameters.get("format_id")
                 candidates = api.list_dft_readers(format_id) if format_id else api.list_dft_readers()
                 reader_catalogues.append({
@@ -337,11 +352,13 @@ class RealDataAnalysisAdapter:
                 result_record = dict(read_result)
                 result_record["pipeline_artifact_id"] = artifact.artifact_id
                 actual_hash = result_record.get("source_sha256")
-                if not actual_hash or str(actual_hash).lower() != artifact.sha256.lower():
+                if not actual_hash or (
+                    artifact.sha256 and str(actual_hash).lower() != artifact.sha256.lower()
+                ):
                     result_record["status"] = "artifact_hash_mismatch"
                     result_record["error"] = (
                         f"Data_analysis read hash {actual_hash!r} does not match "
-                        f"Pipeline ArtifactRef hash {artifact.sha256}"
+                        f"the supplied ArtifactRef SHA-256 {artifact.sha256!r}"
                     )
                 reader_results.append(result_record)
 
