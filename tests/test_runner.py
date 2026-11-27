@@ -110,6 +110,38 @@ class PipelineRunnerMockTests(unittest.TestCase):
             self.assertTrue(any(d.code == "MOCK_CST_WARNING" for d in result.diagnostics))
             self.assertEqual(result.qc_status, "not_evaluated")
 
+    def test_unavailable_official_resolver_is_reported_as_unavailable(self):
+        class UnavailableResolver:
+            execution_mode = "real"
+
+            def resolve_artifact_path(self, artifact):
+                raise RuntimeError("Data_analysis DFT API is unavailable in this runtime")
+
+            def analyze(self, request):
+                raise AssertionError("Reader must not run after resolver unavailability")
+
+        with tempfile.TemporaryDirectory() as temp:
+            result = PipelineRunner(data_analysis_adapter=UnavailableResolver()).run(
+                self._manifest(Path(temp), cst_validation=None)
+            )
+            self.assertEqual(result.status, TaskStatus.UNAVAILABLE)
+            self.assertEqual(result.stages[0].status, TaskStatus.UNAVAILABLE)
+            self.assertIn("unavailable", result.error.lower())
+            self.assertIsNone(result.analysis_outcome)
+
+    def test_cst_failure_stops_before_data_analysis(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data_analysis = MockDataAnalysisAdapter()
+            cst = MockCSTAdapter(status=TaskStatus.FAILED)
+            result = PipelineRunner(
+                data_analysis_adapter=data_analysis, cst_adapter=cst
+            ).run(self._manifest(Path(temp)))
+
+            self.assertEqual(result.status, TaskStatus.FAILED)
+            self.assertIsNone(result.analysis_outcome)
+            self.assertIsNone(data_analysis.last_request)
+            self.assertFalse(result.output_artifacts)
+
     def test_reader_failure_stops_pipeline_without_output_or_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
             data_analysis = MockDataAnalysisAdapter(
