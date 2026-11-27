@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+import json
+from collections import Counter
 
 from pipeline_contracts.plan_compiler import ExtractedBlock, build_project_manifest, detect_conflicts
 from projects.corr_dft_v4_1.plan_compiler import _profile_provenance
@@ -192,6 +194,12 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         profile = load_v41_profile()
         _field_provenance, reconciliation = _profile_provenance(manifest, profile)
         by_field = {item["field"]: item for item in reconciliation}
+        print("RUN04_PROFILE_STATUS_COUNTS=" + json.dumps(dict(Counter(item["status"] for item in reconciliation)), ensure_ascii=False))
+        print("RUN04_PROFILE_STATUS_ROWS=" + json.dumps(
+            [{"field": item["field"], "status": item["status"], "docx_status": item["docx_status"],
+              "evidence_ids": item["docx_evidence_ids"]} for item in reconciliation],
+            ensure_ascii=False,
+        ))
 
         consistent_fields = [
             "systems.Cu-20.support_atom_count",
