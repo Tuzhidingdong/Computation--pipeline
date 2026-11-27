@@ -34,6 +34,17 @@ The first validation workflow is a user-frozen CO-reduction ketene-selectivity p
 
 Start with [`AGENT_START_HERE.md`](AGENT_START_HERE.md). The current prerequisite is to remediate the scoped gaps in the existing Skills and produce reviewable upstream PRs before beginning the workflow engine.
 
+## Parallel adapter preparation
+
+The Pipeline-side provisional interface and synthetic-only adapters are documented in [`docs/SKILLS_ADAPTER_CONTRACT_V0.1.md`](docs/SKILLS_ADAPTER_CONTRACT_V0.1.md). The package under `pipeline_contracts/` is limited to typed contracts, mocks and a small handoff test; it is not the workflow engine and does not assert that provisional upstream API names already exist. Real binding steps are tracked in [`docs/REAL_SKILLS_INTEGRATION_TODO.md`](docs/REAL_SKILLS_INTEGRATION_TODO.md).
+
+Run the standard-library contract suite with:
+
+```bash
+python -m unittest discover -s tests -v
+python -m compileall -q pipeline_contracts tests
+```
+
 ## Development
 
 Implementation must follow the phases and acceptance criteria in `TASK_PLAN_v1.0.0.md`. Do not treat the presence of a script as proof that its scientific function is validated.
