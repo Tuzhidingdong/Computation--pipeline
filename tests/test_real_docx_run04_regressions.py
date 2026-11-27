@@ -277,6 +277,8 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "systems.SnCu-20.complete_formula",
             "systems.Cu-20.cluster.multiplicities[0]",
             "systems.SnCu-20.support_multiplicities[0]",
+            "tasks.WP1.support_cluster_docking_orientation_count",
+            "tasks.WP1.orientation_scope",
             "tasks.WP1.isolated_fragment_spin_candidate_count",
             "tasks.WP1.summary_fragment_single_point_count",
             "tasks.WP1.mace_fmax_ev_per_angstrom",
@@ -321,8 +323,11 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         ))
 
         orientation = by_field["tasks.WP1.support_cluster_docking_orientation_count"]
-        self.assertEqual(orientation["status"], "profile_only")
-        self.assertEqual(orientation["docx_evidence_ids"], [])
+        self.assertEqual(orientation["status"], "needs_review")
+        self.assertEqual(orientation["docx_evidence_ids"], ["docx-block-000155"])
+        orientation_scope = by_field["tasks.WP1.orientation_scope"]
+        self.assertEqual(orientation_scope["status"], "needs_review")
+        self.assertEqual(orientation_scope["docx_evidence_ids"], ["docx-block-000155"])
 
         # The Profile remains isolated; no Profile-only value is inserted into DOCX claims.
         self.assertFalse(any(c.get("value") == 15 for c in manifest["claims"]))
