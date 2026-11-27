@@ -41,6 +41,16 @@ def _sha(path: Path) -> str:
     return sha256_file(path)
 
 
+def _file_uri_path(uri: str) -> Path:
+    parsed = urlparse(uri or "")
+    if parsed.scheme != "file":
+        raise RealWorkflowUnavailable("expected a local file URI from the HPC staging adapter")
+    value = unquote(parsed.path)
+    if os.name == "nt" and len(value) >= 3 and value[0] == "/" and value[2] == ":":
+        value = value[1:]
+    return Path(value)
+
+
 def _atomic_new_file(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.parent.is_symlink():
@@ -564,13 +574,7 @@ class RealCP2KWorkflowAdapter:
         return HpcTaskManifest(str(task["task_id"]), refs, payload=payload)
 
     def _register_retrieved(self, role: str, reference: ArtifactRef, job_id: str) -> ArtifactRef:
-        parsed = urlparse(reference.uri or "")
-        if parsed.scheme != "file":
-            raise RealWorkflowUnavailable(f"retrieved {role} does not have a local file URI")
-        local_value = unquote(parsed.path)
-        if os.name == "nt" and len(local_value) >= 3 and local_value[0] == "/" and local_value[2] == ":":
-            local_value = local_value[1:]
-        staged_path = Path(local_value)
+        staged_path = _file_uri_path(reference.uri or "")
         if not staged_path.is_file() or _sha(staged_path).lower() != str(reference.sha256).lower():
             raise RealWorkflowUnavailable(f"recovered {role} file failed local SHA256 verification")
         receipt = self.register_inputs(
@@ -754,11 +758,7 @@ class RealCP2KWorkflowAdapter:
             else:
                 stdout_remote = remote_workdir.rstrip("/") + "/slurm-" + job.job_id + ".out"
                 stderr_remote = remote_workdir.rstrip("/") + "/slurm-" + job.job_id + ".err"
-            local_result_files = []
-            for ref in staged_refs:
-                parsed_ref = urlparse(ref.uri or "")
-                if parsed_ref.scheme == "file":
-                    local_result_files.append(unquote(parsed_ref.path))
+            local_result_files = [str(_file_uri_path(ref.uri or "")) for ref in staged_refs]
             self.hpc.update_application_record(
                 job.job_id, success=True, marker="PROGRAM ENDED AT; CST OUTPUT CHECK PASSED",
                 result_files=local_result_files, stdout_path=stdout_remote, stderr_path=stderr_remote,
