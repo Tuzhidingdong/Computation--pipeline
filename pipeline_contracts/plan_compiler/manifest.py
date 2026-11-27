@@ -106,6 +106,23 @@ def _normalise_field_value(value: Any) -> str:
         "",
         value,
     )
+    # Canonicalise only a complete scalar numeric token. Decimal formatting
+    # differences are equivalent; the unit token remains part of the identity.
+    numeric = re.fullmatch(
+        r"([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)([a-zå/0-9^]+)?",
+        value,
+        re.I,
+    )
+    if numeric:
+        from decimal import Decimal, InvalidOperation
+        try:
+            number = Decimal(numeric.group(1))
+            number_text = format(number.normalize(), "f")
+            if number_text in {"-0", ""}:
+                number_text = "0"
+        except InvalidOperation:
+            return value
+        return number_text + (numeric.group(2) or "")
     return value
 
 
