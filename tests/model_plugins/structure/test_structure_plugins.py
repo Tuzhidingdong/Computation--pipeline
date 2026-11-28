@@ -104,7 +104,7 @@ class SourceArtifactIdentityContractTests(unittest.TestCase):
             )
             source["artifact_sha256"] = "0" * 64
             checked_path, digest, issues = validate_source_spec(source, "source")
-            self.assertIsNone(checked_path)
+            self.assertIsNotNone(checked_path)
             self.assertTrue(any("artifact_sha256" in issue for issue in issues))
             with self.assertRaisesRegex(ValueError, "artifact_sha256"):
                 read_ase_source(source, "source")
@@ -254,25 +254,31 @@ class ExplicitSolventPreflightTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             solute, water = self._files(root)
-            water["artifact_id"] = "data-analysis:water:only-id"
-            output = root / "must_not_be_created"
-            result = build_explicit_solvent_box(
-                {
-                    "solute": solute,
-                    "solvents": [{"id": "water", "count": 2, **water}],
-                    "box": {
-                        "bounds_angstrom": [[0, 0, 0], [14, 14, 14]],
-                        "pbc": [False, False, False],
-                    },
-                    "distance_tolerance_angstrom": 1.2,
-                    "random_seed": 20261128,
-                    "output_format": "xyz",
-                    "validation": {"minimum_inter_molecular_distance_angstrom": 0.6},
-                },
-                output,
-            )
-            self.assertEqual(result["status"], "NEEDS_DECISION")
-            self.assertFalse(output.exists())
+            partial_sources = [
+                {"artifact_id": "data-analysis:water:only-id"},
+                {"artifact_sha256": water["sha256"]},
+            ]
+            for partial_identity in partial_sources:
+                with self.subTest(partial_identity=partial_identity):
+                    partial_water = {**water, **partial_identity}
+                    output = root / ("must_not_be_created_" + next(iter(partial_identity)))
+                    result = build_explicit_solvent_box(
+                        {
+                            "solute": solute,
+                            "solvents": [{"id": "water", "count": 2, **partial_water}],
+                            "box": {
+                                "bounds_angstrom": [[0, 0, 0], [14, 14, 14]],
+                                "pbc": [False, False, False],
+                            },
+                            "distance_tolerance_angstrom": 1.2,
+                            "random_seed": 20261128,
+                            "output_format": "xyz",
+                            "validation": {"minimum_inter_molecular_distance_angstrom": 0.6},
+                        },
+                        output,
+                    )
+                    self.assertEqual(result["status"], "NEEDS_DECISION")
+                    self.assertFalse(output.exists())
 
     def test_wrong_source_sha_is_rejected_before_output_creation(self):
         with tempfile.TemporaryDirectory() as temp:
