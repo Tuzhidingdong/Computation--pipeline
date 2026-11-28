@@ -166,7 +166,7 @@ class _RegisteredMockAdapter:
             structure_sha256=str(task.get("input", {}).get("sha256") or
                                  _sha256(self.approved_structure_path)),
             approved_model_sha256=_sha256(self.approved_structure_path),
-            upstream_job_reference=None,
+            upstream_job_reference=task.get("_upstream_job_reference"),
             parser_id="pipeline-mock-workflow", parser_version="1",
             units={}, assumptions=("No CP2K execution was performed.",),
             warnings=("Mock result only; no scientific energy value is represented.",),
