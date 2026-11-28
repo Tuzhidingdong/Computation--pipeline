@@ -7,7 +7,9 @@ opt-in. External records are data, never runtime instructions.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -294,7 +296,14 @@ def detect_scientific_issues(
             "issue_id": issue_id, "source": dict(source), "affected_fields": [field_path],
             "related_planning_objects": related_objects or [],
             "description": description, "classification": classification,
-            "classification_basis": basis, "current_status": "IDENTIFIED",
+            "classification_basis": basis,
+            "current_status": (
+                "RESOLVED_IN_PRIOR_REVISION" if resolution and
+                (resolution.get("prior_revision") or resolution.get("decision_record_id")) else
+                "RESOLVED_AUTOMATICALLY" if classification == "SOURCE_RESOLVED" else
+                "REQUIRES_PIPELINE_REPAIR" if classification == "PIPELINE_INTERPRETATION_ISSUE" else
+                "REQUIRES_SCIENTIFIC_DECISION"
+            ),
             "source_resolution": resolution,
             "evidence_ids": sorted(set(evidence_ids)),
         })
@@ -441,7 +450,8 @@ def build_search_queries(context: Mapping[str, Any]) -> list[str]:
 
 def select_literature_databases(context: Mapping[str, Any]) -> list[str]:
     text = _flatten_text(context).casefold()
-    if any(token in text for token in _BIOMEDICAL_HINTS):
+    if any(re.search(r"\b" + re.escape(token.casefold()) + r"\b", text)
+           for token in _BIOMEDICAL_HINTS):
         return ["europepmc", "openalex", "crossref"]
     # arXiv is selected for computational, physical-science and mathematical
     # questions; OpenAlex/Crossref provide independent multidisciplinary and
@@ -772,11 +782,16 @@ def _search_with_lookup(query: str, databases: Sequence[str], *,
         else:
             logs.append({"database": database, "query": query, "status": "NOT_SELECTED"})
             continue
+        error_output = io.StringIO()
         try:
-            raw, reconciliation, urls = paper_lookup_paginate.walk(
-                api, api_query, page_size=min(50, max_records),
-                max_records=max_records, max_calls=max_calls, verbose=False,
-            )
+            # The upstream paginator's fail() helper writes the provider error to
+            # stderr then raises SystemExit. Capture that message so rate limits,
+            # malformed responses and network failures remain useful diagnostics.
+            with contextlib.redirect_stderr(error_output):
+                raw, reconciliation, urls = paper_lookup_paginate.walk(
+                    api, api_query, page_size=min(50, max_records),
+                    max_records=max_records, max_calls=max_calls, verbose=False,
+                )
             records.extend(_normalise_research_records(
                 [dict(x, database=database) if isinstance(x, Mapping) else {} for x in raw]
             ))
@@ -788,11 +803,11 @@ def _search_with_lookup(query: str, databases: Sequence[str], *,
                 "request_urls_redacted": urls, "called_at": _now(),
             })
         except BaseException as exc:
-            # The upstream CLI helper exits SystemExit for silent API failures.
             if isinstance(exc, (KeyboardInterrupt, GeneratorExit)):
                 raise
+            diagnostic = error_output.getvalue().strip() or f"{type(exc).__name__}: {exc}"
             logs.append({"database": database, "query": query, "status": "FAILED",
-                         "returned_count": 0, "diagnostic": f"{type(exc).__name__}: {exc}",
+                         "returned_count": 0, "diagnostic": diagnostic,
                          "called_at": _now()})
     return records, logs
 
@@ -830,7 +845,8 @@ def _build_decision_proposals(issues: Sequence[Mapping[str, Any]],
         option_inputs.extend(assessment.get("generated_options") or [])
         seen_options = set()
         for opt in option_inputs:
-            if not isinstance(opt, Mapping) or not opt.get("option_id"):
+            if (not isinstance(opt, Mapping) or not opt.get("option_id")
+                    or "value" not in opt or opt.get("value") is None):
                 continue
             option_id = str(opt["option_id"])
             if option_id in seen_options:

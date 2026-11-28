@@ -259,6 +259,7 @@ class ScientificIssueClassificationTests(unittest.TestCase):
         self.assertTrue(queries)
         self.assertIn("openalex", select_literature_databases(context))
         self.assertIn("crossref", select_literature_databases(context))
+        self.assertNotIn("europepmc", select_literature_databases(context))
         self.assertIn("europepmc", select_literature_databases({"discipline": "biomedical science"}))
         self.assertIn("arxiv", select_literature_databases({"discipline": "computational physics"}))
 
