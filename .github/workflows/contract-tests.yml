@@ -8,6 +8,7 @@ on:
     paths:
       - "pipeline_contracts/**"
       - "tests/**"
+      - "requirements-literature-acquisition.txt"
       - "docs/SKILLS_ADAPTER_CONTRACT_V0.1.md"
       - ".github/workflows/contract-tests.yml"
 
@@ -28,8 +29,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y packmol
-      - name: Install test dependencies
-        run: python -m pip install pytest ase jsonschema
+      - name: Install Pipeline and literature acquisition test dependencies
+        run: |
+          python -m pip install pytest ase jsonschema
+          python -m pip install -r requirements-literature-acquisition.txt
       - name: Run Scientific Planning E2E and export the generated Planning Bundle
         env:
           PLANNING_BUNDLE_EXAMPLE_PATH: ${{ runner.temp }}/scientific-planning-example/planning_bundle.json
@@ -40,6 +43,30 @@ jobs:
         with:
           name: scientific-planning-complete-mock-example
           path: ${{ runner.temp }}/scientific-planning-example/
+          if-no-files-found: warn
+      - name: Run original migrated MAIN/SI SourcePreprocessor regression tests
+        run: python -m pytest -q tests/test_source_preprocessor.py tests/test_preprocessing_pipeline.py
+      - name: Run native literature acquisition and Source Package Mock E2E
+        env:
+          LITERATURE_ACQUISITION_ARTIFACT_DIR: ${{ runner.temp }}/literature-acquisition-mock-demo
+        run: python -m pytest -q tests/test_literature_acquisition.py
+      - name: Upload Literature Source Package and Decision Dossier Mock E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: literature-acquisition-source-package-and-dossier-mock-e2e
+          path: ${{ runner.temp }}/literature-acquisition-mock-demo/
+          if-no-files-found: warn
+      - name: Run scientific reasoning and literature decision E2E (offline mock APIs)
+        env:
+          SCIENTIFIC_REASONING_ARTIFACT_DIR: ${{ runner.temp }}/scientific-reasoning-mock-demo
+        run: python -m pytest -q tests/test_scientific_reasoning_engine.py
+      - name: Upload Scientific Decision Dossier mock demonstration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-reasoning-decision-dossier-mock-demo
+          path: ${{ runner.temp }}/scientific-reasoning-mock-demo/
           if-no-files-found: warn
       - name: Run mock contract tests
         run: python -m unittest discover -s tests -v

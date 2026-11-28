@@ -40,6 +40,22 @@ class ProjectLifecycle:
           PRIMARY KEY(project_run_id, candidate_id),
           FOREIGN KEY(project_run_id) REFERENCES project_lifecycle_runs(project_run_id)
         );
+        CREATE TABLE IF NOT EXISTS scientific_research_dossiers(
+          project_run_id TEXT NOT NULL, dossier_id TEXT NOT NULL, dossier_sha256 TEXT NOT NULL,
+          json_path TEXT NOT NULL, markdown_path TEXT NOT NULL, metadata_json TEXT NOT NULL,
+          created_at REAL NOT NULL, PRIMARY KEY(project_run_id, dossier_id),
+          FOREIGN KEY(project_run_id) REFERENCES project_lifecycle_runs(project_run_id)
+        );
+        CREATE TABLE IF NOT EXISTS scientific_decision_records(
+          decision_record_id TEXT PRIMARY KEY, project_run_id TEXT NOT NULL, decision_id TEXT NOT NULL,
+          issue_id TEXT NOT NULL, field_path TEXT NOT NULL, option_id TEXT NOT NULL,
+          selected_value_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at REAL NOT NULL,
+          rationale TEXT NOT NULL, dossier_id TEXT NOT NULL, dossier_sha256 TEXT NOT NULL,
+          evidence_ids_json TEXT NOT NULL, new_project_run_id TEXT,
+          status TEXT NOT NULL,
+          UNIQUE(project_run_id, decision_id),
+          FOREIGN KEY(project_run_id) REFERENCES project_lifecycle_runs(project_run_id)
+        );
         """)
     def create(self, project_id: str, manifest: Mapping[str, Any]) -> str:
         run_id = "project-" + uuid.uuid4().hex[:16]
@@ -162,6 +178,84 @@ class ProjectLifecycle:
         if row is None:
             raise KeyError(f"no frozen approval for candidate {candidate_id}")
         return json.loads(row["record_json"])
+
+    def persist_research_dossier(self, run_id: str, dossier_id: str, dossier_sha256: str,
+                                json_path: str, markdown_path: str,
+                                metadata: Mapping[str, Any]) -> None:
+        existing = self.db.execute(
+            "SELECT dossier_sha256 FROM scientific_research_dossiers WHERE project_run_id=? AND dossier_id=?",
+            (run_id, dossier_id),
+        ).fetchone()
+        if existing and existing["dossier_sha256"] != dossier_sha256:
+            raise FileExistsError("scientific Decision Dossier identity already exists with another SHA-256")
+        self.db.execute(
+            "INSERT OR IGNORE INTO scientific_research_dossiers VALUES(?,?,?,?,?,?,?)",
+            (run_id, dossier_id, dossier_sha256, json_path, markdown_path,
+             json.dumps(dict(metadata), ensure_ascii=False, sort_keys=True), time.time()),
+        )
+        self.store.event(run_id, None, "SCIENTIFIC_DECISION_DOSSIER_CREATED",
+                         {"dossier_id": dossier_id, "dossier_sha256": dossier_sha256,
+                          "json_path": json_path, "markdown_path": markdown_path})
+
+    def research_dossiers(self, run_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM scientific_research_dossiers WHERE project_run_id=? ORDER BY created_at",
+            (run_id,),
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["metadata"] = json.loads(item.pop("metadata_json") or "{}")
+            result.append(item)
+        return result
+
+    def latest_research_dossier(self, run_id: str) -> dict | None:
+        rows = self.research_dossiers(run_id)
+        return rows[-1] if rows else None
+
+    def approved_scientific_decisions(self, run_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM scientific_decision_records WHERE project_run_id=? AND status='APPROVED' ORDER BY approved_at",
+            (run_id,),
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["selected_value"] = json.loads(item.pop("selected_value_json"))
+            item["evidence_ids"] = json.loads(item.pop("evidence_ids_json") or "[]")
+            result.append(item)
+        return result
+
+    def create_scientific_decision_record(self, *, project_run_id: str, decision_id: str,
+                                          issue_id: str, field_path: str, option_id: str,
+                                          selected_value: Any, approved_by: str, rationale: str,
+                                          dossier_id: str, dossier_sha256: str,
+                                          evidence_ids: list[str],
+                                          decision_record_id: str | None = None) -> dict:
+        if not all(str(x).strip() for x in
+                   (decision_id, issue_id, field_path, option_id, approved_by, rationale, dossier_id)):
+            raise ValueError("approval requires decision, issue, field, option, approver, rationale and dossier IDs")
+        record_id = decision_record_id or ("decision-record-" + uuid.uuid4().hex[:16])
+        now = time.time()
+        self.db.execute(
+            "INSERT INTO scientific_decision_records VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (record_id, project_run_id, decision_id, issue_id, field_path, option_id,
+             json.dumps(selected_value, ensure_ascii=False, sort_keys=True), approved_by, now,
+             rationale, dossier_id, dossier_sha256,
+             json.dumps(sorted(set(evidence_ids)), ensure_ascii=False), None, "APPROVED"),
+        )
+        self.store.event(project_run_id, None, "SCIENTIFIC_DECISION_APPROVED",
+                         {"decision_record_id": record_id, "decision_id": decision_id,
+                          "issue_id": issue_id, "field_path": field_path, "option_id": option_id,
+                          "approved_by": approved_by, "dossier_id": dossier_id,
+                          "dossier_sha256": dossier_sha256, "evidence_ids": sorted(set(evidence_ids))})
+        return {"decision_record_id": record_id, "approved_at": now, "status": "APPROVED"}
+
+    def attach_decision_revision(self, decision_record_id: str, new_project_run_id: str) -> None:
+        self.db.execute(
+            "UPDATE scientific_decision_records SET new_project_run_id=? WHERE decision_record_id=?",
+            (new_project_run_id, decision_record_id),
+        )
 
     def create_calculation_run(self, run_id: str, candidate_id: str, structure_path: str | Path,
                                plan: CalculationPlan, controller) -> str:

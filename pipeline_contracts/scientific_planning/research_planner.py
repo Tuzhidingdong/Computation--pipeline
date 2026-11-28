@@ -9,7 +9,9 @@ from .intent_compiler import _provenance
 
 
 def build_research_plan(intent: Mapping[str, Any], gaps: list[dict],
-                        dependencies: Mapping[str, list[str]] | None = None) -> dict:
+                        dependencies: Mapping[str, list[str]] | None = None,
+                        approved_decisions: list[dict] | None = None,
+                        source_resolutions: list[dict] | None = None) -> dict:
     families = list(intent.get("requested_task_families") or [])
     observables = list(intent.get("requested_observables") or [])
     refs = intent.get("source_evidence_refs", [])
@@ -49,6 +51,30 @@ def build_research_plan(intent: Mapping[str, Any], gaps: list[dict],
             "evidence_refs": refs,
         })
     decisions = [decision_for_gap(item, item.get("related_evidence_refs", [])) for item in effective_gaps]
+    approved_records = [dict(item) for item in (approved_decisions or [])]
+    source_records = []
+    for source in source_resolutions or []:
+        field_path = str(source.get("field_path") or "")
+        issue_id = str(source.get("issue_id") or "")
+        if not field_path or not issue_id:
+            raise ValueError("source resolutions require issue_id and field_path")
+        evidence_refs = list(source.get("source_evidence_refs") or [])
+        source_records.append({
+            "decision_id": "source-resolution-" + issue_id,
+            "subject": field_path,
+            "selection_mode": "A_EVIDENCE_OR_APPROVED_FACT",
+            "status": "SELECTED_FROM_EVIDENCE",
+            "selected_value": source.get("value"),
+            "source_evidence_refs": evidence_refs,
+            "policy_ref": None,
+            "applicable_scope": "Frozen DOCX source for this Project Run",
+            "candidates": [{"candidate_id": "unique-source-value", "value": source.get("value"),
+                            "evidence_refs": evidence_refs,
+                            "compatibility_status": "UNIQUE_HASH_PINNED_SOURCE_CLAIM"}],
+            "excluded_candidates": [], "assumptions": [], "uncertainties": [],
+            "requires_user_approval": False, "approval_ref": None,
+            "missing_information": [], "minimum_questions": [],
+        })
     body = {
         "schema_version": PLANNING_SCHEMA_VERSION, "plan_id": "",
         "intent_ref": {
@@ -58,7 +84,7 @@ def build_research_plan(intent: Mapping[str, Any], gaps: list[dict],
         },
         "intent_sha256": intent["planning_metadata"]["object_sha256"],
         "objectives": objectives, "work_packages": work_packages,
-        "decision_records": decisions, "evidence_gaps": effective_gaps,
+        "decision_records": decisions + source_records + approved_records, "evidence_gaps": effective_gaps,
         "assumptions": [],
         "status": "BLOCKED" if effective_gaps else "READY_FOR_MODEL_AND_METHOD_PLANNING",
         "provenance": _provenance(refs, intent["planning_metadata"]["object_sha256"],
@@ -68,4 +94,4 @@ def build_research_plan(intent: Mapping[str, Any], gaps: list[dict],
         status="BLOCKED" if effective_gaps else "READY",
         source_evidence_refs=refs,
         upstream_sha256s={"scientific_intent": intent["planning_metadata"]["object_sha256"]},
-        selection_records=decisions, missing_items=effective_gaps)
+        selection_records=decisions + source_records + approved_records, missing_items=effective_gaps)

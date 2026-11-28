@@ -1,0 +1,1 @@
+# Optional local full-text evidence retrieval plugin only; not required by Pipeline core.\npaper-qa==2026.8.12\n

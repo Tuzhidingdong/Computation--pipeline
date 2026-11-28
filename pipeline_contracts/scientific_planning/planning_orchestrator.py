@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -363,9 +364,69 @@ def _planning_status_legacy(kind: str, status: str) -> str:
     }.get(kind, "DRAFT")
 
 
+def _route_scientific_field_path(field_path: str) -> tuple[str, list[str]]:
+    """Map public planning object paths to their existing Project Profile sections."""
+    tokens = [part for part in str(field_path).split(".") if part]
+    if len(tokens) >= 2 and tokens[0] == "scientific_planning":
+        tokens = tokens[1:]
+    if not tokens:
+        raise ValueError("empty scientific field path")
+    aliases = {
+        "scientific_intent": "intent", "intent": "intent",
+        "research_goal": "intent", "requested_observables": "intent",
+        "requested_task_families": "intent", "constraints": "intent",
+        "model_recipe": "model", "model": "model", "models": "model",
+        "method_plan": "method", "method": "method",
+        "execution_plan": "execution", "execution": "execution",
+        "qc_plan": "qc", "qc": "qc",
+    }
+    section = aliases.get(tokens[0])
+    if section is None:
+        raise ValueError(f"unsupported scientific planning section: {tokens[0]}")
+    if tokens[0] in {"research_goal", "requested_observables", "requested_task_families", "constraints"}:
+        tokens = [tokens[0]] + tokens[1:]
+    else:
+        tokens = tokens[1:]
+    if not tokens or any("[" in part or "]" in part for part in tokens):
+        raise ValueError("only explicit object field paths are supported")
+    return section, tokens
+
+
+def filter_resolved_manifest_fields(
+    manifest: Mapping[str, Any],
+    *,
+    source_resolutions: list[Mapping[str, Any]] | None = None,
+    decision_overrides: list[Mapping[str, Any]] | None = None,
+) -> tuple[dict, set[str]]:
+    """Filter only explicitly source-resolved or user-approved field paths.
+
+    This is deliberately exact-path scoped. Unrelated unresolved fields,
+    diagnostics and Profile reconciliation entries remain untouched.
+    """
+    resolved_fields = {
+        str(item.get("field_path"))
+        for item in list(source_resolutions or []) + list(decision_overrides or [])
+        if isinstance(item, Mapping) and item.get("field_path")
+    }
+    result = deepcopy(dict(manifest))
+    if not resolved_fields:
+        return result, resolved_fields
+    field_aliases = ("field_path", "field", "path")
+    for key in ("unresolved_definitions", "diagnostics",
+                "unresolved_structured_fields", "profile_reconciliation"):
+        result[key] = [
+            item for item in manifest.get(key, [])
+            if not isinstance(item, Mapping) or
+            not any(str(item.get(field) or "") in resolved_fields for field in field_aliases)
+        ]
+    return result, resolved_fields
+
+
 def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None = None,
                      data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
-                     runtime_verified_version: str | None = None) -> dict:
+                     runtime_verified_version: str | None = None,
+                     decision_overrides: list[Mapping[str, Any]] | None = None,
+                     source_resolutions: list[Mapping[str, Any]] | None = None) -> dict:
     """Compile a deterministic bundle from one existing Project Run and its Project Profile."""
     info = pipeline.lifecycle.run_info(run_id)
     project_id = str(info["project_id"])
@@ -375,7 +436,76 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     config = profile.get("scientific_planning") or profile.get("planning") or {}
     if not isinstance(config, Mapping):
         raise ValueError("Project Profile scientific_planning section must be an object")
-    config = dict(config)
+    config = json.loads(json.dumps(dict(config), ensure_ascii=False))
+    approved_decision_objects = []
+    for override in decision_overrides or []:
+        if not isinstance(override, Mapping):
+            raise TypeError("decision_overrides must contain objects")
+        field_path = str(override.get("field_path") or "")
+        section, tokens = _route_scientific_field_path(field_path)
+        if not tokens or any(not token or token.startswith("_") for token in tokens):
+            raise ValueError(f"unsupported approved scientific field path: {field_path!r}")
+        target_cfg = config.setdefault(section, {})
+        if not isinstance(target_cfg, dict):
+            raise ValueError(f"scientific_planning.{section} must be an object before an approved override")
+        cursor = target_cfg
+        for token in tokens[:-1]:
+            child = cursor.setdefault(token, {})
+            if not isinstance(child, dict):
+                raise ValueError(f"approved field path collides with a non-object: {field_path}")
+            cursor = child
+        cursor[tokens[-1]] = override.get("value")
+        decision_id = str(override.get("decision_id") or "")
+        decision_record_id = str(override.get("decision_record_id") or "")
+        dossier_sha = str(override.get("dossier_sha256") or "")
+        if not decision_id or not decision_record_id or len(dossier_sha) != 64:
+            raise ValueError("approved override lacks its persisted DecisionRecord and dossier SHA-256")
+        approval_sha = canonical_sha256(dict(override))
+        approved_decision_objects.append({
+            "decision_id": decision_id, "subject": field_path,
+            "selection_mode": "C_MISSING_DECISIVE_INFORMATION",
+            "status": "APPROVED_BY_USER", "selected_value": override.get("value"),
+            "source_evidence_refs": list(override.get("source_evidence_refs") or []),
+            "policy_ref": None, "applicable_scope": f"Project Run revision {run_id}",
+            "candidates": [], "excluded_candidates": [], "assumptions": [],
+            "uncertainties": ["User selected this option after reviewing the persisted literature Decision Dossier."],
+            "requires_user_approval": False,
+            "approval_ref": {"object_type": "DecisionRecord", "object_id": decision_record_id,
+                             "schema_version": "1.0", "sha256": approval_sha},
+            "missing_information": [],
+            "minimum_questions": [],
+        })
+    source_resolution_objects = []
+    source_resolved_fields = set()
+    for resolution in source_resolutions or []:
+        if not isinstance(resolution, Mapping):
+            raise TypeError("source_resolutions must contain objects")
+        field_path = str(resolution.get("field_path") or "")
+        issue_id = str(resolution.get("issue_id") or "")
+        if not field_path or not issue_id or not isinstance(resolution.get("source_evidence_refs"), list):
+            raise ValueError("source resolution lacks issue_id, field_path or evidence references")
+        source_resolved_fields.add(field_path)
+        try:
+            section, tokens = _route_scientific_field_path(field_path)
+        except ValueError:
+            section, tokens = "", []
+        if tokens and not any("[" in token or "]" in token for token in tokens):
+            target_cfg = config.setdefault(section, {})
+            if not isinstance(target_cfg, dict):
+                raise ValueError(f"scientific_planning.{section} must be an object before applying a source resolution")
+            cursor = target_cfg
+            for token in tokens[:-1]:
+                child = cursor.setdefault(token, {})
+                if not isinstance(child, dict):
+                    raise ValueError(f"source resolution path collides with a non-object: {field_path}")
+                cursor = child
+            cursor[tokens[-1]] = resolution.get("value")
+        source_resolution_objects.append(dict(resolution))
+    planning_manifest, resolved_fields = filter_resolved_manifest_fields(
+        manifest, source_resolutions=source_resolutions,
+        decision_overrides=decision_overrides,
+    )
+
     if runtime_verified_version is not None:
         if not isinstance(runtime_verified_version, str):
             raise TypeError("runtime_verified_version must be supplied as an independent version string")
@@ -383,6 +513,21 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     refs = evidence_refs(manifest)
     profile_ref = _profile_evidence_ref(resolved_profile_path, profile_sha, project_id)
     all_refs = list(refs) + ([profile_ref] if profile_ref else [])
+    known_ref_ids = {str(x.get("evidence_id")) for x in all_refs}
+    for source_group in (source_resolutions or [], decision_overrides or []):
+        for record in source_group:
+            for evidence_ref in record.get("source_evidence_refs", []):
+                if not isinstance(evidence_ref, Mapping):
+                    raise TypeError("decision/source resolution EvidenceRef must be an object")
+                evidence_id = str(evidence_ref.get("evidence_id") or "")
+                source_sha = str(evidence_ref.get("source_sha256") or "")
+                locator = evidence_ref.get("locator") or {}
+                if (not evidence_id or not re.fullmatch(r"[0-9a-fA-F]{64}", source_sha)
+                        or not isinstance(locator, Mapping) or not locator.get("kind") or not locator.get("value")):
+                    raise ValueError("decision/source resolution EvidenceRef lacks ID, SHA-256 or precise locator")
+                if evidence_id not in known_ref_ids:
+                    all_refs.append(dict(evidence_ref))
+                    known_ref_ids.add(evidence_id)
     resource_cfg_for_ref = (config.get("execution") or {}).get("resource_profile") or {}
     resource_source_ref = str(resource_cfg_for_ref.get("source_ref") or "")
     if resource_source_ref:
@@ -402,6 +547,10 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
         "project_profile_sha256": profile_sha,
         "planning_config": config,
     }
+    if decision_overrides:
+        fingerprint_payload["approved_decision_overrides"] = list(decision_overrides)
+    if source_resolutions:
+        fingerprint_payload["source_resolutions"] = list(source_resolutions)
     # Preserve old same-input fingerprints when there is no external runtime
     # observation; a supplied observation becomes part of this frozen input.
     if runtime_verified_version is not None:
@@ -454,13 +603,17 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
             "idempotent_reuse": True,
         }
 
-    intent, intent_gaps = compile_intent(project_id, manifest, config, all_refs)
+    intent, intent_gaps = compile_intent(project_id, planning_manifest, config, all_refs)
     research_config = config.get("research_plan") or {}
     research_dependencies = (
         research_config.get("dependencies", {})
         if isinstance(research_config, Mapping) else {}
     )
-    research = build_research_plan(intent, intent_gaps, dependencies=research_dependencies)
+    research = build_research_plan(
+        intent, intent_gaps, dependencies=research_dependencies,
+        approved_decisions=approved_decision_objects,
+        source_resolutions=source_resolution_objects,
+    )
     upstream = {
         "scientific_intent": intent["planning_metadata"]["object_sha256"],
         "research_plan": research["planning_metadata"]["object_sha256"],
@@ -1126,6 +1279,8 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
         "project_profile_sha256": profile_sha, "planning_config": config,
         "runtime_verified_version": runtime_verified_version,
         "input_fingerprint": input_fingerprint,
+        "approved_decision_overrides": list(decision_overrides or []),
+        "source_resolutions": source_resolution_objects,
         "data_analysis_project_root": str(data_analysis_project_root or (run_root / "model_candidates")),
         "structure_path": structure_path, "artifact_ref": artifact_ref,
         "model_plugin_result": model_plugin_result,

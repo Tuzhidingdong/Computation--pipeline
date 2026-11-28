@@ -64,6 +64,45 @@ def _project_cli(args) -> int:
                 data_analysis_project_root=args.data_analysis_project_root,
                 runtime_verified_version=args.runtime_verified_version,
             )
+        elif args.project_action == "research":
+            integrations = {}
+            if args.integration_factory:
+                integrations = load_integration_factory(
+                    args.integration_factory,
+                    project_root=pipeline._run_root(args.project_run_id),
+                    run_root=pipeline._run_root(args.project_run_id),
+                )
+            result = pipeline.research_scientific(
+                args.project_run_id, profile_path=args.project_profile,
+                skill_executor=integrations.get("skill_executor"),
+                allow_external_ai=args.allow_external_ai,
+                paperqa2_documents=args.paperqa2_document or (),
+                paperqa2_consent=args.allow_paperqa2_processing,
+                allow_local_evidence_to_external_ai=args.allow_local_evidence_to_external_ai,
+                data_analysis_api=integrations.get("data_analysis_api"),
+                data_analysis_project_root=args.data_analysis_project_root,
+                full_text_enabled=args.full_text,
+                literature_acquisition_config_path=args.literature_config,
+                max_full_text_candidates=args.max_full_text_candidates,
+                max_records=args.max_records, max_calls=args.max_calls,
+            )
+        elif args.project_action == "decisions":
+            result = pipeline.scientific_decisions(args.project_run_id)
+        elif args.project_action == "approve-decision":
+            integrations = {}
+            if args.integration_factory:
+                integrations = load_integration_factory(
+                    args.integration_factory,
+                    project_root=pipeline._run_root(args.project_run_id),
+                    run_root=pipeline._run_root(args.project_run_id),
+                )
+            result = pipeline.approve_scientific_decision(
+                args.project_run_id, decision_id=args.decision_id,
+                option_id=args.option_id, approved_by=args.approved_by,
+                rationale=args.rationale, profile_path=args.project_profile,
+                data_analysis_api=integrations.get("data_analysis_api"),
+                data_analysis_project_root=args.data_analysis_project_root,
+            )
         elif args.project_action == "approve":
             result = pipeline.approve_model(
                 args.project_run_id, candidate_id=args.candidate_id,
@@ -134,6 +173,26 @@ def main(argv=None):
         "--runtime-verified-version",
         help="independent version observed from the installed runtime; never inferred from Project Profile or source documents",
     )
+    p=project_sub.add_parser("research", help="classify scientific issues and run bounded academic literature research")
+    p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
+    p.add_argument("--project-profile"); p.add_argument("--integration-factory",help="optional existing host factory returning skill_executor and/or Data_analysis API")
+    p.add_argument("--data-analysis-project-root",help="existing Data_analysis project root to reuse while compiling Source Package Artifacts")
+    p.add_argument("--full-text",action="store_true",help="after literature metadata search, download supported publisher MAIN/SI full text and preprocess Source Packages")
+    p.add_argument("--literature-config",help="local-only literature acquisition JSON config; Cookie files are referenced by path and never embedded")
+    p.add_argument("--max-full-text-candidates",type=int,help="override the configured maximum full-text targets for this Project Run")
+    p.add_argument("--allow-external-ai",action="store_true",help="explicitly allow the configured host Skill executor to assess retrieved evidence")
+    p.add_argument("--paperqa2-document",action="append",default=[],help="local paper file for optional PaperQA2")
+    p.add_argument("--allow-paperqa2-processing",action="store_true",help="consent to send selected local papers to the configured PaperQA2 provider")
+    p.add_argument("--allow-local-evidence-to-external-ai",action="store_true",help="separately allow local PaperQA2 excerpts to be passed to the optional external Skill executor")
+    p.add_argument("--max-records",type=int,default=100); p.add_argument("--max-calls",type=int,default=8)
+    p=project_sub.add_parser("decisions", help="display the latest Scientific Decision Dossier")
+    p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
+    p=project_sub.add_parser("approve-decision", help="approve one proposed scientific option and recompile a new Project Run revision")
+    p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
+    p.add_argument("--decision-id",required=True); p.add_argument("--option-id",required=True)
+    p.add_argument("--approved-by",required=True); p.add_argument("--rationale",required=True)
+    p.add_argument("--project-profile"); p.add_argument("--integration-factory",help="optional existing Data_analysis API factory")
+    p.add_argument("--data-analysis-project-root")
     p=project_sub.add_parser("approve", help="explicitly approve and freeze a reviewed model candidate")
     p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
     p.add_argument("--candidate-id",required=True); p.add_argument("--approver",required=True)

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "repository": "https://github.com/Future-House/paper-qa",
+  "release_tag": "v2026.08.12",
+  "commit_sha": "57e89f7223b0960d5ee5ea048c69e3c47e088572",
+  "package": "paper-qa==2026.8.12",
+  "license": "Apache-2.0",
+  "license_path": "LICENSE",
+  "license_git_blob_sha": "7d89c6e2d7dea1388df7efe33222068cdd784f8b",
+  "python_requirement": ">=3.11",
+  "optional_only": true,
+  "integration_contract": "paperqa.Docs + paperqa.Settings. LiteLLM-compatible provider settings are supplied by the caller. Pipeline selects no default model, key or remote provider."
+}

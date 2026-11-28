@@ -228,6 +228,7 @@
           "enum": [
             "SELECTED_FROM_EVIDENCE",
             "SELECTED_BY_POLICY",
+            "APPROVED_BY_USER",
             "BLOCKED",
             "AWAITING_USER_APPROVAL"
           ]
