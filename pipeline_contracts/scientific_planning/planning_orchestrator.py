@@ -822,6 +822,17 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
         and bool(str(software_record.get("provenance") or "").strip())
         and str(software_record.get("source_ref") or "") in known_method_source_ids
     )
+    # A version string and an independent runtime observation are not sufficient
+    # by themselves: the requested software_version must also be source-backed.
+    # Tighten Agent A's capability flag after resolving the source refs in this run.
+    route = dict(route)
+    route["software_version_source_backed"] = software_source_backed
+    if not software_source_backed:
+        route["can_enter_real_preflight"] = False
+        route["blockers"] = list(route.get("blockers") or [])
+        route["blockers"].append(
+            "Real preflight requires source-backed software_version evidence."
+        )
     if mock_execution and not software_source_backed:
         method_gaps.append(evidence_gap(
             "MOCK_METHOD_SOFTWARE_VERSION_SOURCE_MISSING",

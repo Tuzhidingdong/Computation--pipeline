@@ -770,5 +770,48 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 _CURRENT_API = None
 
 
+    def test_e2e_5_real_preflight_requires_source_backed_software_version(self):
+        global _CURRENT_API
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            api, state_db, output_root, run_id, profile_path, data_root = _setup_project(root)
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            method = profile["scientific_planning"]["method"]
+            method["approved"] = False
+            method.pop("approved_profile_fields", None)
+            profile["scientific_planning"]["execution"]["backend"] = "cp2k"
+            profile_path.write_text(
+                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2) + "\\n",
+                encoding="utf-8",
+            )
+            pipeline = ProjectPipeline(state_db, output_root)
+            try:
+                planned = pipeline.plan_scientific(
+                    run_id, profile_path=profile_path, data_analysis_api=api,
+                    data_analysis_project_root=data_root,
+                    runtime_verified_version="2025.2",
+                )
+                bundle = json.loads(
+                    Path(planned["files"]["planning_bundle.json"]).read_text(encoding="utf-8")
+                )
+                method_plan = bundle["method_plan"]
+                execution_plan = bundle["execution_plan"]
+                route = method_plan["parameters"]["software_compatibility"]["value"]
+
+                # The declared version and observed runtime string match, but the
+                # declared version has no resolved source ref: the gate must remain closed.
+                self.assertEqual(method_plan["agent_a_field_records"]["software_version"]["status"], "MISSING")
+                self.assertFalse(route["software_version_source_backed"])
+                self.assertFalse(route["can_enter_real_preflight"])
+                self.assertFalse(method_plan["real_execution_preflight_allowed"])
+                self.assertFalse(execution_plan["real_execution_preflight_allowed"])
+                self.assertEqual(bundle["planning_metadata"]["planning_status"], "BLOCKED")
+                self.assertFalse(planned["workflow_created"])
+                self.assertFalse(planned["calculation_plan_created"])
+            finally:
+                pipeline.close()
+                _CURRENT_API = None
+
+
 if __name__ == "__main__":
     unittest.main()
