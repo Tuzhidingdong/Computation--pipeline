@@ -124,7 +124,9 @@ result = build_neb_initial_path(
 )
 ~~~
 
-atom_mapping_initial_to_final is a complete bijection of atom indices; no distance-based atom matching, element sorting, or automatic reordering is attempted. Endpoint atom count and ordered element sequence must agree. Cell and PBC must match. Charge, spin multiplicity, ASE constraints and the non-empty method fingerprint must be explicitly supplied and identical. This version does not invent a conversion when endpoint cells or method contexts differ.
+atom_mapping_initial_to_final is a complete bijection from each initial atom index to its corresponding final-source atom index. The plugin validates the bijection and each mapped element pair first, then reorders the final endpoint strictly with that mapping. Initial and final source files are preserved byte-for-byte with their original SHA-256 values. No distance-based atom matching, element sorting, or automatic mapping is attempted.
+
+Endpoint atom counts, cell and PBC must match. Charge, spin multiplicity and the non-empty method fingerprint must be explicitly supplied and identical. Each source endpoint's ASE constraints must match its own endpoint_context record. For a non-identity mapping, the plugin deep-copies every final constraint and calls its ASE index_shuffle implementation with the explicit permutation. It then requires the remapped final constraints to match the initial constraints. If a constraint does not implement a safe remap, remapping raises, or the canonical constraints differ, the function returns NEEDS_DECISION before creating the output directory; no constraint is dropped or silently changed. Identity mapping preserves constraints without invoking a reordering operation.
 
 Missing mapping/image count/context/IDPP controls/geometry threshold, ambiguous scope, or endpoint mismatch returns NEEDS_DECISION before creating the output directory.
 
@@ -185,7 +187,7 @@ Packmol version and executable probe are stored in the solvent provenance. ASE a
 
 ## 5. Tests
 
-The real Packmol test executes the packmol command; under GitHub Actions, the test bootstraps the pinned packmol==21.2.3 wheel when the executable is not preinstalled. It is not a mocked process. The ASE IDPP test uses real ASE NEB and idpp_interpolate.
+The real Packmol test executes the packmol command; under GitHub Actions, the test bootstraps the pinned packmol==21.2.3 wheel when the executable is not preinstalled. It is not a mocked process. The ASE IDPP tests use real ASE NEB and idpp_interpolate, including a mixed-element endpoint whose source atom order differs and whose FixAtoms constraint index is remapped by ASE.
 
 ~~~bash
 python -m unittest discover -s tests -p "test_structure_plugins.py" -v

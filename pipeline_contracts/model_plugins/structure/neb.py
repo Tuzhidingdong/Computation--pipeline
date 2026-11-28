@@ -1,6 +1,7 @@
 """Initial transition-path construction using ASE NEB + IDPP only."""
 from __future__ import annotations
 
+import copy
 import json
 import math
 from pathlib import Path
@@ -40,6 +41,45 @@ def _context_issues(context: Any, label: str) -> list[str]:
 
 def _constraints_signature(atoms: Any) -> list[dict[str, Any]]:
     return [jsonable(constraint.todict()) for constraint in atoms.constraints]
+
+
+def _remap_constraints(atoms: Any, new_order_old_indices: list[int]) -> list[Any]:
+    """Return deep-copied constraints with atom indices remapped by ASE.
+
+    The full permutation is passed to each constraint's own index_shuffle
+    implementation. Unsupported constraints are rejected; they are never
+    silently omitted as they can be by Atoms.__getitem__.
+    """
+    remapped = []
+    for constraint_index, constraint in enumerate(atoms.constraints):
+        candidate = copy.deepcopy(constraint)
+        index_shuffle = getattr(candidate, "index_shuffle", None)
+        if not callable(index_shuffle):
+            raise ValueError(
+                f"constraint {constraint_index} ({type(constraint).__name__}) "
+                "does not implement ASE index_shuffle"
+            )
+        try:
+            index_shuffle(atoms, new_order_old_indices)
+        except Exception as exc:
+            raise ValueError(
+                f"constraint {constraint_index} ({type(constraint).__name__}) "
+                f"cannot be safely remapped: {type(exc).__name__}: {exc}"
+            ) from exc
+        if type(candidate) is not type(constraint):
+            raise ValueError(
+                f"constraint {constraint_index} changed type during remapping"
+            )
+        if not callable(getattr(candidate, "todict", None)):
+            raise ValueError(
+                f"constraint {constraint_index} cannot be serialized after remapping"
+            )
+        # Ensure the remapped constraint remains representable in provenance.
+        jsonable(candidate.todict())
+        remapped.append(candidate)
+    if len(remapped) != len(atoms.constraints):
+        raise ValueError("constraint remapping changed the number of constraints")
+    return remapped
 
 
 def _minimum_pair_distance(atoms: Any, cutoff: float) -> tuple[float | None, list[dict[str, Any]]]:
@@ -102,13 +142,14 @@ def build_neb_initial_path(
     )
     if context_issues:
         return decision_result(*context_issues, plugin=plugin)
-    if json.dumps(jsonable(endpoint_context["initial"]), sort_keys=True) != json.dumps(
-        jsonable(endpoint_context["final"]), sort_keys=True
-    ):
-        return decision_result(
-            "initial/final charge, spin, constraints and method_fingerprint must match exactly; an explicit approved conversion is required otherwise",
-            plugin=plugin,
-        )
+    for context_key in ("charge", "spin_multiplicity", "method_fingerprint"):
+        if json.dumps(
+            jsonable(endpoint_context["initial"][context_key]), sort_keys=True
+        ) != json.dumps(jsonable(endpoint_context["final"][context_key]), sort_keys=True):
+            return decision_result(
+                f"initial/final {context_key} must match exactly; an explicit approved conversion is required otherwise",
+                plugin=plugin,
+            )
 
     idpp = recipe.get("idpp")
     if not isinstance(idpp, Mapping):
@@ -142,11 +183,6 @@ def build_neb_initial_path(
             f"endpoint atom counts differ: initial={natoms}, final={len(final_raw)}",
             plugin=plugin,
         )
-    if initial.get_chemical_symbols() != final_raw.get_chemical_symbols():
-        return decision_result(
-            "endpoint element sequences differ; automatic atom reordering is prohibited",
-            plugin=plugin,
-        )
     if len(mapping) != natoms or any(
         isinstance(index, bool) or not isinstance(index, int) or index < 0 or index >= natoms
         for index in mapping
@@ -155,18 +191,17 @@ def build_neb_initial_path(
             "atom mapping must be a complete bijection from initial atom indices to final atom indices",
             plugin=plugin,
         )
+    initial_symbols = initial.get_chemical_symbols()
+    final_source_symbols = final_raw.get_chemical_symbols()
     if any(
-        initial.get_chemical_symbols()[index] != final_raw.get_chemical_symbols()[mapping[index]]
+        initial_symbols[index] != final_source_symbols[mapping[index]]
         for index in range(natoms)
     ):
-        return decision_result("explicit atom mapping maps unlike chemical elements", plugin=plugin)
-    if mapping != list(range(natoms)) and (
-        initial.constraints or final_raw.constraints
-    ):
         return decision_result(
-            "non-identity atom mapping with ASE constraints requires explicit constraint-index remapping; provide already aligned endpoint files",
+            "explicit atom mapping pairs atoms with unlike chemical elements",
             plugin=plugin,
         )
+    mapping_is_identity = mapping == list(range(natoms))
 
     initial_cell = np.asarray(initial.cell.array, dtype=float)
     final_cell = np.asarray(final_raw.cell.array, dtype=float)
@@ -178,24 +213,50 @@ def build_neb_initial_path(
             plugin=plugin,
         )
 
-    expected_constraints = endpoint_context["initial"]["constraints"]
-    if _constraints_signature(initial) != jsonable(expected_constraints):
+    expected_initial_constraints = jsonable(endpoint_context["initial"]["constraints"])
+    expected_final_source_constraints = jsonable(endpoint_context["final"]["constraints"])
+    if _constraints_signature(initial) != expected_initial_constraints:
         return decision_result(
             "initial endpoint ASE constraints differ from endpoint_context.initial.constraints",
             plugin=plugin,
         )
-    if _constraints_signature(final_raw) != jsonable(endpoint_context["final"]["constraints"]):
+    if _constraints_signature(final_raw) != expected_final_source_constraints:
         return decision_result(
-            "final endpoint ASE constraints differ from endpoint_context.final.constraints",
+            "final source ASE constraints differ from endpoint_context.final.constraints",
             plugin=plugin,
         )
     if not np.all(np.isfinite(initial.positions)) or not np.all(np.isfinite(final_raw.positions)):
         return decision_result("endpoint coordinates contain non-finite values", plugin=plugin)
 
-    # Apply only the caller-supplied index mapping. No distance-based atom matching.
-    final = final_raw[mapping]
-    if initial.get_chemical_symbols() != final.get_chemical_symbols():
-        return decision_result("explicit atom mapping did not produce identical ordered elements", plugin=plugin)
+    # Only the user-provided initial-index -> final-source-index bijection is used.
+    # Never infer correspondence from distances or element sorting.
+    if mapping_is_identity:
+        final = final_raw.copy()
+    elif final_raw.constraints:
+        try:
+            remapped_constraints = _remap_constraints(final_raw, mapping)
+        except Exception as exc:
+            return decision_result(
+                f"final endpoint constraints cannot be safely remapped: {type(exc).__name__}: {exc}",
+                plugin=plugin,
+            )
+        final_without_constraints = final_raw.copy()
+        final_without_constraints.set_constraint([])
+        final = final_without_constraints[mapping]
+        final.set_constraint(remapped_constraints)
+    else:
+        final = final_raw[mapping]
+
+    if final.get_chemical_symbols() != initial_symbols:
+        return decision_result(
+            "explicit atom mapping did not produce the initial endpoint element order",
+            plugin=plugin,
+        )
+    if _constraints_signature(final) != _constraints_signature(initial):
+        return decision_result(
+            "final endpoint constraints do not match initial endpoint constraints after explicit index remapping",
+            plugin=plugin,
+        )
 
     target = Path(output_dir).expanduser().resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -299,6 +360,14 @@ def build_neb_initial_path(
         "number_of_images": image_count,
         "atom_count": natoms,
         "atom_mapping_initial_to_final": mapping,
+        "atom_mapping_direction": "initial_index -> final_source_index",
+        "constraint_remapping": {
+            "method": "ASE FixConstraint.index_shuffle",
+            "performed": bool(not mapping_is_identity and final_raw.constraints),
+            "constraint_count": len(final.constraints),
+            "final_source_constraints": _constraints_signature(final_raw),
+            "final_aligned_constraints": _constraints_signature(final),
+        },
         "element_sequence": initial.get_chemical_symbols(),
         "endpoint_sha256": {
             "initial": initial_source["sha256"],

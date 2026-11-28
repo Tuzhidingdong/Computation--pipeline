@@ -14,6 +14,7 @@ import unittest
 
 import numpy as np
 from ase import Atoms
+from ase.constraints import FixAtoms
 from ase.io import read, write
 
 from pipeline_contracts.model_plugins.structure import (
@@ -314,6 +315,124 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
             self.assertTrue((output / "idpp_optimization.log").is_file())
             self.assertTrue((output / "path_manifest.json").is_file())
 
+
+    def test_real_ase_idpp_reorders_mixed_element_endpoint_and_remaps_constraints(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            initial_atoms = Atoms(
+                "HOH",
+                positions=[
+                    [0.9572, 0.0, 0.0],
+                    [0.0, 0.0, 0.0],
+                    [-0.239987, 0.927297, 0.0],
+                ],
+                cell=[12, 12, 12],
+                pbc=[False, False, False],
+            )
+            # The first H is deliberately fixed in both aligned endpoints.
+            initial_atoms.set_constraint(FixAtoms(indices=[0]))
+            final_aligned_atoms = initial_atoms.copy()
+            final_aligned_atoms.positions = np.array([
+                [0.9572, 0.0, 0.0],
+                [0.025, 0.015, 0.0],
+                [-0.205, 0.950, 0.0],
+            ])
+            # Source file order is O/H/H; mapping [1, 0, 2] restores H/O/H.
+            final_source_atoms = Atoms(
+                symbols=[final_aligned_atoms[i].symbol for i in [1, 0, 2]],
+                positions=final_aligned_atoms.positions[[1, 0, 2]],
+                cell=final_aligned_atoms.cell,
+                pbc=final_aligned_atoms.pbc,
+            )
+            final_source_atoms.set_constraint(FixAtoms(indices=[1]))
+            initial = write_xyz(root / "initial_mixed.extxyz", initial_atoms)
+            final = write_xyz(root / "final_reordered.extxyz", final_source_atoms)
+            initial_bytes_before = Path(initial["path"]).read_bytes()
+            final_bytes_before = Path(final["path"]).read_bytes()
+            output = root / "neb-reordered-output"
+
+            context = endpoint_context()
+            context["initial"]["constraints"] = [
+                constraint.todict() for constraint in initial_atoms.constraints
+            ]
+            context["final"]["constraints"] = [
+                constraint.todict() for constraint in final_source_atoms.constraints
+            ]
+            recipe = {
+                "atom_mapping_initial_to_final": [1, 0, 2],
+                "number_of_images": 5,
+                "endpoint_context": context,
+                "idpp": {
+                    "steps": 60,
+                    "fmax_angstrom_per_step": 0.05,
+                    "mic": False,
+                },
+                "validation": {
+                    "minimum_pair_distance_angstrom": 0.55,
+                },
+            }
+
+            result = build_neb_initial_path(initial, final, recipe, output)
+            self.assertEqual(result["status"], "INITIAL_PATH_READY_FOR_REVIEW", result)
+            self.assertEqual(result["atom_mapping_initial_to_final"], [1, 0, 2])
+            self.assertEqual(result["atom_mapping_direction"], "initial_index -> final_source_index")
+            self.assertTrue(result["constraint_remapping"]["performed"])
+            self.assertEqual(result["constraint_remapping"]["constraint_count"], 1)
+            self.assertEqual(
+                result["constraint_remapping"]["final_aligned_constraints"][0]["kwargs"]["indices"],
+                [0],
+            )
+
+            # Input bytes and their original SHA-256 values remain untouched.
+            self.assertEqual(Path(initial["path"]).read_bytes(), initial_bytes_before)
+            self.assertEqual(Path(final["path"]).read_bytes(), final_bytes_before)
+            self.assertEqual(sha256_file(initial["path"]), initial["sha256"])
+            self.assertEqual(sha256_file(final["path"]), final["sha256"])
+            self.assertEqual(result["endpoint_sha256"]["initial"], initial["sha256"])
+            self.assertEqual(result["endpoint_sha256"]["final"], final["sha256"])
+
+            # The final source copy is byte-identical to the original O/H/H endpoint.
+            copied_final = output / "inputs" / "final_source.extxyz"
+            self.assertTrue(copied_final.is_file())
+            self.assertEqual(sha256_file(copied_final), final["sha256"])
+            copied_final_atoms = read(str(copied_final), index=0)
+            self.assertEqual(copied_final_atoms.get_chemical_symbols(), ["O", "H", "H"])
+
+            images = [
+                read(str(path), index=0)
+                for path in sorted((output / "images").glob("image_*.extxyz"))
+            ]
+            self.assertEqual(len(images), 5)
+            for image in images:
+                self.assertEqual(image.get_chemical_symbols(), ["H", "O", "H"])
+                self.assertEqual(len(image), 3)
+                self.assertEqual(image.pbc.tolist(), [False, False, False])
+                np.testing.assert_allclose(image.cell.array, initial_atoms.cell.array, atol=1e-10)
+                self.assertTrue(np.isfinite(image.positions).all())
+                # The identity of the fixed H must remain at initial index 0.
+                np.testing.assert_allclose(image.positions[0], initial_atoms.positions[0], atol=1e-8)
+
+            np.testing.assert_allclose(images[0].positions, initial_atoms.positions, atol=1e-10)
+            np.testing.assert_allclose(
+                images[-1].positions, final_aligned_atoms.positions, atol=1e-10
+            )
+            path_frames = read(str(output / "initial_path.extxyz"), index=":")
+            self.assertEqual(len(path_frames), 5)
+            self.assertTrue(all(frame.get_chemical_symbols() == ["H", "O", "H"] for frame in path_frames))
+
+            manifest = json.loads((output / "path_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["atom_mapping_initial_to_final"], [1, 0, 2])
+            self.assertEqual(manifest["endpoint_sha256"]["final"], final["sha256"])
+            self.assertTrue(manifest["constraint_remapping"]["performed"])
+            self.assertEqual(manifest["constraint_remapping"]["constraint_count"], 1)
+            artifact_records = {item["path"]: item["sha256"] for item in manifest["artifacts"]}
+            self.assertEqual(artifact_records["inputs/final_source.extxyz"], final["sha256"])
+            self.assertEqual(artifact_records["inputs/initial_source.extxyz"], initial["sha256"])
+            for artifact in result["artifacts"]:
+                artifact_path = output / artifact["path"]
+                self.assertTrue(artifact_path.is_file(), artifact)
+                self.assertEqual(sha256_file(artifact_path), artifact["sha256"])
+
     def test_missing_or_ambiguous_atom_mapping_returns_needs_decision_without_output(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -326,6 +445,39 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
                 "validation": {"minimum_pair_distance_angstrom": 0.55},
             }
             result = build_neb_initial_path(initial, final, recipe, output)
+            self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertFalse(output.exists())
+
+
+    def test_missing_mapping_for_reordered_endpoint_returns_needs_decision_without_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            initial_atoms = Atoms(
+                "HOH",
+                positions=[[0.9572, 0.0, 0.0], [0.0, 0.0, 0.0], [-0.239987, 0.927297, 0.0]],
+                cell=[12, 12, 12],
+                pbc=[False, False, False],
+            )
+            final_source_atoms = Atoms(
+                "OHH",
+                positions=[[0.025, 0.015, 0.0], [0.9572, 0.0, 0.0], [-0.205, 0.950, 0.0]],
+                cell=[12, 12, 12],
+                pbc=[False, False, False],
+            )
+            initial = write_xyz(root / "initial.extxyz", initial_atoms)
+            final = write_xyz(root / "final_reordered.extxyz", final_source_atoms)
+            output = root / "must_not_be_created"
+            result = build_neb_initial_path(
+                initial,
+                final,
+                {
+                    "number_of_images": 5,
+                    "endpoint_context": endpoint_context(),
+                    "idpp": {"steps": 20, "fmax_angstrom_per_step": 0.05, "mic": False},
+                    "validation": {"minimum_pair_distance_angstrom": 0.55},
+                },
+                output,
+            )
             self.assertEqual(result["status"], "NEEDS_DECISION")
             self.assertFalse(output.exists())
 
