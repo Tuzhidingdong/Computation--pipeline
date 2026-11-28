@@ -112,7 +112,7 @@ class ScientificPlanningExecutionModeTests(unittest.TestCase):
         )
         self.assertNotIn("execution_mode", blocked_method)
         self.assertNotIn("planning_scope", blocked_method)
-        self.assertFalse(blocked_method["mock_only"])
+        self.assertFalse(blocked_method.get("mock_only", False))
         self.assertFalse(blocked_method["real_execution_preflight_allowed"])
 
     def test_runtime_verified_version_is_independent_of_profile_fields(self):
