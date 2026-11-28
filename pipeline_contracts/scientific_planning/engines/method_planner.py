@@ -232,10 +232,11 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
             continue
 
         if field == "software_version" and requested_version:
+            source_ref = request.get("software_version_source_ref")
             fields[field] = _record(
                 requested_version, str(request.get("software_version_provenance", "request_metadata")),
-                request.get("software_version_source_ref", "request.software_version"),
-                "APPLICABLE", "Exact version declared in request; still requires runtime verification.",
+                str(source_ref).strip() if source_ref is not None and str(source_ref).strip() else None,
+                "APPLICABLE", "Version is declared in request metadata but is not supported by a selected source record.",
                 "RUNTIME_VERSION_NOT_VERIFIED", True, "DECLARED_UNVERIFIED",
             )
             continue
@@ -278,8 +279,23 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     )
 
     blockers: list[str] = []
-    if request.get("runtime_version_verified") is not True:
-        blockers.append("Exact software version must be verified against the installed executable before final method compilation/preflight.")
+    version_record = fields.get("software_version")
+    source_backed_version = (
+        isinstance(version_record, Mapping)
+        and version_record.get("status") in {"SOURCE_CONFIRMED", "APPROVED_POLICY", "VERSION_VERIFIED_RULE"}
+        and bool(str(version_record.get("source_ref") or "").strip())
+        and bool(str(version_record.get("provenance") or "").strip())
+    )
+    mock_only_source_version = (
+        str(request.get("execution_mode", "")).strip().casefold() == "mock"
+        and source_backed_version
+    )
+    runtime_version_unverified = request.get("runtime_version_verified") is not True
+    if runtime_version_unverified and not mock_only_source_version:
+        blockers.append(
+            "Exact software version must be verified against the installed executable before real preflight; "
+            "Mock-only planning is allowed only with a source-backed software_version record."
+        )
     if periodic is None and conditional:
         if "structure.periodicity" not in missing:
             missing.append("structure.periodicity")
@@ -294,7 +310,7 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         status = "BLOCKED_MISSING_METHOD_FIELDS"
     elif conflicts:
         status = "BLOCKED_SOURCE_CONFLICT"
-    elif request.get("runtime_version_verified") is not True:
+    elif runtime_version_unverified and not mock_only_source_version:
         status = "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
     elif proposed:
         status = "PROPOSED"
