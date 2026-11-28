@@ -14,8 +14,9 @@ import unittest
 
 import numpy as np
 from ase import Atoms
-from ase.constraints import FixAtoms
+from ase.constraints import FixAtoms, FixConstraint
 from ase.io import read, write
+from unittest.mock import patch
 
 from pipeline_contracts.model_plugins.structure import (
     build_explicit_solvent_box,
@@ -34,6 +35,21 @@ def write_xyz(path: Path, atoms: Atoms) -> dict:
     write(str(path), atoms, format="extxyz" if path.suffix.lower() == ".extxyz" else "xyz")
     return source_record(path)
 
+
+
+
+class _UnremappableConstraint(FixConstraint):
+    def index_shuffle(self, atoms, ind):
+        raise NotImplementedError("test constraint deliberately has no safe atom-index remap")
+
+    def todict(self):
+        return {"name": "UnremappableConstraint", "kwargs": {}}
+
+    def adjust_positions(self, atoms, newpositions):
+        return None
+
+    def adjust_forces(self, atoms, forces):
+        return None
 
 def endpoint_context() -> dict:
     common = {
@@ -448,6 +464,56 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
             self.assertEqual(result["status"], "NEEDS_DECISION")
             self.assertFalse(output.exists())
 
+
+
+    def test_nonidentity_mapping_with_unremappable_constraint_requires_decision_before_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            initial_atoms = Atoms(
+                "HOH",
+                positions=[[0.9572, 0.0, 0.0], [0.0, 0.0, 0.0], [-0.239987, 0.927297, 0.0]],
+                cell=[12, 12, 12],
+                pbc=[False, False, False],
+            )
+            final_source_atoms = Atoms(
+                "OHH",
+                positions=[[0.025, 0.015, 0.0], [0.9572, 0.0, 0.0], [-0.205, 0.950, 0.0]],
+                cell=[12, 12, 12],
+                pbc=[False, False, False],
+            )
+            initial_source = write_xyz(root / "initial.extxyz", initial_atoms)
+            final_source = write_xyz(root / "final_reordered.extxyz", final_source_atoms)
+            final_atoms_with_constraint = final_source_atoms.copy()
+            final_atoms_with_constraint.set_constraint(_UnremappableConstraint())
+            context = endpoint_context()
+            context["final"]["constraints"] = [_UnremappableConstraint().todict()]
+            output = root / "must_not_be_created"
+
+            def source_reader(source, label):
+                if label == "initial_structure":
+                    return initial_atoms.copy(), initial_source
+                return final_atoms_with_constraint.copy(), final_source
+
+            recipe = {
+                "atom_mapping_initial_to_final": [1, 0, 2],
+                "number_of_images": 5,
+                "endpoint_context": context,
+                "idpp": {"steps": 20, "fmax_angstrom_per_step": 0.05, "mic": False},
+                "validation": {"minimum_pair_distance_angstrom": 0.55},
+            }
+            with patch(
+                "pipeline_contracts.model_plugins.structure.neb.read_ase_source",
+                side_effect=source_reader,
+            ):
+                result = build_neb_initial_path(
+                    initial_source, final_source, recipe, output
+                )
+
+            self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertTrue(
+                any("cannot be safely remapped" in item for item in result["decision_required"])
+            )
+            self.assertFalse(output.exists())
 
     def test_missing_mapping_for_reordered_endpoint_returns_needs_decision_without_output(self):
         with tempfile.TemporaryDirectory() as temp:

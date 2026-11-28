@@ -300,6 +300,10 @@ def build_neb_initial_path(
 
         geometry_records = []
         for image_index, image in enumerate(image_list):
+            if len(image) != natoms:
+                raise RuntimeError(
+                    f"image {image_index} atom count {len(image)} differs from endpoint count {natoms}"
+                )
             if image.get_chemical_symbols() != initial.get_chemical_symbols():
                 raise RuntimeError(f"image {image_index} element ordering differs from the endpoints")
             if not np.all(np.isfinite(image.positions)):
@@ -316,6 +320,8 @@ def build_neb_initial_path(
                 )
             geometry_records.append({
                 "image_index": image_index,
+                "atom_count": len(image),
+                "element_sequence": image.get_chemical_symbols(),
                 "minimum_pair_distance_threshold_angstrom": float(minimum_distance),
                 "pairs_below_threshold": 0,
                 "minimum_pair_distance_observed_angstrom": minimum_found,
