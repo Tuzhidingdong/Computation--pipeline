@@ -710,5 +710,52 @@ class ScientificPlanningE2ETests(unittest.TestCase):
             self.assertFalse((root / "workflow_runs").exists())
 
 
+    def test_e2e_4_unregistered_backend_blocks_schema_valid_bundle_without_runtime(self):
+        global _CURRENT_API
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            api, state_db, output_root, run_id, profile_path, data_root = _setup_project(root)
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            profile["scientific_planning"]["execution"]["backend"] = "orca"
+            profile_path.write_text(
+                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2) + "\\n",
+                encoding="utf-8",
+            )
+            try:
+                factory = f"{__name__}:build_test_integration"
+                planned, _ = _run_cli([
+                    "project", "plan", run_id, "--state-db", str(state_db),
+                    "--output-root", str(output_root), "--project-profile", str(profile_path),
+                    "--integration-factory", factory,
+                    "--data-analysis-project-root", str(data_root),
+                ])
+                self.assertEqual(planned["planning_status"], "BLOCKED")
+                self.assertFalse(planned["workflow_created"])
+                self.assertFalse(planned["calculation_plan_created"])
+                self.assertIsNone(planned["candidate_id"])
+                self.assertTrue(any(
+                    item.get("code") == "EXECUTION_BACKEND_UNREGISTERED"
+                    for item in planned["missing_items"]
+                ))
+
+                bundle = json.loads(
+                    Path(planned["files"]["planning_bundle.json"]).read_text(encoding="utf-8")
+                )
+                method_plan = bundle["method_plan"]
+                execution_plan = bundle["execution_plan"]
+                self.assertEqual(bundle["planning_metadata"]["planning_status"], "BLOCKED")
+                self.assertIsNone(execution_plan["backend"])
+                self.assertEqual(execution_plan["planning_metadata"]["planning_status"], "BLOCKED")
+                self.assertNotIn("execution_mode", method_plan)
+                self.assertNotIn("planning_scope", method_plan)
+                self.assertNotIn("execution_mode", execution_plan)
+                self.assertNotIn("planning_scope", execution_plan)
+                self.assertFalse(method_plan["real_execution_preflight_allowed"])
+                self.assertFalse(execution_plan["real_execution_preflight_allowed"])
+                self.assertFalse((root / "workflow_runs").exists())
+            finally:
+                _CURRENT_API = None
+
+
 if __name__ == "__main__":
     unittest.main()
