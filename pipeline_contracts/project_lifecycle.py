@@ -146,10 +146,13 @@ class ProjectLifecycle:
             (run_id, record["candidate_id"], record["artifact_id"], record["structure_sha256"],
              json.dumps(dict(record), sort_keys=True, ensure_ascii=False), time.time()),
         )
-        self.transition(run_id, "MODEL_APPROVAL", "COMPLETED", outputs=dict(record))
-        self.transition(run_id, "MODEL_ARTIFACT_FREEZE", "COMPLETED",
-                        outputs={"artifact_id": record["artifact_id"],
-                                 "sha256": record["structure_sha256"]})
+        approval_outputs = self.stage(run_id, "MODEL_APPROVAL")["outputs"]
+        approval_outputs.update(dict(record))
+        self.transition(run_id, "MODEL_APPROVAL", "COMPLETED", outputs=approval_outputs)
+        freeze_outputs = self.stage(run_id, "MODEL_ARTIFACT_FREEZE")["outputs"]
+        freeze_outputs.update({"artifact_id": record["artifact_id"],
+                               "sha256": record["structure_sha256"]})
+        self.transition(run_id, "MODEL_ARTIFACT_FREEZE", "COMPLETED", outputs=freeze_outputs)
 
     def approval(self, run_id: str, candidate_id: str) -> dict:
         row = self.db.execute(
