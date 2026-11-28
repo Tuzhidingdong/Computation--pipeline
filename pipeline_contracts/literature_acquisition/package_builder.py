@@ -228,7 +228,21 @@ def _cache_package_valid(package_dir: Path, package: dict, main_path: Path,
         from .schemas import validate_source_package
         validate_source_package(package)
         input_manifest = _read_json(package_dir / "PREPROCESSING_INPUTS.json") or {}
-        for input_record in input_manifest.get("inputs", []):
+        stored_inputs = input_manifest.get("inputs") or []
+        # The directly migrated corpus preprocessor stores {"main": ..., "si": ...};
+        # the single-package builder stores a list. Validate both persisted formats.
+        if isinstance(stored_inputs, Mapping):
+            input_records = [
+                value for key, value in stored_inputs.items()
+                if key in {"main", "si"} and isinstance(value, Mapping)
+            ]
+        elif isinstance(stored_inputs, list):
+            input_records = [value for value in stored_inputs if isinstance(value, Mapping)]
+        else:
+            return False
+        if not input_records:
+            return False
+        for input_record in input_records:
             input_path = Path(str(input_record.get("path") or ""))
             if (not input_path.is_file() or input_path.stat().st_size != input_record.get("size_bytes")
                     or _sha256(input_path) != input_record.get("sha256")):
