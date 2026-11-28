@@ -20,4 +20,16 @@ def agent_a_execution_mode(backend: Any) -> str | None:
     return _BACKEND_TO_AGENT_A_MODE.get(token)
 
 
-__all__ = ["agent_a_execution_mode"]
+def planning_mode_fields(backend: Any) -> dict[str, str | bool]:
+    """Return schema-valid mode fields; unknown backends deliberately emit none."""
+    mode = agent_a_execution_mode(backend)
+    if mode is None:
+        return {}
+    return {
+        "execution_mode": mode,
+        "planning_scope": "MOCK_ONLY" if mode == "mock" else "REAL_PREFLIGHT_CANDIDATE",
+        "mock_only": mode == "mock",
+    }
+
+
+__all__ = ["agent_a_execution_mode", "planning_mode_fields"]

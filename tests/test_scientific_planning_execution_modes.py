@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from pipeline_contracts.scientific_planning.execution_modes import agent_a_execution_mode
+from pipeline_contracts.scientific_planning.execution_modes import agent_a_execution_mode, planning_mode_fields
+from pipeline_contracts.scientific_planning.object_adapters import method_plan_object
 from pipeline_contracts.scientific_planning.engines import plan_method, to_cp2k_calculation_plan_method
 from pipeline_contracts.scientific_planning.planning_orchestrator import _engine_request
 
@@ -81,6 +82,38 @@ class ScientificPlanningExecutionModeTests(unittest.TestCase):
         self.assertFalse(unknown["execution_backend_registered"])
         self.assertIsNone(agent_a_execution_mode("orca"))
         self.assertIsNone(agent_a_execution_mode(None))
+        self.assertEqual(planning_mode_fields("cp2k"), {
+            "execution_mode": "real",
+            "planning_scope": "REAL_PREFLIGHT_CANDIDATE",
+            "mock_only": False,
+        })
+        self.assertEqual(planning_mode_fields("orca"), {})
+
+    def test_unknown_backend_does_not_emit_invalid_mode_enum_fields(self):
+        request = _request("orca", verified=True, runtime_version="2025.2")
+        blocked_method = method_plan_object(
+            method_raw={
+                "engine": "cp2k", "execution_mode": "blocked",
+                "status": "BLOCKED_UNREGISTERED_EXECUTION_BACKEND",
+                "fields": {}, "software_version": None,
+                "runtime_version_verified": False,
+                "runtime_verified_version": None,
+                "runtime_version_matches": False,
+            },
+            route={
+                "integration_status": "UNSUPPORTED_BACKEND",
+                "can_enter_real_preflight": False,
+                "capability_ids": [],
+            },
+            engine_request=request,
+            method_source_refs=[], all_refs=[], structure_mapping=None,
+            artifact_ref=None, overall_status="BLOCKED",
+            method_gaps=[], selection_records=[],
+        )
+        self.assertNotIn("execution_mode", blocked_method)
+        self.assertNotIn("planning_scope", blocked_method)
+        self.assertFalse(blocked_method["mock_only"])
+        self.assertFalse(blocked_method["real_execution_preflight_allowed"])
 
     def test_runtime_verified_version_is_independent_of_profile_fields(self):
         missing = _request("cp2k", verified=True)

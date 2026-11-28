@@ -14,7 +14,7 @@ from .intent_compiler import compile_intent, compile_model_recipe, evidence_refs
 from .object_adapters import method_plan_object, build_qc_gates, build_resource_profile
 from .plugin_registry import engine_planning, MODEL_PLUGIN_REGISTRY, plugin_capability_status
 from .research_planner import build_research_plan
-from .execution_modes import agent_a_execution_mode
+from .execution_modes import agent_a_execution_mode, planning_mode_fields
 
 
 def _sha(path: str | Path) -> str:
@@ -956,13 +956,15 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
             "adapter_id": "pipeline_contracts.real_workflow.RealCP2KWorkflowAdapter",
             "adapter_version": "1.0.0",
         }
+    agent_execution_mode = agent_a_execution_mode(execution_cfg.get("backend"))
     execution_body = {
         "schema_version": PLANNING_SCHEMA_VERSION, "execution_plan_id": "",
         "backend": backend,
-        "execution_mode": execution_mode,
-        "planning_scope": "MOCK_ONLY" if execution_mode == "mock" else "REAL_PREFLIGHT_CANDIDATE",
-        "mock_only": execution_mode == "mock",
-        "real_execution_preflight_allowed": False if execution_mode == "mock" else bool(route.get("can_enter_real_preflight")),
+        **planning_mode_fields(execution_cfg.get("backend")),
+        "real_execution_preflight_allowed": (
+            bool(route.get("can_enter_real_preflight"))
+            if agent_execution_mode == "real" else False
+        ),
         "task_nodes": task_nodes,
         "resource_profile": resource_profile,
         "preflight_requirements": (

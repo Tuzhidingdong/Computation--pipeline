@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+from .execution_modes import planning_mode_fields
+
 
 def _ref_map(refs: list[dict]) -> dict[str, dict]:
     return {str(item.get("evidence_id")): item for item in refs if item.get("evidence_id")}
@@ -238,9 +240,7 @@ def method_plan_object(*, method_raw: Mapping[str, Any], route: Mapping[str, Any
     body = {
         "schema_version": "1.0.0", "method_plan_id": "",
         "engine": method_engine,
-        "execution_mode": str(method_raw.get("execution_mode") or engine_request.get("execution_mode") or "real"),
-        "planning_scope": str(method_raw.get("planning_scope") or ("MOCK_ONLY" if engine_request.get("execution_mode") == "mock" else "REAL_CANDIDATE")),
-        "mock_only": bool(method_raw.get("execution_mode") == "mock"),
+        **planning_mode_fields(engine_request.get("execution_backend")),
         "real_execution_preflight_allowed": bool(route.get("can_enter_real_preflight")),
         "software_version": str(method_raw.get("software_version") or version or ""),
         "runtime_version_verified": bool(method_raw.get("runtime_version_verified")),
