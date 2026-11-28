@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import unittest
+import csv
 import json
 from collections import Counter
+from pathlib import Path
 
 from pipeline_contracts.plan_compiler import ExtractedBlock, build_project_manifest, detect_conflicts
 from projects.corr_dft_v4_1.plan_compiler import _compare_profile_value, _profile_provenance
+from projects.corr_dft_v4_1.docx_adapter import extract_corr_v41_claims, extract_corr_v41_unresolved_fields
 from projects.corr_dft_v4_1.plan_rules import load_v41_profile
 
 
@@ -18,11 +21,11 @@ def _run04_blocks() -> list[ExtractedBlock]:
     ]
 
     def put(index: int, text: str, *, kind: str = "paragraph", location: dict | None = None,
-            style: str | None = None) -> None:
+            style: str | None = None, list_info: dict | None = None) -> None:
         blocks[index - 1] = ExtractedBlock(
             kind, text,
             location or {"part": "word/document.xml", "evidence_block": index},
-            style,
+            style, list_info,
         )
 
     # Real paragraph heading markers: these are Normal-style paragraphs, not Heading styles.
@@ -130,9 +133,19 @@ def _run04_blocks() -> list[ExtractedBlock]:
     return blocks
 
 
+
+def _corr_manifest(blocks: list[ExtractedBlock] | None = None) -> dict:
+    return build_project_manifest(
+        blocks or _run04_blocks(),
+        project_id="corr_dft_v4_1",
+        claim_enricher=extract_corr_v41_claims,
+        unresolved_fields_extractor=extract_corr_v41_unresolved_fields,
+    )
+
+
 class RealDocxRun04RegressionTests(unittest.TestCase):
     def test_real_charge_cells_split_scalar_from_explanation_without_conflict(self):
-        manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
+        manifest = _corr_manifest()
         charge = [c for c in manifest["claims"] if c.get("field") == "charge"
                   and c.get("evidence_id") in {"docx-block-000079", "docx-block-000080"}]
         self.assertEqual([c["value"] for c in charge], ["0", "0"])
@@ -190,6 +203,40 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         self.assertEqual(len(different_units), 1)
         self.assertTrue(different_units[0].blocks_execution)
 
+    def test_same_field_same_scope_different_labels_and_scalar_values_still_blocks(self):
+        diagnostics = detect_conflicts([
+            {"field": "canonical_parameter", "label": "Primary value", "value": "0.01",
+             "context": {"system_id": "model-a", "work_package": "WP2"},
+             "evidence_id": "ev-label-a"},
+            {"field": "canonical_parameter", "label": "Alternative setting", "value": "0.02",
+             "context": {"system_id": "model-a", "work_package": "WP2"},
+             "evidence_id": "ev-label-b"},
+        ])
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0].code, "PLAN_FIELD_CONFLICT")
+        self.assertTrue(diagnostics[0].blocks_execution)
+        self.assertEqual(diagnostics[0].evidence_ids, ["ev-label-a", "ev-label-b"])
+
+    def test_distinct_output_artifacts_coexist_but_same_artifact_contents_conflict(self):
+        different_artifacts = [
+            {"field": "output_document", "label": "Output", "artifact_identity": "method-section",
+             "value": "First output content", "evidence_id": "ev-output-a"},
+            {"field": "output_document", "label": "Output", "artifact_identity": "results-template",
+             "value": "Second output content", "evidence_id": "ev-output-b"},
+        ]
+        self.assertEqual(detect_conflicts(different_artifacts), [])
+
+        same_artifact = [
+            {"field": "output_document", "label": "Output", "artifact_identity": "method-section",
+             "value": "Approved method section content A", "evidence_id": "ev-output-c"},
+            {"field": "output_document", "label": "Output", "artifact_identity": "method-section",
+             "value": "Mutually exclusive method section content B", "evidence_id": "ev-output-d"},
+        ]
+        diagnostics = detect_conflicts(same_artifact)
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0].code, "PLAN_FIELD_CONFLICT")
+        self.assertTrue(diagnostics[0].blocks_execution)
+
     def test_ase_same_label_with_different_parameter_values_still_blocks(self):
         diagnostics = detect_conflicts([
             {"field": "ase_vibrations_cp2k", "label": "ASE Vibrations + CP2K",
@@ -215,6 +262,53 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
                          {"docx-block-000132", "docx-block-000133", "docx-block-000134", "docx-block-000135"})
         self.assertEqual({c["work_package"] for c in manifest["task_count_claims"]}, {"WP4"})
 
+    def test_heading_recognition_respects_word_styles_and_list_metadata(self):
+        blocks = [
+            ExtractedBlock("paragraph", "1.1 Normal style numbered heading",
+                           {"paragraph": 1}),
+            ExtractedBlock("paragraph", "1.1 Numbered list item",
+                           {"paragraph": 2}, style="ListNumber",
+                           list_info={"num_id": "9", "level": "1"}),
+            ExtractedBlock("paragraph", "1.1 List metadata without list style",
+                           {"paragraph": 3}, list_info={"num_id": "10", "level": "1"}),
+            ExtractedBlock("paragraph", "Heading style title",
+                           {"paragraph": 4}, style="Heading2"),
+            ExtractedBlock("paragraph", "1.1 Bullet list item",
+                           {"paragraph": 5}, style="ListBullet"),
+            ExtractedBlock("paragraph", "Ordinary prose mentioning section 1.1",
+                           {"paragraph": 6}),
+        ]
+        manifest = build_project_manifest(blocks, project_id="generic")
+        headings = manifest["sections"]
+        self.assertEqual(
+            [(item["heading"], item["heading_source"]) for item in headings],
+            [
+                ("Normal style numbered heading", "explicit_numbering"),
+                ("Heading style title", "word_style"),
+            ],
+        )
+
+    def test_corr_v41_extraction_is_opt_in_and_not_part_of_generic_manifest(self):
+        blocks = _run04_blocks()
+        generic = build_project_manifest(blocks, project_id="unrelated-project")
+        generic_added_mos = [
+            claim for claim in generic["claims"]
+            if claim.get("field") == "added_mos" and "docx-block-000103" in claim.get("evidence_ids", [])
+        ]
+        self.assertEqual(generic_added_mos, [])
+        self.assertFalse(any(claim.get("field") == "reaction_intermediate" for claim in generic["claims"]))
+        self.assertFalse(any(claim.get("field") == "support_motif" for claim in generic["claims"]))
+        self.assertFalse(any(
+            item.get("field") == "tasks.WP4.total_force_evaluations"
+            for item in generic["unresolved_structured_fields"]
+        ))
+
+        adapted = _corr_manifest(blocks)
+        added = [claim for claim in adapted["claims"] if claim.get("field") == "added_mos"]
+        self.assertEqual(len(added), 1)
+        self.assertEqual(added[0]["value"], "80")
+        self.assertEqual(added[0]["evidence_ids"], ["docx-block-000103"])
+
     def test_added_mos_is_extracted_from_real_table_cell_and_keeps_all_cell_evidence(self):
         manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
         added = [c for c in manifest["claims"] if c.get("field") == "added_mos"]
@@ -227,88 +321,63 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             "part": "word/document.xml", "table": 6, "row": 5, "column": 2
         })
 
-    def test_profile_104_reconciliation_uses_explicit_real_source_evidence(self):
-        manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
+    def test_profile_104_reconciliation_matches_all_csv_rows_and_evidence(self):
+        manifest = _corr_manifest()
         profile = load_v41_profile()
         _field_provenance, reconciliation = _profile_provenance(manifest, profile)
+
+        self.assertEqual(len(reconciliation), 104)
         by_field = {item["field"]: item for item in reconciliation}
-        print("RUN04_PROFILE_STATUS_COUNTS=" + json.dumps(dict(Counter(item["status"] for item in reconciliation)), ensure_ascii=False))
-        print("RUN04_PROFILE_STATUS_ROWS=" + json.dumps(
-            [{"field": item["field"], "status": item["status"], "docx_status": item["docx_status"],
-              "evidence_ids": item["docx_evidence_ids"]} for item in reconciliation],
-            ensure_ascii=False,
-        ))
+        self.assertEqual(len(by_field), 104)
 
-        consistent_fields = [
-            "systems.Cu-20.support_atom_count",
-            "systems.Cu-20.complete_atom_count",
-            "systems.Cu-20.explicit_valence_electrons",
-            "systems.Cu-20.charge",
-            "systems.Cu-20.cluster.formula",
-            "systems.Cu-20.cluster.atom_count",
-            "systems.Cu-20.support_motif",
-            "systems.SnCu-20.support_atom_count",
-            "systems.SnCu-20.complete_atom_count",
-            "systems.SnCu-20.explicit_valence_electrons",
-            "systems.SnCu-20.charge",
-            "systems.SnCu-20.support_motif",
-            "method.xc", "method.dispersion", "method.cutoff_ry",
-            "method.rel_cutoff_ry", "method.spin_polarized",
-            "method.smearing_temperature_K", "method.periodicity",
-            "method.poisson_solver", "method.cell_sizes_angstrom[0]", "method.cell_sizes_angstrom[1]",
-            "method.force_threshold_ev_per_angstrom", "method.sccs_dielectric",
-            "method.basis_sensitivity", "method.engine",
-            "method.che.temperature_K", "method.che.potential_v_vs_rhe",
-            "scientific_scope.reaction_intermediate",
-            "scientific_scope.protonation_products[0]", "scientific_scope.protonation_products[1]",
-            "method.local_hessian.displacement_angstrom",
-            "method.local_hessian.frozen_support_and_Cu13",
-            "tasks.WP2.cell_sizes_angstrom[0]", "tasks.WP2.cell_sizes_angstrom[1]",
-            "tasks.WP4.total_force_evaluations",
-            "tasks.WP4.adsorbed_state_hessians",
-        ]
-        for field in consistent_fields:
-            with self.subTest(field=field):
-                self.assertEqual(by_field[field]["status"], "consistent")
-                self.assertTrue(by_field[field]["docx_evidence_ids"])
+        csv_path = (
+            Path(__file__).resolve().parents[1]
+            / "docs/reports/real_docx_run04_20261127/PR3_PROFILE_RECONCILIATION_AFTER_FIX.csv"
+        )
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as stream:
+            csv_rows = list(csv.DictReader(stream))
+        self.assertEqual(len(csv_rows), 104)
+        self.assertEqual(len({row["profile_field"] for row in csv_rows}), 104)
 
-        review_fields = [
-            "systems.Cu-20.complete_formula",
-            "systems.SnCu-20.complete_formula",
-            "systems.Cu-20.cluster.multiplicities[0]",
-            "systems.SnCu-20.support_multiplicities[0]",
-            "tasks.WP1.support_cluster_docking_orientation_count",
-            "tasks.WP1.orientation_scope",
-            "tasks.WP1.isolated_fragment_spin_candidate_count",
-            "tasks.WP1.summary_fragment_single_point_count",
-            "tasks.WP1.mace_fmax_ev_per_angstrom",
-            "tasks.WP1.isolated_fragment_spin_candidates.Cu13[0]",
-            "tasks.WP1.isolated_fragment_spin_candidates.Cu20_support[0]",
-            "tasks.WP1.isolated_fragment_spin_candidates.SnCu20_support[0]",
-            "tasks.WP1.retained_structurally_distinct_candidates_per_catalyst.min",
-            "tasks.WP1.retained_structurally_distinct_candidates_per_catalyst.max",
-            "tasks.WP2.representative_sncu20_models",
-            "tasks.WP3.hcco_candidates_per_catalyst",
-            "tasks.WP3.protonation_products_per_catalyst",
-            "tasks.WP3.gas_references[0]", "tasks.WP3.gas_references[1]",
-            "tasks.WP4.adsorbate_atom_counts_per_catalyst[0]",
-            "tasks.WP4.adsorbate_atom_counts_per_catalyst[1]",
-            "tasks.WP4.adsorbate_atom_counts_per_catalyst[2]",
-            "tasks.WP5.sccs_single_points",
-            "tasks.WP5.tzv2p_single_points",
-            "scientific_scope.thermodynamic_only",
-            "topology_requirements.explicit_elements",
-            "topology_requirements.explicit_covalent_bonds_and_orders",
-            "topology_requirements.explicit_coordination_bonds",
-            "topology_requirements.explicit_donor_atoms",
-            "topology_requirements.explicit_formal_charges",
-            "topology_requirements.explicit_spin_candidates",
-            "topology_requirements.explicit_3d_construction_constraints",
-        ]
-        for field in review_fields:
+        expected_counts = Counter(row["new_reconciliation_status"] for row in csv_rows)
+        self.assertEqual(expected_counts, {
+            "consistent": 39,
+            "needs_review": 44,
+            "profile_only": 21,
+        })
+        actual_counts = Counter(item["status"] for item in reconciliation)
+        self.assertEqual(actual_counts, expected_counts)
+
+        evidence_ids = {item["evidence_id"] for item in manifest["evidence"]}
+        self.assertTrue(evidence_ids)
+        for row in csv_rows:
+            field = row["profile_field"]
+            self.assertIn(field, by_field)
+            actual = by_field[field]
+            csv_evidence_ids = (
+                [item for item in row["new_evidence_ids"].split(";") if item]
+            )
             with self.subTest(field=field):
-                self.assertEqual(by_field[field]["status"], "needs_review")
-                self.assertTrue(by_field[field]["docx_evidence_ids"])
+                self.assertEqual(actual["field"], field)
+                self.assertEqual(actual["status"], row["new_reconciliation_status"])
+                self.assertEqual(actual["docx_status"], row["new_docx_status"])
+                self.assertEqual(actual["docx_evidence_ids"], csv_evidence_ids)
+
+                if actual["status"] == "consistent":
+                    self.assertEqual(actual["docx_status"], "docx_evidence")
+                    self.assertTrue(actual["docx_evidence_ids"])
+                    self.assertTrue(set(actual["docx_evidence_ids"]).issubset(evidence_ids))
+                elif actual["status"] == "needs_review":
+                    self.assertEqual(actual["docx_status"], "unresolved")
+                    self.assertTrue(actual["docx_evidence_ids"])
+                    self.assertTrue(set(actual["docx_evidence_ids"]).issubset(evidence_ids))
+                    self.assertTrue(actual["unresolved_docx_sources"])
+                else:
+                    self.assertEqual(actual["status"], "profile_only")
+                    self.assertEqual(actual["docx_status"], "absent")
+                    self.assertEqual(actual["docx_evidence_ids"], [])
+                    self.assertEqual(actual["docx_values"], [])
+                    self.assertEqual(actual["unresolved_docx_sources"], [])
 
         geometry_eps = by_field["method.scf_eps_scf_ha.geometry_optimization"]
         force_eps = by_field["method.scf_eps_scf_ha.local_hessian_force"]
@@ -322,14 +391,17 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
             for item in manifest["unresolved_structured_fields"]
         ))
 
-        orientation = by_field["tasks.WP1.support_cluster_docking_orientation_count"]
-        self.assertEqual(orientation["status"], "needs_review")
-        self.assertEqual(orientation["docx_evidence_ids"], ["docx-block-000155"])
-        orientation_scope = by_field["tasks.WP1.orientation_scope"]
-        self.assertEqual(orientation_scope["status"], "needs_review")
-        self.assertEqual(orientation_scope["docx_evidence_ids"], ["docx-block-000155"])
-
-        # The Profile remains isolated; no Profile-only value is inserted into DOCX claims.
+        # Uncertain orientation and spin scope remain review-only; never infer the Profile's 15.
+        for field in (
+            "tasks.WP1.support_cluster_docking_orientation_count",
+            "tasks.WP1.orientation_scope",
+            "systems.Cu-20.cluster.multiplicities[0]",
+            "systems.SnCu-20.support_multiplicities[0]",
+            "tasks.WP3.protonation_products_per_catalyst",
+            "tasks.WP5.sccs_single_points",
+            "topology_requirements.explicit_coordination_bonds",
+        ):
+            self.assertEqual(by_field[field]["status"], "needs_review")
         self.assertFalse(any(c.get("value") == 15 for c in manifest["claims"]))
 
 
