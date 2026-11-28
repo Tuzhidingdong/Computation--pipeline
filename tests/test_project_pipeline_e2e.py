@@ -307,8 +307,7 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             )
             self.assertTrue(final_report_path.is_file())
             self.assertEqual(hashlib.sha256(final_report_path.read_bytes()).hexdigest(),
-                             next(stage for stage in report["stages"] if stage["stage"] == "RESULT_DELIVERY")
-                             ["outputs"]["final_report_sha256"])
+                             report["final_report_sha256"])
         _FACTORY_API = None
 
 

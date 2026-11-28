@@ -331,7 +331,6 @@ class ProjectPipeline:
         if approval_stage != "COMPLETED" or _stage_status(self.lifecycle, run_id, "MODEL_ARTIFACT_FREEZE") != "COMPLETED":
             return self.status(run_id)
 
-        approval_row = self.lifecycle.stage(run_id, "MODEL_ARTIFACT_FREEZE")["outputs"]
         approval = self.lifecycle.approval(run_id, self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]["candidate_id"])
         # The full record in stage output is the authoritative candidate binding.
         candidate_id = approval["candidate_id"]
@@ -381,11 +380,15 @@ class ProjectPipeline:
             outputs={"workflow_run_id": workflow_run_id, "workflow_status": workflow_status,
                      "workflow_report": str(root / "workflow_report.json")})
         self.lifecycle.transition(run_id, "RESULT_DELIVERY", "RUNNING")
-        final_report = self.report(run_id, write=False)
-        final_path = _write_json(root / "final_project_report.json", final_report)
+        final_path = root / "final_project_report.json"
         self.lifecycle.transition(run_id, "RESULT_DELIVERY", "COMPLETED",
-                                  outputs={"final_report": str(final_path),
-                                           "final_report_sha256": _sha256(final_path)})
+                                  outputs={"final_report": str(final_path)})
+        final_report = self.report(run_id, write=False)
+        _write_json(final_path, final_report)
+        delivery_outputs = self.lifecycle.stage(run_id, "RESULT_DELIVERY")["outputs"]
+        delivery_outputs["final_report_sha256"] = _sha256(final_path)
+        self.lifecycle.transition(run_id, "RESULT_DELIVERY", "COMPLETED",
+                                  outputs=delivery_outputs)
         return self.status(run_id)
 
     def status(self, run_id: str) -> dict:
@@ -451,7 +454,19 @@ class ProjectPipeline:
             },
         }
         if write:
-            _write_json(root / "final_project_report.json", result)
+            final_path = root / "final_project_report.json"
+            for item in result["stages"]:
+                if item["stage"] == "RESULT_DELIVERY":
+                    item["outputs"].pop("final_report_sha256", None)
+            _write_json(final_path, result)
+            digest = _sha256(final_path)
+            delivery_outputs = self.lifecycle.stage(run_id, "RESULT_DELIVERY")["outputs"]
+            delivery_outputs.update({"final_report": str(final_path), "final_report_sha256": digest})
+            self.lifecycle.transition(run_id, "RESULT_DELIVERY",
+                                      self.lifecycle.stage(run_id, "RESULT_DELIVERY")["status"],
+                                      outputs=delivery_outputs)
+            result["final_report_path"] = str(final_path)
+            result["final_report_sha256"] = digest
         return result
 
 
