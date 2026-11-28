@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from pipeline_contracts.scientific_planning.bundle import canonical_sha256
 from pipeline_contracts.scientific_planning.planning_orchestrator import filter_resolved_manifest_fields
 from pipeline_contracts.scientific_planning.research_planner import build_research_plan
 from pipeline_contracts.scientific_planning.decision_policy import evidence_gap
