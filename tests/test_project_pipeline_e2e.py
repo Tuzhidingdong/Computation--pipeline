@@ -234,6 +234,99 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             finally:
                 pipeline.close()
 
+    def test_completed_evidence_review_rejects_manifest_confirmation_without_partial_write(self):
+        global _FACTORY_API
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = _write_docx(root / "synthetic-confirmation-lock.docx",
+                                 "test_identifier: manifest-lock")
+            state_db = root / "state.sqlite"
+            output_root = root / "project_runs"
+            spec_path = root / "model_spec_bundle.json"
+            plan_path = root / "calculation_plan.json"
+            model_bundle = {
+                "model_specs": [_synthetic_model_spec()],
+                "format_ids": {
+                    "structure": "extxyz", "topology": "json",
+                    "metadata": "json", "validation_report": "json",
+                },
+                "parent_artifact_ids": [],
+                "pseudopotential_valence_by_model": {"mock-cu-o": {"Cu": 11, "O": 6}},
+            }
+            spec_path.write_text(json.dumps(model_bundle), encoding="utf-8")
+            example_plan = Path(__file__).resolve().parents[1] / "examples" / "cp2k_geo_opt_energy_plan.json"
+            plan_path.write_text(example_plan.read_text(encoding="utf-8"), encoding="utf-8")
+            _FACTORY_API = FakeDataAnalysis()
+            factory_spec = f"{__name__}:build_test_integration"
+
+            started = _run_cli([
+                "project", "start", str(source), "--project-id", "synthetic-e2e",
+                "--compiler", "generic", "--state-db", str(state_db),
+                "--output-root", str(output_root),
+            ])
+            run_id = started["project_run_id"]
+            _run_cli([
+                "project", "confirm", run_id, "--state-db", str(state_db),
+                "--output-root", str(output_root), "--evidence-id", "docx-block-000001",
+                "--confirmed-by", "test-owner", "--rationale", "Confirm synthetic source evidence",
+                "--changes", '{"decision":"confirm only the synthetic source note"}',
+            ])
+            generated = _run_cli([
+                "project", "resume", run_id, "--state-db", str(state_db),
+                "--output-root", str(output_root), "--mode", "mock",
+                "--integration-factory", factory_spec,
+                "--model-spec", str(spec_path), "--calculation-plan", str(plan_path),
+            ])
+            self.assertEqual(generated["status"], "AWAITING_APPROVAL")
+            self.assertEqual(generated["stages"][2]["status"], "COMPLETED")
+            self.assertEqual(generated["stages"][3]["status"], "COMPLETED")
+            self.assertEqual(generated["stages"][4]["status"], "COMPLETED")
+            self.assertEqual(generated["stages"][5]["status"], "COMPLETED")
+            self.assertEqual(generated["stages"][6]["status"], "AWAITING_APPROVAL")
+
+            pipeline = ProjectPipeline(state_db, output_root)
+            try:
+                manifest_path = output_root / run_id / "manifest.json"
+                before_file_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+                before_db_manifest = pipeline.store._db.execute(
+                    "SELECT manifest_json FROM project_lifecycle_runs WHERE project_run_id=?",
+                    (run_id,),
+                ).fetchone()["manifest_json"]
+                before_manifest = pipeline.lifecycle.manifest(run_id)
+                before_confirmation_count = len(before_manifest.get("confirmations", []))
+                before_stages = {
+                    name: pipeline.lifecycle.stage(run_id, name)
+                    for name in (
+                        "EVIDENCE_REVIEW", "MODEL_GENERATE", "MODEL_VALIDATE",
+                        "MODEL_REVIEW", "MODEL_APPROVAL", "MODEL_ARTIFACT_FREEZE",
+                        "CALCULATION_PLAN", "WORKFLOW_EXECUTION", "RESULT_DELIVERY",
+                    )
+                }
+
+                with self.assertRaisesRegex(RuntimeError, "Manifest confirmation is closed"):
+                    pipeline.confirm_evidence(
+                        run_id, evidence_ids=["docx-block-000001"],
+                        confirmer="late-owner", rationale="Attempted late confirmation",
+                        changes={"decision": "must not be recorded"},
+                    )
+
+                after_db_manifest = pipeline.store._db.execute(
+                    "SELECT manifest_json FROM project_lifecycle_runs WHERE project_run_id=?",
+                    (run_id,),
+                ).fetchone()["manifest_json"]
+                after_manifest = pipeline.lifecycle.manifest(run_id)
+                self.assertEqual(after_db_manifest, before_db_manifest)
+                self.assertEqual(after_manifest, before_manifest)
+                self.assertEqual(hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                                 before_file_sha)
+                self.assertEqual(len(after_manifest.get("confirmations", [])),
+                                 before_confirmation_count)
+                for name, before_stage in before_stages.items():
+                    self.assertEqual(pipeline.lifecycle.stage(run_id, name), before_stage)
+            finally:
+                pipeline.close()
+                _FACTORY_API = None
+
     def test_e2e_b_cli_mock_pipeline_runs_through_approval_energy_and_evidence_delivery(self):
         global _FACTORY_API
         with tempfile.TemporaryDirectory() as tmp:
@@ -365,6 +458,145 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             self.assertTrue(final_report_path.is_file())
             self.assertEqual(hashlib.sha256(final_report_path.read_bytes()).hexdigest(),
                              report["final_report_sha256"])
+
+            # A repeated resume with the same complete Plan must reuse the
+            # existing Workflow Run and completed task results without side effects.
+            project_root = output_root / run_id
+            stored_plan_input = project_root / "calculation_plan_input.json"
+            stored_final_plan = project_root / "calculation_plan.json"
+            input_file_sha_before = hashlib.sha256(stored_plan_input.read_bytes()).hexdigest()
+            final_plan_sha_before = hashlib.sha256(stored_final_plan.read_bytes()).hexdigest()
+            api_call_count_before = len(_FACTORY_API.calls)
+            analysis_count_before = len(_FACTORY_API.analysis_runs)
+            evidence_count_before = len(_FACTORY_API.evidence_packages)
+
+            pipeline = ProjectPipeline(state_db, output_root)
+            try:
+                workflow_run_id = completed["workflow_run_id"]
+                frozen_info_before = pipeline.store.run_info(workflow_run_id)
+                frozen_tasks_before = pipeline.store.tasks(workflow_run_id)
+                workflow_events_before = pipeline.store.events(workflow_run_id)
+                workflow_run_count_before = pipeline.store._db.execute(
+                    "SELECT COUNT(*) AS n FROM workflow_runs"
+                ).fetchone()["n"]
+                task_count_before = pipeline.store._db.execute(
+                    "SELECT COUNT(*) AS n FROM workflow_tasks"
+                ).fetchone()["n"]
+                final_report_bytes_before = final_report_path.read_bytes()
+
+                repeated = _run_cli([
+                    "project", "resume", run_id, "--state-db", str(state_db),
+                    "--output-root", str(output_root), "--mode", "mock",
+                    "--integration-factory", factory_spec,
+                    "--calculation-plan", str(plan_path),
+                ])
+                self.assertEqual(repeated["status"], "COMPLETED")
+                self.assertEqual(repeated["workflow_run_id"], workflow_run_id)
+                frozen_info_after = pipeline.store.run_info(workflow_run_id)
+                self.assertEqual(frozen_info_after["plan_hash"], frozen_info_before["plan_hash"])
+                self.assertEqual(frozen_info_after["plan_json"], frozen_info_before["plan_json"])
+                self.assertEqual(frozen_info_after["plan_id"], frozen_info_before["plan_id"])
+                self.assertEqual(pipeline.store.tasks(workflow_run_id), frozen_tasks_before)
+                self.assertEqual(
+                    pipeline.store._db.execute("SELECT COUNT(*) AS n FROM workflow_runs").fetchone()["n"],
+                    workflow_run_count_before,
+                )
+                self.assertEqual(
+                    pipeline.store._db.execute("SELECT COUNT(*) AS n FROM workflow_tasks").fetchone()["n"],
+                    task_count_before,
+                )
+                self.assertEqual(len(_FACTORY_API.calls), api_call_count_before)
+                self.assertEqual(len(_FACTORY_API.analysis_runs), analysis_count_before)
+                self.assertEqual(len(_FACTORY_API.evidence_packages), evidence_count_before)
+                self.assertEqual(hashlib.sha256(stored_plan_input.read_bytes()).hexdigest(),
+                                 input_file_sha_before)
+                self.assertEqual(hashlib.sha256(stored_final_plan.read_bytes()).hexdigest(),
+                                 final_plan_sha_before)
+                repeated_report = pipeline.report(run_id, write=False)
+                self.assertEqual(repeated_report["workflow_run_id"], workflow_run_id)
+
+                # A caller-supplied Plan with changed content is rejected before
+                # rewriting either persisted Plan file or mutating WorkflowStore.
+                changed_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+                changed_plan.setdefault("metadata", {})["mock_test_revision"] = "different-plan"
+                changed_plan_path = root / "different_calculation_plan.json"
+                changed_plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
+                input_bytes_before_rejection = stored_plan_input.read_bytes()
+                final_plan_bytes_before_rejection = stored_final_plan.read_bytes()
+                report_bytes_before_rejection = final_report_path.read_bytes()
+                frozen_info_before_rejection = pipeline.store.run_info(workflow_run_id)
+                frozen_tasks_before_rejection = pipeline.store.tasks(workflow_run_id)
+                events_before_rejection = pipeline.store.events(workflow_run_id)
+                workflow_runs_before_rejection = pipeline.store._db.execute(
+                    "SELECT COUNT(*) AS n FROM workflow_runs"
+                ).fetchone()["n"]
+                workflow_tasks_before_rejection = pipeline.store._db.execute(
+                    "SELECT COUNT(*) AS n FROM workflow_tasks"
+                ).fetchone()["n"]
+                api_calls_before_rejection = len(_FACTORY_API.calls)
+                analysis_runs_before_rejection = len(_FACTORY_API.analysis_runs)
+                evidence_packages_before_rejection = len(_FACTORY_API.evidence_packages)
+
+                with self.assertRaisesRegex(ValueError, "Newly supplied CalculationPlan differs"):
+                    _run_cli([
+                        "project", "resume", run_id, "--state-db", str(state_db),
+                        "--output-root", str(output_root), "--mode", "mock",
+                        "--integration-factory", factory_spec,
+                        "--calculation-plan", str(changed_plan_path),
+                    ])
+
+                self.assertEqual(stored_plan_input.read_bytes(), input_bytes_before_rejection)
+                self.assertEqual(stored_final_plan.read_bytes(), final_plan_bytes_before_rejection)
+                self.assertEqual(final_report_path.read_bytes(), report_bytes_before_rejection)
+                self.assertEqual(pipeline.store.run_info(workflow_run_id)["plan_hash"],
+                                 frozen_info_before_rejection["plan_hash"])
+                self.assertEqual(pipeline.store.run_info(workflow_run_id)["plan_json"],
+                                 frozen_info_before_rejection["plan_json"])
+                self.assertEqual(pipeline.store.run_info(workflow_run_id)["plan_id"],
+                                 frozen_info_before_rejection["plan_id"])
+                self.assertEqual(pipeline.store.tasks(workflow_run_id), frozen_tasks_before_rejection)
+                self.assertEqual(pipeline.store.events(workflow_run_id), events_before_rejection)
+                self.assertEqual(
+                    pipeline.store._db.execute("SELECT COUNT(*) AS n FROM workflow_runs").fetchone()["n"],
+                    workflow_runs_before_rejection,
+                )
+                self.assertEqual(
+                    pipeline.store._db.execute("SELECT COUNT(*) AS n FROM workflow_tasks").fetchone()["n"],
+                    workflow_tasks_before_rejection,
+                )
+                self.assertEqual(len(_FACTORY_API.calls), api_calls_before_rejection)
+                self.assertEqual(len(_FACTORY_API.analysis_runs), analysis_runs_before_rejection)
+                self.assertEqual(len(_FACTORY_API.evidence_packages), evidence_packages_before_rejection)
+                self.assertEqual(pipeline.report(run_id, write=False)["workflow_run_id"], workflow_run_id)
+
+                # Tampering with the on-disk original input is also rejected and
+                # is not "repaired" by overwriting it with a different Plan.
+                original_input_bytes = stored_plan_input.read_bytes()
+                tampered_input = json.loads(original_input_bytes)
+                tampered_input.setdefault("metadata", {})["mock_test_revision"] = "tampered-on-disk"
+                stored_plan_input.write_text(json.dumps(tampered_input), encoding="utf-8")
+                tampered_input_bytes = stored_plan_input.read_bytes()
+                with self.assertRaisesRegex(ValueError, "On-disk input CalculationPlan differs"):
+                    _run_cli([
+                        "project", "resume", run_id, "--state-db", str(state_db),
+                        "--output-root", str(output_root), "--mode", "mock",
+                        "--integration-factory", factory_spec,
+                    ])
+                self.assertEqual(stored_plan_input.read_bytes(), tampered_input_bytes)
+                self.assertEqual(stored_final_plan.read_bytes(), final_plan_bytes_before_rejection)
+                self.assertEqual(final_report_path.read_bytes(), report_bytes_before_rejection)
+                self.assertEqual(pipeline.store.run_info(workflow_run_id)["plan_hash"],
+                                 frozen_info_before_rejection["plan_hash"])
+                self.assertEqual(pipeline.store.run_info(workflow_run_id)["plan_json"],
+                                 frozen_info_before_rejection["plan_json"])
+                self.assertEqual(pipeline.store.tasks(workflow_run_id), frozen_tasks_before_rejection)
+                self.assertEqual(pipeline.store.events(workflow_run_id), events_before_rejection)
+                self.assertEqual(len(_FACTORY_API.calls), api_calls_before_rejection)
+                self.assertEqual(len(_FACTORY_API.analysis_runs), analysis_runs_before_rejection)
+                self.assertEqual(len(_FACTORY_API.evidence_packages), evidence_packages_before_rejection)
+                stored_plan_input.write_bytes(original_input_bytes)
+            finally:
+                pipeline.close()
         _FACTORY_API = None
 
 
