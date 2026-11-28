@@ -35,7 +35,7 @@ class ModelPipelineTests(unittest.TestCase):
             try:
                 lifecycle = ProjectLifecycle(store)
                 run_id = lifecycle.create("v41-test", {})
-                for stage in PROJECT_STAGES[:2]:
+                for stage in PROJECT_STAGES[:3]:
                     lifecycle.transition(run_id, stage, "COMPLETED")
                 spec = {
                     "schema_version":"1.0.0","project_id":"v41-test","model_id":"test-model",

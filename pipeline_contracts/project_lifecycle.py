@@ -1,4 +1,4 @@
-"""Pre-model project DAG persisted in the existing WorkflowStore SQLite ledger."""
+"""Project stages persisted in the existing WorkflowStore SQLite ledger."""
 from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
@@ -11,18 +11,15 @@ from .calculation_plan import CalculationPlan
 from projects.corr_dft_v4_1.model_plugin.approval import verify_approval_record, verify_approval_record_integrity
 
 PROJECT_STAGES = (
-    "DOCX_INGEST", "PLAN_COMPILE", "MODEL_GENERATE", "MODEL_VALIDATE",
-    "MODEL_REVIEW", "MODEL_APPROVAL", "MODEL_ARTIFACT_FREEZE", "CALCULATION_PLAN",
+    "DOCX_INGEST", "PLAN_COMPILE", "EVIDENCE_REVIEW", "MODEL_GENERATE",
+    "MODEL_VALIDATE", "MODEL_REVIEW", "MODEL_APPROVAL", "MODEL_ARTIFACT_FREEZE",
+    "CALCULATION_PLAN", "WORKFLOW_EXECUTION", "RESULT_DELIVERY",
 )
 PROJECT_STATES = {"PENDING", "RUNNING", "BLOCKED", "FAILED", "COMPLETED", "AWAITING_APPROVAL"}
 
 
 class ProjectLifecycle:
-    """Adds pre-model lifecycle tables to the existing WorkflowStore database.
-
-    The formal CalculationPlan is created only after model approval and Artifact
-    registration. The workflow store remains the single SQLite control ledger.
-    """
+    """Project-stage records share the WorkflowStore database; no second ledger is created."""
     def __init__(self, workflow_store: WorkflowStore):
         self.store = workflow_store
         self.db = workflow_store._db
@@ -56,6 +53,49 @@ class ProjectLifecycle:
         self.store.event(run_id, None, "PROJECT_LIFECYCLE_CREATED",
                          {"project_id": project_id, "stages": list(PROJECT_STAGES)})
         return run_id
+
+    def run_info(self, run_id: str) -> dict:
+        row = self.db.execute(
+            "SELECT * FROM project_lifecycle_runs WHERE project_run_id=?", (run_id,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(run_id)
+        result = dict(row)
+        result["manifest"] = json.loads(result.pop("manifest_json") or "{}")
+        return result
+
+    def manifest(self, run_id: str) -> dict:
+        return self.run_info(run_id)["manifest"]
+
+    def update_manifest(self, run_id: str, manifest: Mapping[str, Any]) -> None:
+        self.db.execute(
+            "UPDATE project_lifecycle_runs SET manifest_json=?,updated_at=? WHERE project_run_id=?",
+            (json.dumps(dict(manifest), ensure_ascii=False, sort_keys=True), time.time(), run_id),
+        )
+        self.store.event(run_id, None, "PROJECT_MANIFEST_UPDATED",
+                         {"manifest_keys": sorted(manifest.keys())})
+
+    def stages(self, run_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM project_lifecycle_tasks WHERE project_run_id=? ORDER BY rowid",
+            (run_id,),
+        ).fetchall()
+        if not rows:
+            raise KeyError(run_id)
+        result = []
+        for raw in rows:
+            item = dict(raw)
+            item["inputs"] = json.loads(item.pop("input_json") or "{}")
+            item["outputs"] = json.loads(item.pop("output_json") or "{}")
+            result.append(item)
+        return result
+
+    def stage(self, run_id: str, name: str) -> dict:
+        for item in self.stages(run_id):
+            if item["stage"] == name:
+                return item
+        raise KeyError(f"{run_id}:{name}")
+
     def transition(self, run_id: str, stage: str, status: str, *,
                    inputs: Mapping[str, Any] | None = None,
                    outputs: Mapping[str, Any] | None = None, error: str | None = None):
@@ -91,6 +131,7 @@ class ProjectLifecycle:
                         (run_status, time.time(), run_id))
         self.store.event(run_id, stage, status, {"inputs": dict(inputs or {}),
                                                 "outputs": dict(outputs or {}), "error": error})
+
     def freeze_approval(self, run_id: str, record: Mapping[str, Any]):
         if not verify_approval_record_integrity(record):
             raise ValueError("model approval record or Data_analysis ArtifactRef integrity is invalid")
@@ -105,10 +146,14 @@ class ProjectLifecycle:
             (run_id, record["candidate_id"], record["artifact_id"], record["structure_sha256"],
              json.dumps(dict(record), sort_keys=True, ensure_ascii=False), time.time()),
         )
-        self.transition(run_id, "MODEL_APPROVAL", "COMPLETED", outputs=dict(record))
-        self.transition(run_id, "MODEL_ARTIFACT_FREEZE", "COMPLETED",
-                        outputs={"artifact_id": record["artifact_id"],
-                                 "sha256": record["structure_sha256"]})
+        approval_outputs = self.stage(run_id, "MODEL_APPROVAL")["outputs"]
+        approval_outputs.update(dict(record))
+        self.transition(run_id, "MODEL_APPROVAL", "COMPLETED", outputs=approval_outputs)
+        freeze_outputs = self.stage(run_id, "MODEL_ARTIFACT_FREEZE")["outputs"]
+        freeze_outputs.update({"artifact_id": record["artifact_id"],
+                               "sha256": record["structure_sha256"]})
+        self.transition(run_id, "MODEL_ARTIFACT_FREEZE", "COMPLETED", outputs=freeze_outputs)
+
     def approval(self, run_id: str, candidate_id: str) -> dict:
         row = self.db.execute(
             "SELECT record_json FROM model_approval_records WHERE project_run_id=? AND candidate_id=?",
@@ -131,6 +176,7 @@ class ProjectLifecycle:
         workflow_run_id = controller.create(plan)
         self.transition(run_id, "CALCULATION_PLAN", "COMPLETED", outputs={
             "workflow_run_id": workflow_run_id, "plan_id": plan.plan_id,
+            "plan_sha256": plan.sha256,
             "model_artifact_id": record["artifact_id"],
             "model_sha256": record["structure_sha256"],
         })
