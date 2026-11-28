@@ -211,3 +211,25 @@ def test_projection_validation_uses_existing_calculationplan_validate():
         "CalculationPlan.validate(): method.cutoff_ry must be positive" in item
         for item in result["blockers"]
     )
+
+
+def test_structure_periodicity_blocker_cannot_coexist_with_resolved_status():
+    fields = _complete_fields()
+    fields["kpoints"] = "Gamma"
+    fields["smearing"] = "Gaussian"
+    result = plan_method({
+        "engine": "cp2k",
+        "task_type": "cp2k.geo_opt",
+        "software_version": "2025.2",
+        "runtime_version_verified": True,
+        "structure": {"atom_count": 2, "system_type": "molecule"},
+        "sources": [{
+            "source_kind": "frozen_source",
+            "source_ref": "source:complete-method",
+            "fields": fields,
+        }],
+    })
+
+    assert result["status"] == "BLOCKED_MISSING_METHOD_FIELDS"
+    assert "structure.periodicity" in result["missing_fields"]
+    assert result["ready_for_core_compilation"] is False

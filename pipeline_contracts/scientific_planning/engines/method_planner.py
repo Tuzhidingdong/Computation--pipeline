@@ -281,6 +281,8 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     if request.get("runtime_version_verified") is not True:
         blockers.append("Exact software version must be verified against the installed executable before final method compilation/preflight.")
     if periodic is None and conditional:
+        if "structure.periodicity" not in missing:
+            missing.append("structure.periodicity")
         blockers.append("structure.periodicity is required to establish k-point/smearing applicability.")
     if missing:
         blockers.append("Missing method fields: " + ", ".join(missing))
