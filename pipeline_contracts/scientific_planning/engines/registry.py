@@ -58,8 +58,10 @@ def requested_features(request: Mapping[str, Any]) -> set[str]:
 
 def route_capability(request: Mapping[str, Any]) -> dict[str, Any]:
     engine, task = str(request.get("engine", "")).strip(), str(request.get("task_type", "")).strip()
+    execution_mode = str(request.get("execution_mode", "real")).strip().casefold() or "real"
     if not engine or not task:
-        return {"engine": engine or None, "task_type": task or None, "software_supported": False,
+        return {"engine": engine or None, "task_type": task or None,
+                "execution_mode": execution_mode, "software_supported": False,
                 "integration_status": "UNVERIFIED", "allows_real_execution_plan": False,
                 "can_enter_real_preflight": False, "capability_ids": [],
                 "blockers": ["engine and task_type are required for capability routing"]}
@@ -91,25 +93,43 @@ def route_capability(request: Mapping[str, Any]) -> dict[str, Any]:
     statuses = [str(x.get("integration_status", "UNVERIFIED")) for x in selected]
     status = max(statuses, key=lambda x: rank.get(x, 3))
     allows_real = all(x.get("allows_real_execution_plan") is True for x in selected)
-    version = request.get("software_version")
+    version_raw = request.get("software_version")
+    version = str(version_raw).strip() if version_raw is not None else ""
     version_verified = request.get("runtime_version_verified") is True
+    runtime_verified_raw = request.get("runtime_verified_version")
+    runtime_verified_version = str(runtime_verified_raw).strip() if runtime_verified_raw is not None else ""
+    version_matches = bool(version and runtime_verified_version and runtime_verified_version == version)
     blockers = []
     if status != "AVAILABLE":
         blockers.append("This route is not covered by an AVAILABLE Pipeline execution adapter.")
     if not allows_real:
         blockers.append("Real execution-plan generation is disabled for this capability combination.")
-    if not version:
-        blockers.append("Exact software_version is missing; runtime version preflight is required.")
-    elif not version_verified:
-        blockers.append("Software version has not been verified against the actual local executable.")
+    if execution_mode == "real":
+        if not version:
+            blockers.append("Exact software_version is missing; runtime version preflight is required.")
+        if not version_verified:
+            blockers.append("Software version has not been verified against the actual local executable.")
+        if not version_matches:
+            blockers.append("runtime_verified_version must exactly match the requested software_version.")
+    elif execution_mode == "mock":
+        blockers.append("Mock-only planning cannot enter Real execution preflight.")
+    else:
+        blockers.append("execution_mode must be 'mock' or 'real'.")
     return {
-        "engine": engine, "task_type": task, "software_supported": all(x.get("software_supported") is True for x in selected),
+        "engine": engine, "task_type": task, "execution_mode": execution_mode,
+        "software_supported": all(x.get("software_supported") is True for x in selected),
         "integration_status": status, "allows_real_execution_plan": allows_real,
-        "can_enter_real_preflight": allows_real and status == "AVAILABLE" and bool(version) and version_verified,
+        "can_enter_real_preflight": (
+            execution_mode == "real" and allows_real and status == "AVAILABLE"
+            and bool(version) and version_verified and version_matches
+        ),
         "capability_ids": [x["capability_id"] for x in selected],
         "requested_features": sorted(features),
         "documented_versions": sorted({str(v) for x in selected for v in x.get("version", {}).get("documented_versions", [])}),
-        "software_version_declared": bool(version), "runtime_version_verified": version_verified,
+        "software_version_declared": bool(version),
+        "runtime_version_verified": version_verified,
+        "runtime_verified_version": runtime_verified_version or None,
+        "runtime_version_matches": version_matches,
         "requires_runtime_preflight": True,
         "pipeline_adapter": [x.get("pipeline_adapter") for x in selected],
         "parser_qc_plugins": sorted({v for x in selected for v in x.get("parser_qc_plugins", [])}),

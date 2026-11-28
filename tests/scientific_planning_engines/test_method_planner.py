@@ -176,9 +176,96 @@ def test_request_metadata_version_without_source_stays_blocked_for_mock_planning
     result = plan_method(request)
 
     version = result["fields"]["software_version"]
-    assert version["status"] == "DECLARED_UNVERIFIED"
+    assert version["status"] == "MISSING"
     assert version["source_ref"] is None
-    assert result["status"] == "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
+    assert "software_version" in result["missing_fields"]
+    assert result["status"] == "BLOCKED_MISSING_METHOD_FIELDS"
     assert result["ready_for_core_compilation"] is False
     assert any("software_version" in item.lower() or "software version" in item.lower()
                for item in result["blockers"])
+
+
+
+def test_real_mode_source_version_without_runtime_verification_is_blocked():
+    request = _request([_complete_cp2k_source()])
+    request["execution_mode"] = "real"
+    request["runtime_version_verified"] = False
+
+    result = plan_method(request)
+
+    assert result["fields"]["software_version"]["source_ref"] == "frozen-docx-sha256:page-4/table-1"
+    assert result["status"] == "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
+    assert result["ready_for_core_compilation"] is False
+
+
+def test_real_mode_requires_the_runtime_verified_version_to_match_exactly():
+    request = _request([_complete_cp2k_source()])
+    request["execution_mode"] = "real"
+    request["runtime_version_verified"] = True
+    request["runtime_verified_version"] = "2025.1"
+
+    result = plan_method(request)
+
+    assert result["fields"]["software_version"]["value"] == "2025.2"
+    assert result["runtime_version_verified"] is True
+    assert result["runtime_version_matches"] is False
+    assert result["status"] == "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
+    assert result["ready_for_core_compilation"] is False
+
+
+def test_real_mode_accepts_a_source_version_matching_the_verified_runtime():
+    request = _request([_complete_cp2k_source()])
+    request["execution_mode"] = "real"
+    request["runtime_version_verified"] = True
+    request["runtime_verified_version"] = "2025.2"
+
+    result = plan_method(request)
+
+    assert result["fields"]["software_version"]["value"] == "2025.2"
+    assert result["fields"]["software_version"]["provenance"] == "frozen_source"
+    assert result["runtime_version_matches"] is True
+    assert result["status"] == "METHOD_FIELDS_RESOLVED"
+    assert result["blockers"] == []
+    assert result["ready_for_core_compilation"] is True
+
+
+def test_explicit_version_source_reference_is_retained_without_fabricating_one():
+    request = _request([_complete_cp2k_source(include_software_version=False)])
+    request["execution_mode"] = "mock"
+    request["software_version_source_ref"] = "software-manifest:cp2k-2025.2"
+    request["software_version_provenance"] = "owner_supplied_manifest"
+    request["software_version_rationale"] = "Version copied from the installed software manifest."
+    request["software_version_status"] = "SOURCE_CONFIRMED"
+    request["software_version_approval_required"] = False
+
+    result = plan_method(request)
+    version = result["fields"]["software_version"]
+
+    assert result["status"] == "METHOD_FIELDS_RESOLVED"
+    assert version["value"] == "2025.2"
+    assert version["source_ref"] == "software-manifest:cp2k-2025.2"
+    assert version["provenance"] == "owner_supplied_manifest"
+    assert version["rationale"] == "Version copied from the installed software manifest."
+    assert version["status"] == "SOURCE_CONFIRMED"
+    assert version["approval_required"] is False
+
+
+
+def test_mock_source_version_still_requires_approval_when_source_marks_it_pending():
+    source = _complete_cp2k_source()
+    source["fields"]["software_version"] = {
+        "value": "2025.2",
+        "rationale": "Version appears in an unapproved source note.",
+        "approval_required": True,
+    }
+    request = _request([source])
+    request["execution_mode"] = "mock"
+    request["runtime_version_verified"] = False
+
+    result = plan_method(request)
+
+    assert result["fields"]["software_version"]["status"] == "PROPOSED"
+    assert result["fields"]["software_version"]["approval_required"] is True
+    assert "software_version" in result["proposed_fields"]
+    assert result["status"] == "PROPOSED"
+    assert result["ready_for_core_compilation"] is False

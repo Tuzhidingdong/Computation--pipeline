@@ -67,10 +67,23 @@ def to_cp2k_calculation_plan_method(method_plan: Mapping[str, Any]) -> dict[str,
     """
     if not isinstance(method_plan, Mapping):
         raise TypeError("method_plan must be a Mapping")
+    execution_mode = str(method_plan.get("execution_mode", "real")).strip().casefold() or "real"
+    if execution_mode not in {"mock", "real"}:
+        return {
+            "status": "BLOCKED", "method": None, "calculation_plan": None,
+            "execution_mode": execution_mode, "planning_scope": "BLOCKED",
+            "mock_only": False, "real_execution_preflight_allowed": False,
+            "field_provenance": {}, "preserved_fields": {},
+            "blockers": ["execution_mode must be 'mock' or 'real'."],
+            "validation": {"status": "NOT_RUN", "issues": []},
+        }
     if str(method_plan.get("engine", "")).casefold() != "cp2k":
         return {
-            "status": "BLOCKED", "method": None, "field_provenance": {},
-            "preserved_fields": {}, "blockers": ["Projection supports CP2K MethodPlan only."],
+            "status": "BLOCKED", "method": None, "calculation_plan": None,
+            "execution_mode": execution_mode, "planning_scope": "BLOCKED",
+            "mock_only": execution_mode == "mock", "real_execution_preflight_allowed": False,
+            "field_provenance": {}, "preserved_fields": {},
+            "blockers": ["Projection supports CP2K MethodPlan only."],
             "validation": {"status": "NOT_RUN", "issues": []},
         }
 
@@ -86,6 +99,11 @@ def to_cp2k_calculation_plan_method(method_plan: Mapping[str, Any]) -> dict[str,
         )
     for item in method_plan.get("blockers", []) or []:
         blockers.append(f"MethodPlan blocker: {item}")
+    if execution_mode == "real":
+        if method_plan.get("runtime_version_verified") is not True:
+            blockers.append("Real projection requires runtime_version_verified=True.")
+        if method_plan.get("runtime_version_matches") is not True:
+            blockers.append("Real projection requires runtime_verified_version to match software_version exactly.")
 
     projected: dict[str, Any] = {}
     provenance: dict[str, Any] = {}
@@ -156,26 +174,81 @@ def to_cp2k_calculation_plan_method(method_plan: Mapping[str, Any]) -> dict[str,
     context = method_plan.get("calculation_plan_context")
     validation_issues: list[str] = []
     validation_status = "NOT_RUN"
+    calculation_plan_data = None
     if not isinstance(context, Mapping):
         blockers.append("calculation_plan_context is required to validate the projected method in its actual CalculationPlan v1.0 envelope.")
-    elif not blockers:
-        plan_data = deepcopy(dict(context))
-        plan_data["method"] = deepcopy(projected)
-        try:
-            plan = CalculationPlan.from_mapping(plan_data)
-            validation_issues = plan.validate()
-            validation_status = "PASS" if not validation_issues else "FAIL"
-            if validation_issues:
-                blockers.extend(f"CalculationPlan.validate(): {issue}" for issue in validation_issues)
-        except Exception as exc:
-            validation_status = "FAIL"
-            validation_issues = [f"{type(exc).__name__}: {exc}"]
-            blockers.extend(f"CalculationPlan.validate(): {issue}" for issue in validation_issues)
+    else:
+        version_record = fields.get("software_version")
+        if not isinstance(version_record, Mapping):
+            blockers.append("MethodPlan.fields.software_version source evidence is required.")
+        else:
+            version_value = version_record.get("value")
+            version_ref = version_record.get("source_ref")
+            version_provenance = version_record.get("provenance")
+            if (
+                version_record.get("status") not in {"SOURCE_CONFIRMED", "APPROVED_POLICY", "VERSION_VERIFIED_RULE"}
+                or version_value is None or not str(version_value).strip()
+                or not version_ref or not str(version_ref).strip()
+                or not version_provenance or not str(version_provenance).strip()
+            ):
+                blockers.append("software_version must retain a concrete value, source_ref and provenance.")
+            elif str(version_value).strip() != str(method_plan.get("software_version", "")).strip():
+                blockers.append("Projected software_version must match the request declaration.")
+            else:
+                plan_data = deepcopy(dict(context))
+                for stage in plan_data.get("calculations", []):
+                    if isinstance(stage, Mapping) and stage.get("operation") in {"cp2k.geo_opt", "cp2k.energy"}:
+                        if str(stage.get("tool_version", "")).strip() != str(version_value).strip():
+                            blockers.append(
+                                f"CalculationPlan stage {stage.get('id')!r} tool_version must exactly match "
+                                "the source-backed MethodPlan software_version."
+                            )
+                if execution_mode == "mock":
+                    metadata = plan_data.get("metadata")
+                    if not isinstance(metadata, Mapping):
+                        blockers.append("Mock-only CalculationPlan requires a metadata mapping.")
+                    else:
+                        metadata = deepcopy(dict(metadata))
+                        metadata.update({
+                            "execution_mode": "mock",
+                            "planning_scope": "MOCK_ONLY",
+                            "mock_only": True,
+                            "real_execution_preflight_allowed": False,
+                            "runtime_verification_required_before_real_preflight": True,
+                            "software_version_evidence": {
+                                "value": deepcopy(version_value),
+                                "provenance": version_provenance,
+                                "source_ref": version_ref,
+                                "rationale": version_record.get("rationale"),
+                                "status": version_record.get("status"),
+                                "approval_required": version_record.get("approval_required"),
+                            },
+                        })
+                        plan_data["metadata"] = metadata
+                if not blockers:
+                    plan_data["method"] = deepcopy(projected)
+                    try:
+                        plan = CalculationPlan.from_mapping(plan_data)
+                        validation_issues = plan.validate()
+                        validation_status = "PASS" if not validation_issues else "FAIL"
+                        if validation_issues:
+                            blockers.extend(f"CalculationPlan.validate(): {issue}" for issue in validation_issues)
+                        else:
+                            calculation_plan_data = plan.as_dict()
+                    except Exception as exc:
+                        validation_status = "FAIL"
+                        validation_issues = [f"{type(exc).__name__}: {exc}"]
+                        blockers.extend(f"CalculationPlan.validate(): {issue}" for issue in validation_issues)
 
     ready = not blockers and validation_status == "PASS"
     return {
         "status": "READY" if ready else "BLOCKED",
         "method": deepcopy(projected) if ready else None,
+        "calculation_plan": calculation_plan_data if ready else None,
+        "execution_mode": execution_mode,
+        "planning_scope": "MOCK_ONLY" if execution_mode == "mock" else "REAL_CANDIDATE",
+        "mock_only": execution_mode == "mock",
+        "real_execution_preflight_allowed": False if execution_mode == "mock" else None,
         "field_provenance": provenance,
         "preserved_fields": preserved,
         "blockers": blockers,

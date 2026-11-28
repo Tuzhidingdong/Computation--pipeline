@@ -6,6 +6,10 @@ from pipeline_contracts.scientific_planning.engines import (
 def _complete_fields():
     return {
         "xc_functional": "PBE",
+        "software_version": {
+            "value": "2025.2",
+            "rationale": "Version recorded in the cited software manifest.",
+        },
         "dispersion": "D3(BJ)",
         "basis_set": "DZVP-MOLOPT-SR-GTH",
         "pseudopotential": "GTH-PBE",
@@ -66,13 +70,18 @@ def _context():
     }
 
 
-def _planned(fields=None, *, runtime_version_verified=True, include_context=True):
+def _planned(
+    fields=None, *, runtime_version_verified=True, include_context=True,
+    execution_mode="real", runtime_verified_version="2025.2",
+):
     source_fields = _complete_fields() if fields is None else fields
     return plan_method({
         "engine": "cp2k",
         "task_type": "cp2k.geo_opt",
+        "execution_mode": execution_mode,
         "software_version": "2025.2",
         "runtime_version_verified": runtime_version_verified,
+        "runtime_verified_version": runtime_verified_version,
         "structure": {"atom_count": 2, "system_type": "molecule",
                       "periodicity": source_fields.get("periodicity")},
         "sources": [{
@@ -100,6 +109,46 @@ def test_method_resolved_status_strictly_means_no_blockers():
     assert result["status"] == "METHOD_FIELDS_RESOLVED"
     assert result["blockers"] == []
     assert result["ready_for_core_compilation"] is True
+
+
+def test_mock_methodplan_projects_full_calculationplan_marked_mock_only():
+    planned = _planned(execution_mode="mock", runtime_version_verified=False)
+
+    assert planned["status"] == "METHOD_FIELDS_RESOLVED", planned["blockers"]
+    version = planned["fields"]["software_version"]
+    assert version["value"] == "2025.2"
+    assert version["provenance"] == "frozen_source"
+    assert version["source_ref"] == "frozen-docx:sha256:source/page-4/table-1"
+    assert version["rationale"] == "Version recorded in the cited software manifest."
+    assert version["status"] == "SOURCE_CONFIRMED"
+    assert version["approval_required"] is False
+
+    projected = to_cp2k_calculation_plan_method(planned)
+
+    assert projected["status"] == "READY", projected["blockers"]
+    assert projected["execution_mode"] == "mock"
+    assert projected["planning_scope"] == "MOCK_ONLY"
+    assert projected["mock_only"] is True
+    assert projected["real_execution_preflight_allowed"] is False
+    plan = projected["calculation_plan"]
+    assert plan["metadata"]["execution_mode"] == "mock"
+    assert plan["metadata"]["planning_scope"] == "MOCK_ONLY"
+    assert plan["metadata"]["mock_only"] is True
+    assert plan["metadata"]["real_execution_preflight_allowed"] is False
+    assert plan["metadata"]["runtime_verification_required_before_real_preflight"] is True
+    assert plan["metadata"]["software_version_evidence"]["source_ref"] == version["source_ref"]
+
+
+def test_mock_projection_blocks_when_software_version_has_no_source_ref():
+    fields = _complete_fields()
+    fields.pop("software_version")
+    planned = _planned(fields, execution_mode="mock", runtime_version_verified=False)
+
+    assert planned["status"] == "BLOCKED_MISSING_METHOD_FIELDS"
+    assert "software_version" in planned["missing_fields"]
+    projected = to_cp2k_calculation_plan_method(planned)
+    assert projected["status"] == "BLOCKED"
+    assert projected["calculation_plan"] is None
 
 
 def test_explicit_na_with_source_and_rationale_is_accepted():
@@ -222,6 +271,7 @@ def test_structure_periodicity_blocker_cannot_coexist_with_resolved_status():
         "task_type": "cp2k.geo_opt",
         "software_version": "2025.2",
         "runtime_version_verified": True,
+        "runtime_verified_version": "2025.2",
         "structure": {"atom_count": 2, "system_type": "molecule"},
         "sources": [{
             "source_kind": "frozen_source",

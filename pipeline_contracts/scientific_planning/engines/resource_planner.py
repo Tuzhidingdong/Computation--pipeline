@@ -26,6 +26,45 @@ def plan_resources(request: Mapping[str, Any]) -> dict[str, Any]:
     structure = _mapping(request.get("structure"))
     engine, task = str(request.get("engine", "")).strip(), str(request.get("task_type", "")).strip()
     atom_count, system_type = structure.get("atom_count"), structure.get("system_type")
+    execution_mode = str(request.get("execution_mode", "real")).strip().casefold() or "real"
+    if execution_mode == "mock":
+        allocation = {
+            key: {
+                "value": None, "provenance": "mock_only_not_estimated", "source_ref": None,
+                "uncertainty": "NOT_ESTIMATED_FOR_MOCK", "status": "NOT_APPLICABLE",
+            }
+            for key in _RESOURCE_FIELDS
+        }
+        normalized_atom_count = (
+            atom_count if isinstance(atom_count, int) and not isinstance(atom_count, bool) and atom_count > 0
+            else None
+        )
+        return {
+            "engine": engine or None, "task_type": task or None,
+            "execution_mode": "mock", "planning_scope": "MOCK_ONLY", "mock_only": True,
+            "structure": {"atom_count": normalized_atom_count, "system_type": system_type},
+            "status": "MOCK_ONLY", "allocation": allocation,
+            "verified_profile": False, "profile_id": None, "profile_source_ref": None,
+            "historical_benchmark_reference": None, "quantitative_reference_available": False,
+            "quantitative_estimate_available": False, "quantitative_estimate": None,
+            "resource_estimate_policy": (
+                "Mock-only planning does not estimate or allocate nodes, MPI ranks, OpenMP threads, "
+                "GPUs, memory, walltime or scratch. Real execution requires a separate owner-verified "
+                "engine/task-specific resource profile."
+            ),
+            "real_execution_preflight_allowed": False, "missing_profile_fields": [],
+            "blockers": [], "notes": ["No resource values are inferred or copied from profiles/benchmarks in Mock mode."],
+        }
+    if execution_mode != "real":
+        return {
+            "engine": engine or None, "task_type": task or None,
+            "execution_mode": execution_mode, "planning_scope": "BLOCKED",
+            "status": "BLOCKED_INVALID_EXECUTION_MODE", "allocation": {},
+            "verified_profile": False, "quantitative_estimate_available": False,
+            "quantitative_estimate": None, "real_execution_preflight_allowed": False,
+            "missing_profile_fields": list(_RESOURCE_FIELDS),
+            "blockers": ["execution_mode must be 'mock' or 'real'."],
+        }
     blockers: list[str] = []
     if not isinstance(atom_count, int) or isinstance(atom_count, bool) or atom_count <= 0:
         blockers.append("A positive integer structure.atom_count is required.")
@@ -97,6 +136,7 @@ def plan_resources(request: Mapping[str, Any]) -> dict[str, Any]:
     ready = verified and not missing and not blockers
     return {
         "engine": engine or None, "task_type": task or None,
+        "execution_mode": "real", "planning_scope": "REAL_PREFLIGHT_CANDIDATE",
         "structure": {"atom_count": atom_count, "system_type": system_type},
         "status": "READY_FOR_REAL_PREFLIGHT" if ready else "BLOCKED_MISSING_RESOURCE_PROFILE",
         "allocation": allocation, "verified_profile": bool(verified),

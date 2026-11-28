@@ -235,3 +235,41 @@ METHOD_FIELDS_RESOLVED is emitted only with an empty blocker list.
 The projection result is READY only when all REQUIRED_METHOD fields are sourced,
 the real CalculationPlan envelope is present, and CalculationPlan.validate() passes.
 Otherwise method is null and blockers explain why.
+
+
+## Mock-only planning and version evidence
+
+The request may set `execution_mode` to `mock` or `real`; omission defaults to
+`real`. The top-level `request.software_version` is only the requested version
+declaration. It is never source evidence by itself. A source record must supply
+`sources[].fields.software_version` with a concrete value and a non-empty
+`source_ref`; the resulting field record retains provenance, source_ref, rationale,
+status and approval_required. An explicitly supplied `software_version_source_ref`
+is also accepted as evidence; no synthetic `request.software_version` reference is
+created. A source version that does not exactly match the requested version is a
+conflict.
+
+Mock mode may resolve MethodPlan when that source-backed version and all other
+required method fields are resolved, without runtime verification. The resulting
+CalculationPlan v1.0 envelope is returned in `calculation_plan` and marked in its
+`metadata` with `execution_mode="mock"`, `planning_scope="MOCK_ONLY"`,
+`mock_only=true`, and `real_execution_preflight_allowed=false`. The version evidence
+is retained in `metadata.software_version_evidence`. This is a schema-validated
+Mock-only plan, not authorization to run a real calculation.
+
+Real mode requires both `runtime_version_verified=true` and an independently
+supplied `runtime_verified_version` exactly equal to the requested
+`software_version`. The runtime verification flag must come from explicit
+verification of the installed executable. It must never be inferred from Project
+Profile, papers, frozen documents, manuals, or declared version metadata.
+
+Resource planning also separates modes. Mock mode returns `status="MOCK_ONLY"`,
+sets all allocation values to null, emits no numeric resource estimates or benchmark
+references, and sets `real_execution_preflight_allowed=false`. Even a supplied
+Real resource profile is ignored in Mock mode. Real mode retains the existing
+owner-verified engine/task-specific resource-profile requirements without relaxation.
+
+`route_capability.can_enter_real_preflight` remains false for Mock mode. For Real
+mode it requires an AVAILABLE execution capability, an explicit true runtime
+verification flag, and an exact match between `runtime_verified_version` and
+`software_version`.
