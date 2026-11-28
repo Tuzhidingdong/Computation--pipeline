@@ -262,7 +262,7 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         self.assertTrue(diagnostics[0].blocks_execution)
 
     def test_numbered_normal_style_sections_and_real_wp4_table_scope_are_preserved(self):
-        manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
+        manifest = _corr_manifest()
         headings = [s for s in manifest["sections"]]
         self.assertTrue(any(s["heading"].startswith("研究的科学问题") and s["heading_source"] == "explicit_numbering"
                             for s in headings))
@@ -285,21 +285,22 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
                            list_info={"num_id": "9", "level": "1"}),
             ExtractedBlock("paragraph", "1.1 List metadata without list style",
                            {"paragraph": 3}, list_info={"num_id": "10", "level": "1"}),
-            ExtractedBlock("paragraph", "Heading style title",
-                           {"paragraph": 4}, style="Heading2"),
             ExtractedBlock("paragraph", "1.1 Bullet list item",
-                           {"paragraph": 5}, style="ListBullet"),
+                           {"paragraph": 4}, style="ListBullet"),
             ExtractedBlock("paragraph", "Ordinary prose mentioning section 1.1",
-                           {"paragraph": 6}),
+                           {"paragraph": 5}),
         ]
+        blocks.extend(
+            ExtractedBlock("paragraph", f"Heading level {level}",
+                           {"paragraph": 5 + level}, style=f"Heading{level}")
+            for level in range(1, 10)
+        )
         manifest = build_project_manifest(blocks, project_id="generic")
         headings = manifest["sections"]
         self.assertEqual(
             [(item["heading"], item["heading_source"]) for item in headings],
-            [
-                ("Normal style numbered heading", "explicit_numbering"),
-                ("Heading style title", "word_style"),
-            ],
+            [("Normal style numbered heading", "explicit_numbering")]
+            + [(f"Heading level {level}", "word_style") for level in range(1, 10)],
         )
 
     def test_corr_v41_extraction_is_opt_in_and_not_part_of_generic_manifest(self):
@@ -324,7 +325,7 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         self.assertEqual(added[0]["evidence_ids"], ["docx-block-000103"])
 
     def test_added_mos_is_extracted_from_real_table_cell_and_keeps_all_cell_evidence(self):
-        manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
+        manifest = _corr_manifest()
         added = [c for c in manifest["claims"] if c.get("field") == "added_mos"]
         self.assertEqual(len(added), 1)
         self.assertEqual(added[0]["value"], "80")
@@ -364,6 +365,25 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
 
         evidence_ids = {item["evidence_id"] for item in manifest["evidence"]}
         self.assertTrue(evidence_ids)
+        def collect_ids(value):
+            found = []
+            if isinstance(value, dict):
+                if value.get("evidence_id"):
+                    found.append(value["evidence_id"])
+                if isinstance(value.get("evidence_ids"), list):
+                    found.extend(value["evidence_ids"])
+                for child in value.values():
+                    found.extend(collect_ids(child))
+            elif isinstance(value, list):
+                for child in value:
+                    found.extend(collect_ids(child))
+            return found
+
+        all_referenced_ids = set(collect_ids({
+            key: value for key, value in manifest.items() if key != "evidence"
+        }))
+        self.assertTrue(all_referenced_ids)
+        self.assertTrue(all_referenced_ids.issubset(evidence_ids))
         for row in csv_rows:
             field = row["profile_field"]
             self.assertIn(field, by_field)
