@@ -470,8 +470,12 @@ class ProjectPipeline:
                             allow_local_evidence_to_external_ai: bool = False,
                             data_analysis_api=None,
                             data_analysis_project_root: str | Path | None = None,
+                            full_text_enabled: bool = False,
+                            literature_acquisition_config: Mapping[str, Any] | None = None,
+                            literature_acquisition_config_path: str | Path | None = None,
+                            max_full_text_candidates: int | None = None,
                             max_records: int = 100, max_calls: int = 8) -> dict:
-        """Run issue classification and bounded literature research for one Project Run."""
+        """Run scientific reasoning, metadata search, and optional authenticated full-text acquisition."""
         from .scientific_planning.literature_engine import ScientificResearchEngine
         result = ScientificResearchEngine(self, max_records=max_records,
                                           max_calls=max_calls).run(
@@ -480,6 +484,12 @@ class ProjectPipeline:
             paperqa2_documents=paperqa2_documents,
             paperqa2_consent=paperqa2_consent,
             allow_local_evidence_to_external_ai=allow_local_evidence_to_external_ai,
+            full_text_enabled=full_text_enabled,
+            literature_acquisition_config=literature_acquisition_config,
+            literature_acquisition_config_path=literature_acquisition_config_path,
+            data_analysis_api=data_analysis_api,
+            data_analysis_project_root=data_analysis_project_root,
+            max_full_text_candidates=max_full_text_candidates,
         )
         dossier = self.scientific_decisions(run_id)
         source_issues = [item for item in dossier.get("issues", [])

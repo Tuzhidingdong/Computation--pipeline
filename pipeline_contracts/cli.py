@@ -81,6 +81,9 @@ def _project_cli(args) -> int:
                 allow_local_evidence_to_external_ai=args.allow_local_evidence_to_external_ai,
                 data_analysis_api=integrations.get("data_analysis_api"),
                 data_analysis_project_root=args.data_analysis_project_root,
+                full_text_enabled=args.full_text,
+                literature_acquisition_config_path=args.literature_config,
+                max_full_text_candidates=args.max_full_text_candidates,
                 max_records=args.max_records, max_calls=args.max_calls,
             )
         elif args.project_action == "decisions":
@@ -173,7 +176,10 @@ def main(argv=None):
     p=project_sub.add_parser("research", help="classify scientific issues and run bounded academic literature research")
     p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
     p.add_argument("--project-profile"); p.add_argument("--integration-factory",help="optional existing host factory returning skill_executor and/or Data_analysis API")
-    p.add_argument("--data-analysis-project-root",help="existing Data_analysis project root to reuse while recompiling source/approved decisions")
+    p.add_argument("--data-analysis-project-root",help="existing Data_analysis project root to reuse while compiling Source Package Artifacts")
+    p.add_argument("--full-text",action="store_true",help="after literature metadata search, download supported publisher MAIN/SI full text and preprocess Source Packages")
+    p.add_argument("--literature-config",help="local-only literature acquisition JSON config; Cookie files are referenced by path and never embedded")
+    p.add_argument("--max-full-text-candidates",type=int,help="override the configured maximum full-text targets for this Project Run")
     p.add_argument("--allow-external-ai",action="store_true",help="explicitly allow the configured host Skill executor to assess retrieved evidence")
     p.add_argument("--paperqa2-document",action="append",default=[],help="local paper file for optional PaperQA2")
     p.add_argument("--allow-paperqa2-processing",action="store_true",help="consent to send selected local papers to the configured PaperQA2 provider")

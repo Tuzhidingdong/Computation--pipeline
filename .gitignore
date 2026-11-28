@@ -11,6 +11,11 @@ config/local*.yaml
 config/local*.yml
 config/private*/
 
+# WebVPN credentials and local literature acquisition configuration
+.pipeline/literature-acquisition.local.json
+.pipeline/webvpn-cookies/
+literature_acquisition/
+
 # Python tooling
 __pycache__/
 *.py[cod]

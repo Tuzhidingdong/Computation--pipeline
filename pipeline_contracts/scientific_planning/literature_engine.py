@@ -483,6 +483,7 @@ def _openalex_record(record: Mapping[str, Any]) -> dict[str, Any]:
         "openalex_id": record.get("id"),
         "abstract": abstract,
         "source_name": source.get("display_name"),
+        "publisher": record.get("host_organization_name") or source.get("host_organization_name"),
         "source_url": record.get("id"),
         "is_retracted": record.get("is_retracted") is True,
         "work_type": record.get("type"),
@@ -509,6 +510,7 @@ def _crossref_record(record: Mapping[str, Any]) -> dict[str, Any]:
         "pmid": None, "openalex_id": None,
         "abstract": re.sub(r"<[^>]+>", " ", _text(record.get("abstract"))),
         "source_name": (record.get("container-title") or [None])[0],
+        "publisher": record.get("publisher"),
         "source_url": record.get("URL"), "is_retracted": retracted,
         "work_type": record.get("type"), "is_oa": None, "oa_url": None,
         "database": "crossref",
@@ -688,8 +690,9 @@ def _merge_records(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
             current = merged[target]
             if item.get("database") and item["database"] not in current["database_sources"]:
                 current["database_sources"].append(item["database"])
-            current["source_records"].append({"database": item.get("database"), "source_url": item.get("source_url")})
-            for key in ("doi", "pmid", "pmcid", "arxiv_id", "openalex_id", "abstract", "oa_url", "source_name"):
+            current["source_records"].append({"database": item.get("database"), "source_url": item.get("source_url"),
+                                               "publisher": item.get("publisher")})
+            for key in ("doi", "pmid", "pmcid", "arxiv_id", "openalex_id", "abstract", "oa_url", "source_name", "publisher"):
                 if not current.get(key) and item.get(key):
                     current[key] = item[key]
             if item.get("is_retracted"):
@@ -817,7 +820,14 @@ def _external_evidence_matrix(evidence_matrix: Sequence[Mapping[str, Any]], *,
     """Prevent local PaperQA2 full-text excerpts leaving the machine by default."""
     return [
         dict(item) for item in evidence_matrix
-        if allow_local_evidence or "paperqa2-local-index" not in (item.get("databases") or [])
+        if allow_local_evidence or (
+            "paperqa2-local-index" not in (item.get("databases") or [])
+            and not item.get("local_source_path")
+            and item.get("evidence_type") not in {
+                "FULL_TEXT_PAGE", "NATIVE_TABLE", "EXTRACTED_FIGURE_ASSET",
+                "SI_DOCX_PARAGRAPH", "SI_DOCX_EQUATION",
+            }
+        )
     ]
 
 
@@ -832,7 +842,14 @@ def _build_decision_proposals(issues: Sequence[Mapping[str, Any]],
                               evidence: Sequence[Mapping[str, Any]],
                               assessments: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
     by_field = {_text(x.get("field_path")): x for x in specs if x.get("field_path")}
-    evidence_ids = {str(x.get("evidence_id")) for x in evidence}
+    evidence_by_id = {str(x.get("evidence_id")): x for x in evidence if x.get("evidence_id")}
+    evidence_ids = set(evidence_by_id)
+    required_si_missing = {
+        evidence_id for evidence_id, item in evidence_by_id.items()
+        if item.get("requires_si") is True and item.get("si_dependency_status") not in {
+            "SATISFIED", "SATISFIED_WITH_SCANNED_PAGE_WARNINGS",
+        }
+    }
     proposals = []
     for issue in issues:
         if issue.get("classification") != "GENUINE_SCIENTIFIC_DECISION":
@@ -882,9 +899,16 @@ def _build_decision_proposals(issues: Sequence[Mapping[str, Any]],
         option_support = (recommended_option or {}).get("supporting_evidence_ids", [])
         option_challenges = (recommended_option or {}).get("challenging_evidence_ids", [])
         assessment_evidence = sorted(set(option_support + option_challenges))
+        selected_assessment_evidence = set(assessment_evidence)
+        selected_assessment_evidence.update(
+            str(value) for value in assessment.get("evidence_ids", []) if str(value) in evidence_ids
+        )
+        missing_required_si_evidence = sorted(selected_assessment_evidence & required_si_missing)
         valid_recommendation = bool(
-            recommended_option and option_support and _text(recommended_option.get("assessment_reason") or assessment.get("reason"))
+            recommended_option and option_support
+            and _text(recommended_option.get("assessment_reason") or assessment.get("reason"))
             and set(assessment_evidence).issubset(evidence_ids)
+            and not missing_required_si_evidence
         )
         if valid_recommendation:
             confidence = _text(assessment.get("confidence")).upper()
@@ -899,10 +923,20 @@ def _build_decision_proposals(issues: Sequence[Mapping[str, Any]],
                    "evidence_ids": assessment_evidence,
                    "uncertainties": list(recommended_option.get("assessment_uncertainties") or assessment.get("uncertainties") or [])}
         else:
-            rec = {"status": "NO_RECOMMENDATION_INSUFFICIENT_EVIDENCE",
-                   "option_id": None, "confidence": "INSUFFICIENT",
-                   "reason": "Retrieved bibliographic/abstract evidence has not been independently assessed against each declared option; no unique scientific recommendation is justified.",
-                   "evidence_ids": [], "uncertainties": ["Full-text access and/or a configured evidence assessor may be unavailable."]}
+            if missing_required_si_evidence:
+                rec = {
+                    "status": "BLOCKED_REQUIRED_SI_EVIDENCE_MISSING",
+                    "option_id": None, "confidence": "INSUFFICIENT",
+                    "reason": "A selected evidence source is required by the ResearchPlan to include Supporting Information, but the required SI evidence is unavailable or was not successfully parsed. No recommendation may rely on that source until the SI evidence gap is resolved.",
+                    "evidence_ids": [],
+                    "missing_required_si_evidence_ids": missing_required_si_evidence,
+                    "uncertainties": ["Required SI evidence is missing, inaccessible, scanned without OCR, or unsupported by the deterministic parser."],
+                }
+            else:
+                rec = {"status": "NO_RECOMMENDATION_INSUFFICIENT_EVIDENCE",
+                       "option_id": None, "confidence": "INSUFFICIENT",
+                       "reason": "Retrieved bibliographic/abstract evidence has not been independently assessed against each declared option; no unique scientific recommendation is justified.",
+                       "evidence_ids": [], "uncertainties": ["Full-text access and/or a configured evidence assessor may be unavailable."]}
         proposals.append({
             "decision_id": proposal_id, "issue_id": issue["issue_id"],
             "subject": field_path, "question": issue["description"],
@@ -965,6 +999,10 @@ def render_decision_markdown(dossier: Mapping[str, Any]) -> str:
                   f"- Access: {item.get('access_status')}; identity verification: {item.get('identity_verification', {}).get('status')}",
                   f"- Metadata / identity SHA-256: {item.get('record_content_sha256') or 'not available'} / {item.get('identity_verification_sha256') or 'not available'}",
                   f"- Source content / full-text SHA-256: {item.get('source_content_sha256') or 'not available'} / {item.get('full_text_sha256') or 'not available'}",
+                  f"- Source Package / Artifact registration: {item.get('source_package_id') or 'n/a'} / {item.get('artifact_registration_status') or 'n/a'}",
+                  f"- SI dependency: required={item.get('requires_si', False)}; status={item.get('si_dependency_status') or 'not declared'}",
+                  f"- Artifact IDs: {', '.join(item.get('source_artifact_ids') or []) or 'none registered'}",
+                  f"- Visual interpretation: {item.get('visual_interpretation_status') or 'not applicable'}",
                   f"- Evidence polarity: {item.get('polarity')} (not inferred from title/citation counts)",
                   f"- Excerpt: {item.get('excerpt') or 'No abstract/full-text excerpt available.'}",
                   f"- Locator: {json.dumps(item.get('locator'), ensure_ascii=False)}", ""]
@@ -1001,7 +1039,8 @@ class ScientificResearchEngine:
     def __init__(self, pipeline: Any, *, max_records: int = DEFAULT_MAX_RECORDS,
                  max_calls: int = DEFAULT_MAX_CALLS,
                  fetch_json: Callable[[str], dict] | None = None,
-                 fetch_text: Callable[[str], str] | None = None):
+                 fetch_text: Callable[[str], str] | None = None,
+                 full_text_service_factory: Callable[..., Any] | None = None):
         if max_records < 1 or max_calls < 1:
             raise ValueError("max_records and max_calls must be positive")
         self.pipeline = pipeline
@@ -1009,6 +1048,7 @@ class ScientificResearchEngine:
         self.max_calls = min(max_calls, 50)
         self._fetch_json = fetch_json or _fetch_json
         self._fetch_text = fetch_text or _fetch_text
+        self._full_text_service_factory = full_text_service_factory
 
     def _profile_and_bundle(self, run_id: str, profile_path: str | Path | None) -> tuple[dict, dict | None]:
         from .planning_orchestrator import _load_profile
@@ -1027,7 +1067,13 @@ class ScientificResearchEngine:
             paperqa2_settings: Mapping[str, Any] | None = None,
             paperqa2_documents: Sequence[str | Path] = (),
             paperqa2_consent: bool = False,
-            allow_local_evidence_to_external_ai: bool = False) -> dict[str, Any]:
+            allow_local_evidence_to_external_ai: bool = False,
+            full_text_enabled: bool = False,
+            literature_acquisition_config: Mapping[str, Any] | None = None,
+            literature_acquisition_config_path: str | Path | None = None,
+            data_analysis_api=None,
+            data_analysis_project_root: str | Path | None = None,
+            max_full_text_candidates: int | None = None) -> dict[str, Any]:
         manifest = self.pipeline.lifecycle.manifest(run_id)
         profile, bundle = self._profile_and_bundle(run_id, profile_path)
         previous = self.pipeline.lifecycle.approved_scientific_decisions(run_id)
@@ -1231,6 +1277,165 @@ class ScientificResearchEngine:
             globals()["_fetch_json"] = original_json_fetch
             globals()["_fetch_text"] = original_text_fetch
             _LOOKUP_FETCH_LOCK.release()
+        # Publisher full-text acquisition is an optional execution stage after metadata search.
+        # It reuses the ResearchPlan's targets and the existing Data_analysis Artifact API.
+        acquisition_report: dict[str, Any] = {
+            "status": "SKIPPED_DISABLED", "records": [], "summary": {
+                "processed": 0, "unavailable": 0, "not_implemented": 0,
+            },
+            "security": {
+                "cookie_contents_logged": False, "cookie_contents_artifacted": False,
+                "daily_browser_profile_used": False, "open_access_fallback_claimed": False,
+            },
+        }
+        acquisition_config_payload = dict(literature_acquisition_config or {})
+        if not acquisition_config_payload:
+            acquisition_config_payload = dict(
+                profile.get("literature_acquisition") or
+                (profile.get("scientific_planning") or profile.get("planning") or {}).get("literature_acquisition") or {}
+            )
+        try:
+            if literature_acquisition_config_path:
+                from .literature_acquisition.contracts import load_local_acquisition_config
+                acquisition_config = load_local_acquisition_config(
+                    literature_acquisition_config_path,
+                    base_dir=Path(literature_acquisition_config_path).expanduser().resolve().parent,
+                )
+            elif acquisition_config_payload or full_text_enabled:
+                from .literature_acquisition.contracts import AcquisitionConfig
+                acquisition_config = AcquisitionConfig.from_mapping(
+                    acquisition_config_payload, base_dir=self.pipeline._run_root(run_id),
+                )
+            else:
+                acquisition_config = None
+            if acquisition_config is not None:
+                if self._full_text_service_factory is None:
+                    from .literature_acquisition.acquisition_service import LiteratureAcquisitionService
+                    service_factory = LiteratureAcquisitionService
+                else:
+                    service_factory = self._full_text_service_factory
+                acquisition_service = service_factory(
+                    acquisition_config,
+                    data_analysis_api=data_analysis_api,
+                    data_analysis_project_root=data_analysis_project_root,
+                )
+                acquisition_report = acquisition_service.acquire(
+                    merged,
+                    run_root=self.pipeline._run_root(run_id),
+                    context=context,
+                    profile=profile,
+                    enabled_override=bool(full_text_enabled),
+                    max_candidates=max_full_text_candidates,
+                    project_run_id=run_id,
+                )
+                from .literature_acquisition.evidence import source_package_evidence
+                full_text_evidence = source_package_evidence(
+                    acquisition_report, literature_records=merged,
+                )
+                evidence_matrix.extend(full_text_evidence)
+                acquisition_by_doi = {
+                    str(item.get("doi") or "").casefold(): item
+                    for item in acquisition_report.get("records", [])
+                    if isinstance(item, Mapping) and item.get("doi")
+                }
+                for paper in merged:
+                    acquisition = acquisition_by_doi.get(str(paper.get("doi") or "").casefold())
+                    if acquisition:
+                        paper["full_text_acquisition"] = {
+                            "status": acquisition.get("status"),
+                            "source_package_status": acquisition.get("source_package_status"),
+                            "source_package_id": acquisition.get("source_package_id"),
+                            "source_package_sha256": acquisition.get("source_package_sha256"),
+                            "artifact_registration_status": acquisition.get("artifact_registration_status"),
+                            "requires_si": acquisition.get("requires_si"),
+                            "si_dependency_status": acquisition.get("si_dependency_status"),
+                        }
+                # Propagate SI dependency state to abstract/metadata Evidence rows too,
+                # so an assessor cannot evade the SI gate by citing the abstract for
+                # a paper whose ResearchPlan-required SI is missing or unparsed.
+                for evidence_item in evidence_matrix:
+                    acquisition = acquisition_by_doi.get(str(evidence_item.get("doi") or "").casefold())
+                    if acquisition:
+                        evidence_item["requires_si"] = bool(acquisition.get("requires_si"))
+                        evidence_item["si_dependency_status"] = acquisition.get("si_dependency_status")
+                        evidence_item["full_text_acquisition_status"] = acquisition.get("status")
+                        if (evidence_item["requires_si"] and evidence_item["si_dependency_status"] not in {
+                            "SATISFIED", "SATISFIED_WITH_SCANNED_PAGE_WARNINGS",
+                        }):
+                            evidence_item.setdefault("limitations", []).append(
+                                "ResearchPlan-required SI evidence is missing, inaccessible, unparsed or not registered; this source cannot support a scientific recommendation."
+                            )
+            elif full_text_enabled:
+                acquisition_report = {
+                    "status": "UNAVAILABLE", "records": [],
+                    "diagnostics": ["LITERATURE_ACQUISITION_CONFIG_UNAVAILABLE"],
+                    "security": {
+                        "cookie_contents_logged": False, "cookie_contents_artifacted": False,
+                        "daily_browser_profile_used": False, "open_access_fallback_claimed": False,
+                    },
+                }
+        except ModuleNotFoundError as exc:
+            # Publisher/browser/PDF/DOCX dependencies are optional for metadata-only
+            # Literature Research. Missing optional packages disable this stage only.
+            acquisition_report = {
+                "status": "UNAVAILABLE", "records": [],
+                "diagnostics": [{
+                    "stage": "OPTIONAL_DEPENDENCY",
+                    "diagnostic": f"Optional literature acquisition dependency is unavailable: {exc.name or 'unknown package'}",
+                }],
+                "security": {
+                    "cookie_contents_logged": False, "cookie_contents_artifacted": False,
+                    "daily_browser_profile_used": False, "open_access_fallback_claimed": False,
+                },
+            }
+        except Exception as exc:
+            # Full-text failure must not discard metadata research or the Dossier.
+            # Do not expose response bodies, Cookie values, proxy tokens or headers.
+            acquisition_report = {
+                "status": "FAILED", "records": [],
+                "diagnostics": [{
+                    "stage": "FULL_TEXT_ACQUISITION",
+                    "diagnostic": f"{type(exc).__name__}: acquisition integration failed; sensitive response text omitted",
+                }],
+                "security": {
+                    "cookie_contents_logged": False, "cookie_contents_artifacted": False,
+                    "daily_browser_profile_used": False, "open_access_fallback_claimed": False,
+                },
+            }
+
+        # When full-text acquisition was not run at all, still expose the
+        # ResearchPlan SI requirement as an unmet evidence dependency. Do not
+        # silently treat an abstract as a substitute for required SI.
+        if not acquisition_report.get("records") and merged:
+            try:
+                from .literature_acquisition.contracts import AcquisitionConfig, decide_si_requirement
+                fallback_config = (
+                    acquisition_config if "acquisition_config" in locals() and acquisition_config is not None
+                    else AcquisitionConfig.from_mapping(
+                        acquisition_config_payload, base_dir=self.pipeline._run_root(run_id),
+                    )
+                )
+                requires_si, si_basis = decide_si_requirement(
+                    fallback_config, context=context, profile=profile,
+                )
+            except Exception:
+                requires_si, si_basis = False, "SI_DEPENDENCY_UNRESOLVED"
+            if requires_si:
+                for paper in merged:
+                    paper["full_text_acquisition"] = {
+                        "status": acquisition_report.get("status") or "UNAVAILABLE",
+                        "requires_si": True,
+                        "si_requirement_basis": si_basis,
+                        "si_dependency_status": "MISSING_REQUIRED_SI_EVIDENCE",
+                    }
+                for evidence_item in evidence_matrix:
+                    evidence_item["requires_si"] = True
+                    evidence_item["si_requirement_basis"] = si_basis
+                    evidence_item["si_dependency_status"] = "MISSING_REQUIRED_SI_EVIDENCE"
+                    evidence_item.setdefault("limitations", []).append(
+                        "The ResearchPlan requires Supporting Information, but the full-text/SI acquisition stage did not produce SI evidence."
+                    )
+
         assessments: dict[str, Any] = {}
         skill_trace = []
         if allow_external_ai and skill_executor is None:
@@ -1364,6 +1569,15 @@ class ScientificResearchEngine:
                 "started_at": _now(), "retrieval_log": retrieval_log,
                 "raw_record_count": len(raw_records), "unique_record_count": len(merged),
                 "paperqa2": paperqa_status, "skill_executor": skill_trace,
+                "literature_acquisition": {
+                    "status": acquisition_report.get("status"),
+                    "report_path": acquisition_report.get("report_path"),
+                    "report_sha256": acquisition_report.get("report_sha256"),
+                    "summary": acquisition_report.get("summary") or {},
+                    "diagnostics": acquisition_report.get("diagnostics") or [],
+                    "security": acquisition_report.get("security") or {},
+                    "publisher_support_matrix": acquisition_report.get("publisher_support_matrix") or [],
+                },
                 "limits": {"max_records_per_query_provider": self.max_records,
                            "max_calls_per_query_provider": self.max_calls},
             },
@@ -1379,6 +1593,10 @@ class ScientificResearchEngine:
                 "Retrieved metadata and abstracts are not equivalent to reading full text.",
                 "Retraction status is limited to the retrieved provider metadata; absence of a flag is not proof of no retraction.",
                 "Citation counts and journal impact factors are not used as scientific quality scores.",
+                "Full-text retrieval is a separately configured authenticated source stage; a missing Cookie/browser configuration is reported as unavailable, not replaced by a claimed OA fallback.",
+                "A Source Package may remain LOCAL_UNREGISTERED when the existing Data_analysis Artifact API is unavailable; a local path is never represented as an Artifact ID.",
+                "Image extraction records asset location and hash only; visual interpretation is separate and was not performed by preprocessing.",
+                "A recommendation cannot use a paper as supporting evidence when the ResearchPlan requires SI from that paper and the SI evidence is missing or unparsed.",
                 "The configured Skill executor is an optional external host callback; without it, polarity and method applicability remain UNASSESSED.",
             ],
         }
@@ -1406,6 +1624,13 @@ class ScientificResearchEngine:
             "json_path": str(json_path), "markdown_path": str(md_path),
             "research_status": "COMPLETE" if not retrieval_log or all(x.get("status") in {"COMPLETE", "NO_RESULTS"} for x in retrieval_log) else "PARTIAL",
             "approval_state": dossier_body["approval_state"],
+            "full_text_acquisition_status": acquisition_report.get("status"),
+            "full_text_acquisition_report": acquisition_report.get("report_path"),
+            "full_text_evidence_count": sum(
+                1 for item in evidence_matrix
+                if str(item.get("evidence_type") or "").startswith("FULL_TEXT") or
+                   item.get("evidence_type") in {"NATIVE_TABLE", "EXTRACTED_FIGURE_ASSET"}
+            ),
         }
 
 
