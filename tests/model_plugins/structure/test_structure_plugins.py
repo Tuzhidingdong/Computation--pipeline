@@ -120,6 +120,13 @@ class SourceArtifactIdentityContractTests(unittest.TestCase):
                 with self.subTest(partial=partial):
                     _, _, issues = validate_source_spec(partial, "source")
                     self.assertTrue(any("must be provided together" in issue for issue in issues))
+            blank_id = {
+                **base,
+                "artifact_id": "  ",
+                "artifact_sha256": base["sha256"],
+            }
+            _, _, invalid_id_issues = validate_source_spec(blank_id, "source")
+            self.assertTrue(any("non-empty string identifier" in issue for issue in invalid_id_issues))
 
     def test_legacy_path_and_sha_source_remains_compatible(self):
         with tempfile.TemporaryDirectory() as temp:

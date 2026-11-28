@@ -355,6 +355,18 @@ def build_neb_initial_path(
                 "initial": initial_source,
                 "final": final_source,
             },
+            "provenance": {
+                "source_artifacts": {
+                    endpoint: {
+                        "artifact_id": source_record["artifact_id"],
+                        "artifact_sha256": source_record["artifact_sha256"],
+                    }
+                    for endpoint, source_record in (
+                        ("initial", initial_source), ("final", final_source)
+                    )
+                    if "artifact_id" in source_record
+                }
+            },
             "artifacts": [
                 artifact_record(initial_copy, target),
                 artifact_record(final_copy, target),

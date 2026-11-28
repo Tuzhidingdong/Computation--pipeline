@@ -17,6 +17,8 @@ route = get_model_plugin_route("explicit solvation")
 
 The functions are not connected to the Pipeline workflow automatically. They create local files only when explicit inputs pass preflight.
 
+Source records accept the legacy required pair `{path, sha256}`. Data_analysis-backed sources may additionally carry `artifact_id` and `artifact_sha256`; these two optional fields must be supplied together, the ID must be non-empty, and the Artifact SHA must exactly match the verified local file bytes. The source reader preserves both fields. Structure mappings, Packmol run manifests and NEB path manifests retain the upstream references; legacy local-file callers do not need Artifact IDs.
+
 ## 1. Explicit solvent packing — Packmol + ASE
 
 ### Required Mapping

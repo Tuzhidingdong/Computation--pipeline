@@ -477,6 +477,13 @@ def build_explicit_solvent_box(
             "packmol_version": version,
             "random_seed": seed,
             "source_inputs": original_sources,
+            "provenance": {
+                "source_sha256": [item["sha256"] for item in original_sources],
+                "source_artifacts": [
+                    {key: item[key] for key in ("role", "artifact_id", "artifact_sha256") if key in item}
+                    for item in original_sources if "artifact_id" in item
+                ],
+            },
             "artifacts": [
                 artifact_record(input_path, target),
                 artifact_record(log_path, target),
