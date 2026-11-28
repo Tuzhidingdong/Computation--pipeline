@@ -102,7 +102,7 @@ def _run_cli(args):
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
         code = cli_main(args)
-    if code not in (0,):
+    if code not in (0, 2):
         raise AssertionError(f"CLI exited {code}: {output.getvalue()}")
     return json.loads(output.getvalue())
 

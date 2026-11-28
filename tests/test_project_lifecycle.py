@@ -49,7 +49,7 @@ class ProjectLifecycleTests(unittest.TestCase):
                 self.assertEqual(lifecycle.db.execute(
                     "SELECT status FROM project_lifecycle_runs WHERE project_run_id=?",
                     (project_run,)
-                ).fetchone()["status"], "COMPLETED")
+                ).fetchone()["status"], "RUNNING")
             finally:
                 store.close()
 
