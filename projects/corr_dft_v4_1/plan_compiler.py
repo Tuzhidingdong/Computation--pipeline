@@ -9,6 +9,7 @@ import re
 from pipeline_contracts.plan_compiler import CompilationResult, compile_docx
 from pipeline_contracts.plan_compiler.manifest import _normalise_field_value, _normalise_label
 from .plan_rules import apply_v41_audit, load_v41_profile
+from .docx_adapter import extract_corr_v41_claims, extract_corr_v41_unresolved_fields
 
 
 _PROFILE_REL_PATH = "projects/corr_dft_v4_1/project_profile.json"
@@ -264,7 +265,13 @@ def _profile_provenance(manifest: dict, profile: dict) -> tuple[dict, list[dict]
     return field_provenance, reconciliation
 
 def compile_v41_docx(docx_path: str | Path, *, plan_version: str | None = None) -> CompilationResult:
-    base = compile_docx(docx_path, project_id="corr_dft_v4_1", plan_version=plan_version)
+    base = compile_docx(
+        docx_path,
+        project_id="corr_dft_v4_1",
+        plan_version=plan_version,
+        claim_enricher=extract_corr_v41_claims,
+        unresolved_fields_extractor=extract_corr_v41_unresolved_fields,
+    )
     manifest = dict(base.manifest)
     profile = load_v41_profile()
 
