@@ -100,6 +100,19 @@ def extract_corr_v41_claims(
         ("che_temperature_K", re.compile(r"\bT\s*=\s*(\d+(?:\.\d+)?)\s*K\b", re.I), lambda m: f"{m.group(1)} K"),
         ("potential_v_vs_rhe", re.compile(r"\bU\s*=\s*([+-]?\d+(?:\.\d+)?)\s*V\s*vs\.?\s*RHE\b", re.I), lambda m: f"{m.group(1)} V"),
     ]
+    # The source audit establishes this exact pair as a summary/detail relationship:
+    # a multi-cell table summary and paragraph 27 detailed implementation.
+    for claim in claims:
+        evidence_ids = claim.get("evidence_ids") or [claim.get("evidence_id")]
+        if claim.get("field") != "ase_vibrations_cp2k":
+            continue
+        if set(evidence_ids) == {"docx-block-000050", "docx-block-000051", "docx-block-000052"}:
+            claim["coexistence_group"] = "corr-v41-ase-vibration-summary-detail"
+            claim["coexistence_role"] = "summary"
+        elif evidence_ids == ["docx-block-000113"]:
+            claim["coexistence_group"] = "corr-v41-ase-vibration-summary-detail"
+            claim["coexistence_role"] = "detail"
+
     rows: dict[tuple, list[tuple[int, ExtractedBlock]]] = {}
     for index, block in enumerate(blocks, start=1):
         text = block.text
@@ -263,6 +276,7 @@ def extract_corr_v41_unresolved_fields(
     spin_cells = [
         item for item in evidence
         if _source_at(item, table=5, row=6)
+        and (item.get("source") or {}).get("column") in {2, 3}
     ]
     if spin_cells and any(re.search(r"M\s*=", item.get("text", ""), re.I) for item in spin_cells):
         spin_ids = [item["evidence_id"] for item in spin_cells]
