@@ -1,0 +1,41 @@
+{
+  "genuinely_unresolved": [
+    {
+      "question": "Does the v4.1-configured set of 15 support/cluster docking orientations apply per catalyst or across both systems?",
+      "classification": "C. SOURCE_UNDERSPECIFIED",
+      "why": "TASK_PLAN:192 explicitly forbids inference and requires Manifest declaration. Frozen DOCX gives no 15 count or scope.",
+      "available_citations": "NOT_FOUND (no DOI or bibliography in Frozen DOCX or TASK_PLAN)",
+      "missing_evidence": "Owner design record or referenced method specification defining the orientation set cardinality and its per-system/per-catalyst scope.",
+      "external_research_needed": true,
+      "research_target": "Search project design records and cited methodology for the v4.1 orientation-set definition; do not substitute general literature practice."
+    }
+  ],
+  "resolved_by_existing_sources": [
+    {
+      "question": "Must all six isolated-fragment spin candidates be executed?",
+      "answer": "Yes",
+      "basis": "TASK_PLAN:204"
+    },
+    {
+      "question": "May two candidates be deleted to match summary 4?",
+      "answer": "No",
+      "basis": "TASK_PLAN:204,206"
+    },
+    {
+      "question": "Is complete-model M=5 among the six?",
+      "answer": "No; conditional complete-model candidate only",
+      "basis": "DOCX table 5 row 6 col 3; TASK_PLAN:193"
+    }
+  ],
+  "pipeline_or_configuration_only": [
+    {
+      "issue": "Profile reconciliation marks WP1 fields docx_status=absent although DOCX/TASK_PLAN text supports them",
+      "classification": "D. PIPELINE_INTERPRETATION_ISSUE / E. NOT_A_SCIENTIFIC_DECISION"
+    },
+    {
+      "issue": "WP1_FRAGMENT_SPIN_COUNT_MISMATCH gate still requires explicit owner confirmation",
+      "classification": "E. NOT_A_SCIENTIFIC_DECISION (policy gate; scientific content already resolved)"
+    }
+  ],
+  "instruction": "No user choice list is issued. Unresolved item is handed to ChatGPT for literature/evidence research as requested; Local Agent does not select a value."
+}

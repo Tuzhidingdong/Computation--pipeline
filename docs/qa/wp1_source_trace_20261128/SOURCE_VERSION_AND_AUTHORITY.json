@@ -1,0 +1,55 @@
+{
+  "authoritative_sources": [
+    {
+      "name": "Frozen DOCX",
+      "path": "<REDACTED_LOCAL_PATH> practical<REDACTED_LOCAL_PATH>",
+      "sha256": "eaa40442835c533833d5328745b07517237ed1df08b7f78fb2fd137b7cff3ef6",
+      "size_bytes": 330696,
+      "authority": "frozen scientific plan"
+    },
+    {
+      "name": "TASK_PLAN_v1.0.0.md",
+      "path": "checkout at 54a8a942",
+      "sha256": "9fe0acbc78023098997036ad264a89622c579feb3852c058845beff70dc4bbb1",
+      "authority": "governing implementation plan; explicitly governs workload reconciliation"
+    },
+    {
+      "name": "project_profile.json",
+      "path": "projects/corr_dft_v4_1/project_profile.json",
+      "sha256": "c4f069ba50d1629d16da8322f976347fd46c154bc3fca541471994b509e6cd96",
+      "authority": "configuration; self-declared transcription from TASK_PLAN_v1.0.0.md"
+    },
+    {
+      "name": "DOCX Compilation Manifest",
+      "path": "QA run project-1020e2056fa24f06/manifest.json",
+      "sha256": "89cc15f4e1dcebc5bb336073b509d0fb0cd1eecb91368b2089d956c472d896fa",
+      "authority": "compiler output from the real DOCX"
+    },
+    {
+      "name": "AGENT_B_FROZEN_DOCX_PROVENANCE_FIX_20261127.md",
+      "sha256": "d8f71124850c2637bff8a2af557e545d9a57b63e281298fdecbe4954a4122331",
+      "authority": "historical Agent B record; states both blockers were preserved, no decision selected"
+    },
+    {
+      "name": "STATUS.md",
+      "sha256": "ede7e490d5bc03ef8f9535e5589120f8d66379217e2b7ce0ee91657d778ffbdc",
+      "authority": "project status record"
+    },
+    {
+      "name": "README.md",
+      "sha256": "8f5129e07d2042735884745bad1345cb1b275b17b61162f86b21483f08e38159",
+      "authority": "public project documentation"
+    }
+  ],
+  "other_versions": [
+    {
+      "name": "TASK_PLAN_v1.0.0.md in publish_repo",
+      "sha256": "5590f757d7525c40b9e8265a54f1950126e11efc584c813d4724d5a77c900f32",
+      "note": "differs only by local core.autocrlf line-ending setting; not a scientific version difference"
+    }
+  ],
+  "references_and_doi": {
+    "status": "NOT_FOUND",
+    "note": "No DOI, bibliography entry, or external reference supporting the 15-orientation scope or the 4-vs-6 spin count was found in the Frozen DOCX or TASK_PLAN_v1.0.0.md."
+  }
+}

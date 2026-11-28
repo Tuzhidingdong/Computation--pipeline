@@ -1,0 +1,134 @@
+{
+  "blocker": "WP1_FRAGMENT_SPIN_COUNT_MISMATCH",
+  "detailed_candidates": [
+    {
+      "candidate_id": "Cu13:M2",
+      "fragment": "isolated neutral Cu13 cluster",
+      "multiplicity": 2,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 2",
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    },
+    {
+      "candidate_id": "Cu13:M4",
+      "fragment": "isolated neutral Cu13 cluster",
+      "multiplicity": 4,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 2",
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    },
+    {
+      "candidate_id": "Cu13:M6",
+      "fragment": "isolated neutral Cu13 cluster",
+      "multiplicity": 6,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 2",
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    },
+    {
+      "candidate_id": "Cu20_support:M1",
+      "fragment": "[Cu2(C7H5O5)4]^0 70-atom support",
+      "multiplicity": 1,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 2",
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    },
+    {
+      "candidate_id": "Cu20_support:M3",
+      "fragment": "[Cu2(C7H5O5)4]^0 70-atom support",
+      "multiplicity": 3,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 2",
+          "text": "CHARGE = 0；先校验孤立中性 Cu13（M=2, 4, 6）与中性基底（2×Cu²⁺, M=1, 3）自旋初态，再对比完整奇数电子体系 M=2 与 M=4 锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    },
+    {
+      "candidate_id": "SnCu20_support:M2",
+      "fragment": "CuSn(C7H5O5)2(C7H4O5)2(H2O) 71-atom support",
+      "multiplicity": 2,
+      "source": [
+        {
+          "location": "DOCX table 5 row 6 col 3",
+          "text": "CHARGE = 0；孤立中性基底（1×Cu²⁺ d⁹ + 闭壳层 Sn⁴⁺ d¹⁰, M=2）与 Cu13 组合后，对比完整偶数电子体系 M=1 与 M=3（必要时 M=5）锁定基态。"
+        },
+        {
+          "location": "TASK_PLAN:193",
+          "text": "- WP1 spin candidates: isolated Cu13 M=2/4/6; Cu-20 support M=1/3; SnCu-20 support M=2; complete Cu-20 M=2/4; complete SnCu-20 M=1/3 (M=5 only when the configured diagnostic condition requires it)."
+        }
+      ]
+    }
+  ],
+  "all_six_required_as_single_points": true,
+  "basis_for_all_six": [
+    {
+      "location": "TASK_PLAN:204",
+      "text": "The v4.1 description contains workload counts that must be reconciled in a machine-readable task manifest before submission. In particular, the explicitly listed isolated-fragment spin candidates (Cu13 M=2/4/6, Cu-20 support M=1/3, and SnCu-20 support M=2) enumerate six candidate single-point checks, whereas one WP1 summary line reports four fragment single points. The implementation must preserve the stated spin candidates and report the reconciled count; it must not silently omit candidates to match an approximate total."
+    },
+    {
+      "location": "TASK_PLAN:206",
+      "text": "The task manifest must similarly derive all geometry optimizations, spin comparisons, finite-displacement force calls, gas-phase calculations, SCCS single points, and TZV2P single points directly from explicit task definitions. Do not trust a hand-written aggregate count if the underlying task list disagrees."
+    },
+    {
+      "location": "TASK_PLAN:928",
+      "text": "- AC-3.6: Every configured spin candidate is accounted for in the run manifest and final report."
+    },
+    {
+      "location": "DOCX table 7 row 2 col 2",
+      "text": "1. 搭建电中性 Cu-20（70+13=83 原子, 417 e⁻）与 SnCu-20（71+13=84 原子, 426 e⁻），锁定 Cu-q11 与 Sn-q14；\n2. 校验孤立 Cu13 与中性双核基底自旋初态；\n3. ASE+MACE 预筛多种停靠方位（不单凭 MACE 淘汰拓扑），按化学合理性保留 3–4 个差异化候选送 CP2K（对角化+FD+Broyden）全弛豫，对比 Cu-20（M=2 vs 4）与 SnCu-20（M=1 vs 3）锁定基态。"
+    }
+  ],
+  "summary_four": {
+    "location": "DOCX table 7 row 2 col 3",
+    "text": "碎片自旋校验（4 单点）+\n2 × (3~4) = 6~8 个基态候选全弛豫 + 自旋对比。",
+    "profile_field": "tasks.WP1.summary_fragment_single_point_count",
+    "profile_value": 4,
+    "classification": "E. NOT_A_SCIENTIFIC_DECISION",
+    "note": "Approximate hand-written aggregate; TASK_PLAN:204/206 explicitly says not to omit candidates to match it and not to trust an aggregate that disagrees with explicit task definitions."
+  },
+  "conditional_candidates_not_in_the_six": [
+    {
+      "candidate": "complete SnCu-20 M=5",
+      "location": "DOCX table 5 row 6 col 3 / TASK_PLAN:193",
+      "note": "conditional complete-model multiplicity, not an isolated-fragment candidate"
+    }
+  ],
+  "duplicate_or_cross_stage": "NOT_FOUND — the six IDs are distinct isolated fragments; complete-model multiplicities (Cu-20 M=2/4, SnCu-20 M=1/3, conditional M=5) are a separate later stage.",
+  "single_point_purpose": "Validate isolated fragment electron counts and spin initial states before full-model DFT relaxation and spin comparison (DOCX table 7 row 2 col 2 item 2; TASK_PLAN:434, 438).",
+  "classification": "A. SOURCE_ALREADY_RESOLVES for the scientific question; E. NOT_A_SCIENTIFIC_DECISION for the 4-vs-6 aggregate discrepancy",
+  "conclusion": "TASK_PLAN:204 explicitly enumerates six candidate single-point checks and directs the implementation to preserve all stated spin candidates and report the reconciled count. The summary '4' is an approximate aggregate, not an authorization to delete two candidates. The scientific question is therefore resolved by authoritative sources; the remaining blocker is a conservative policy gate plus a profile/reporting inconsistency, not a genuine scientific ambiguity.",
+  "references": "NOT_FOUND"
+}
