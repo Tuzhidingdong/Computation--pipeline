@@ -177,22 +177,6 @@ def _claim_label_identity(claim: dict) -> str:
     return "".join(char for char in label if char.isalnum())
 
 
-def _claim_is_scalar(claim: dict) -> bool:
-    value = claim.get("value")
-    if isinstance(value, (bool, int, float)):
-        return True
-    if not isinstance(value, str):
-        return False
-    value = value.strip()
-    if not value or "\n" in value or len(value) > 96:
-        return False
-    if re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*(?:[A-Za-zÅ/0-9^]+)?", value):
-        return True
-    if value.casefold() in {"true", "false", "yes", "no", "on", "off", ".true.", ".false."}:
-        return True
-    return len(value.split()) <= 3
-
-
 def _output_artifact_identity(claim: dict) -> str:
     """Return an explicitly declared output artifact identity, not its content."""
     explicit = claim.get("artifact_identity") or claim.get("output_artifact") or claim.get("artifact_name")
@@ -243,17 +227,18 @@ def detect_conflicts(claims: Iterable[dict]) -> list[CompilationDiagnostic]:
         if len(value_groups) <= 1:
             continue
 
-        # Scalar assertions conflict even when labels differ. Descriptive prose
-        # with distinct labels may coexist as a summary and its detailed explanation.
-        label_to_values: dict[str, set[str]] = {}
-        for item in items:
-            label_identity = _claim_label_identity(item) or field
-            label_to_values.setdefault(label_identity, set()).add(
-                _normalise_field_value(item.get("value", ""))
-            )
-        same_label_disagrees = any(len(values) > 1 for values in label_to_values.values())
-        scalar_disagrees = any(_claim_is_scalar(item) for item in items)
-        if not (same_label_disagrees or scalar_disagrees or artifact_identity):
+        # The default is fail-closed: different values for one canonical field
+        # and scope conflict regardless of label wording. Only the project adapter
+        # may explicitly mark a summary/detail pair as coexisting evidence.
+        coexistence_groups = {item.get("coexistence_group") for item in items}
+        coexistence_roles = {item.get("coexistence_role") for item in items}
+        explicitly_coexisting = (
+            len(items) == 2
+            and len(coexistence_groups) == 1
+            and None not in coexistence_groups
+            and coexistence_roles == {"summary", "detail"}
+        )
+        if explicitly_coexisting:
             continue
 
         conflicting_values = []
