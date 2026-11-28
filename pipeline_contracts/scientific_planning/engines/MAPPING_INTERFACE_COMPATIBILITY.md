@@ -167,3 +167,71 @@ its own evidence.
   or prose copied.
 - No third-party code was vendored. Software-specific versions, licenses and
   documentation links are recorded in `capability_registry.json`.
+
+
+## CP2K MethodPlan → CalculationPlan v1.0 projection
+
+The independent adapter is exported as:
+
+~~~python
+from pipeline_contracts.scientific_planning.engines import (
+    plan_method,
+    to_cp2k_calculation_plan_method,
+)
+~~~
+
+The request passed to plan_method may include calculation_plan_context: the actual
+CalculationPlan v1.0 envelope fields excluding method (plan identifiers, scientific
+question, project root, structure, calculations, execution, analysis, quality gates,
+retry policy and metadata). The projection replaces context.method with the exact
+REQUIRED_METHOD projection and invokes the existing CalculationPlan.validate().
+It does not create a second validator and does not insert synthetic envelope values.
+
+Mapping rules:
+
+| CalculationPlan v1.0 method key | MethodPlan source | Rule |
+|---|---|---|
+| xc | xc_functional | Direct, provenance required |
+| basis_set / pseudopotential | basis_set / pseudopotential | Direct, provenance required |
+| cutoff_ry / rel_cutoff_ry | Same names | Direct, provenance required |
+| scf | scf.method, scf.eps_scf, scf.max_scf | Each nested value requires provenance |
+| charge / multiplicity / uks | Same names | Direct, provenance required |
+| kind_definitions | kind_definitions | Explicit per-element definitions; never derived from a generic basis/potential label |
+| basis_file_name / potential_file_name | Same names | Explicit file basenames; never inferred |
+| poisson_solver | poisson_solver | Explicit, provenance required |
+| cell_periodicity | cell_periodicity or periodicity | periodicity is an alias only for the cell boundary setting |
+| poisson_periodicity | poisson_periodicity | Independent source required; never copied from cell_periodicity |
+| center_coordinates | center_coordinates | Explicit boolean, provenance required |
+
+The structure cell geometry remains in calculation_plan_context.structure.cell, not
+inside the CalculationPlan method mapping. Projection returns source provenance per
+target key and preserves fields not represented by REQUIRED_METHOD in preserved_fields.
+This sidecar includes dispersion, spin, solvation choices, k-points, smearing and
+keyword compatibility; these are not silently discarded or added as invented v1.0
+method keys.
+
+A source-backed NOT_APPLICABLE record has the form:
+
+~~~python
+{
+    "status": "NOT_APPLICABLE",
+    "value": None,
+    "rationale": "Explicit reason from the source/policy",
+    "source_ref": "stable-document-or-decision-reference",
+}
+~~~
+
+The source_ref may be inherited from the containing source record when the field
+record does not repeat it. Ordinary None remains MISSING. An explicitly N/A field
+can be preserved for an optional scientific feature such as dispersion/solvation,
+but it cannot satisfy any CalculationPlan.REQUIRED_METHOD key. Such a projection
+returns BLOCKED rather than substituting another scientific value.
+
+Deterministic MethodPlan status priority (highest first) is:
+BLOCKED_MISSING_METHOD_FIELDS > BLOCKED_SOURCE_CONFLICT >
+BLOCKED_RUNTIME_VERSION_UNVERIFIED > PROPOSED > METHOD_FIELDS_RESOLVED.
+METHOD_FIELDS_RESOLVED is emitted only with an empty blocker list.
+
+The projection result is READY only when all REQUIRED_METHOD fields are sourced,
+the real CalculationPlan envelope is present, and CalculationPlan.validate() passes.
+Otherwise method is null and blockers explain why.

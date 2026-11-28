@@ -8,10 +8,13 @@ _FIELD_SPECS: dict[str, dict[str, Any]] = {
     "cp2k": {
         "required": [
             "xc_functional", "dispersion", "basis_set", "pseudopotential",
+            "basis_file_name", "potential_file_name", "kind_definitions",
             "cutoff_ry", "rel_cutoff_ry", "scf.method", "scf.eps_scf", "scf.max_scf",
-            "charge", "multiplicity", "spin", "uks", "cell", "periodicity", "poisson_solver",
+            "charge", "multiplicity", "spin", "uks", "center_coordinates",
+            "periodicity", "poisson_periodicity", "poisson_solver",
             "solvation.implicit", "solvation.explicit", "software_version",
         ],
+        "optional": ["cell_periodicity"],
         "conditional": {"kpoints": "periodic", "smearing": "periodic"},
         "not_applicable": [],
         "keywords": ["RUN_TYPE", "XC_FUNCTIONAL", "BASIS_SET_FILE_NAME", "POTENTIAL",
@@ -66,15 +69,26 @@ def _canonical(value: Any) -> str:
 
 
 def _field_value(source: Mapping[str, Any], field: str) -> tuple[bool, Any, dict[str, Any]]:
+    """Accept NOT_APPLICABLE only as an explicit, sourced assertion."""
     values = source.get("fields", {})
     if not isinstance(values, Mapping):
         return False, None, {}
     present, raw = _lookup(values, field)
     if not present:
         return False, None, {}
+    if isinstance(raw, Mapping) and raw.get("status") == "NOT_APPLICABLE":
+        metadata = dict(raw)
+        ref = metadata.get("source_ref") or source.get("source_ref")
+        rationale = metadata.get("rationale")
+        if "value" not in metadata or metadata.get("value") is not None or not ref or not str(rationale or "").strip():
+            metadata["_invalid_not_applicable"] = True
+            metadata["source_ref"] = ref
+            return True, None, metadata
+        metadata["source_ref"] = ref
+        metadata["_explicit_not_applicable"] = True
+        return True, None, metadata
     metadata = dict(raw) if isinstance(raw, Mapping) and "value" in raw else {"value": raw}
     return True, metadata.get("value"), metadata
-
 
 def _periodic_state(request: Mapping[str, Any]) -> bool | None:
     structure = request.get("structure", {})
@@ -116,6 +130,7 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     specs = _FIELD_SPECS[engine]
     required = list(specs["required"])
     conditional = dict(specs.get("conditional", {}))
+    optional = list(specs.get("optional", []))
     not_applicable = set(specs.get("not_applicable", []))
     periodic = _periodic_state(request)
     sources_raw = request.get("sources", [])
@@ -128,7 +143,7 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     missing: list[str] = []
     proposed: list[str] = []
     conflicts: list[str] = []
-    all_fields = list(dict.fromkeys(required + list(conditional) + list(not_applicable)))
+    all_fields = list(dict.fromkeys(required + list(conditional) + optional + list(not_applicable)))
 
     for field in all_fields:
         if field in not_applicable:
@@ -151,22 +166,37 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         for source in ordered:
             kind = _source_kind(source)
             present, value, metadata = _field_value(source, field)
-            if not present or value is None:
+            if not present:
                 continue
+            is_na = metadata.get("_explicit_not_applicable") is True
+            if metadata.get("_invalid_not_applicable") is True:
+                missing.append(field)
+                fields[field] = _record(
+                    None, "invalid_not_applicable", metadata.get("source_ref") or source.get("source_ref"),
+                    "APPLICABLE", "NOT_APPLICABLE requires value:null, a non-empty rationale and a source_ref.",
+                    "INVALID_DECLARATION", True, "MISSING",
+                )
+                continue
+            if value is None and not is_na:
+                continue
+            source_ref = metadata.get("source_ref") or source.get("source_ref")
             if kind == "candidate":
-                candidate_values.append({"value": deepcopy(value), "source_ref": source.get("source_ref"),
+                candidate_values.append({"value": deepcopy(value), "status": metadata.get("status", "CANDIDATE"),
+                                         "source_ref": source_ref,
                                          "rationale": metadata.get("rationale", source.get("rationale"))})
                 continue
             if kind not in priority:
                 continue
             if kind == "approved_profile" and source.get("approved") is not True:
-                candidate_values.append({"value": deepcopy(value), "source_ref": source.get("source_ref"),
+                candidate_values.append({"value": deepcopy(value), "status": metadata.get("status", "CANDIDATE"),
+                                         "source_ref": source_ref,
                                          "rationale": "Profile is not explicitly marked approved."})
                 continue
             if kind == "capability_rule":
                 verified = source.get("rule_verified") is True and requested_version is not None and str(source.get("verified_for_version")) == str(requested_version)
                 if not verified:
-                    candidate_values.append({"value": deepcopy(value), "source_ref": source.get("source_ref"),
+                    candidate_values.append({"value": deepcopy(value), "status": metadata.get("status", "CANDIDATE"),
+                                             "source_ref": source_ref,
                                              "rationale": "Rule is not verified for the exact requested software version."})
                     continue
             decisive.append((priority[kind], source, value, metadata))
@@ -174,24 +204,31 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         if decisive:
             best_priority = min(x[0] for x in decisive)
             best = [x for x in decisive if x[0] == best_priority]
-            if len({_canonical(x[2]) for x in best}) > 1:
+            if len({_canonical({"status": x[3].get("status", "VALUE"), "value": x[2]}) for x in best}) > 1:
                 conflicts.append(field)
                 fields[field] = _record(
                     None, "conflicting_sources", None, "APPLICABLE",
                     "Highest-priority sources disagree; no value was selected.",
                     "CONFLICT", True, "CONFLICT",
-                    conflicting_sources=[{"source_kind": _source_kind(s), "source_ref": s.get("source_ref"), "value": deepcopy(v)} for _, s, v, _ in best],
+                    conflicting_sources=[{"source_kind": _source_kind(s), "source_ref": m.get("source_ref") or s.get("source_ref"),
+                                          "status": m.get("status", "VALUE"), "value": deepcopy(v)} for _, s, v, m in best],
                 )
                 continue
             _, source, value, metadata = best[0]
-            kind, ref = _source_kind(source), source.get("source_ref")
-            status = "APPROVED_POLICY" if kind == "approved_profile" else ("VERSION_VERIFIED_RULE" if kind == "capability_rule" else "SOURCE_CONFIRMED")
-            fields[field] = _record(
-                value, kind, ref, str(metadata.get("applicability", "APPLICABLE")),
-                str(metadata.get("rationale", source.get("rationale", "Selected by declared source precedence."))),
-                str(metadata.get("uncertainty", source.get("uncertainty", "UNSPECIFIED_BY_SOURCE"))),
-                bool(metadata.get("approval_required", False)), status,
-            )
+            kind, ref = _source_kind(source), metadata.get("source_ref") or source.get("source_ref")
+            if metadata.get("_explicit_not_applicable") is True:
+                fields[field] = _record(
+                    None, kind, ref, "NOT_APPLICABLE", str(metadata["rationale"]),
+                    "NOT_APPLICABLE", False, "NOT_APPLICABLE",
+                )
+            else:
+                status = "APPROVED_POLICY" if kind == "approved_profile" else ("VERSION_VERIFIED_RULE" if kind == "capability_rule" else "SOURCE_CONFIRMED")
+                fields[field] = _record(
+                    value, kind, ref, str(metadata.get("applicability", "APPLICABLE")),
+                    str(metadata.get("rationale", source.get("rationale", "Selected by declared source precedence."))),
+                    str(metadata.get("uncertainty", source.get("uncertainty", "UNSPECIFIED_BY_SOURCE"))),
+                    bool(metadata.get("approval_required", False)), status,
+                )
             continue
 
         if field == "software_version" and requested_version:
@@ -201,6 +238,15 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
                 "APPLICABLE", "Exact version declared in request; still requires runtime verification.",
                 "RUNTIME_VERSION_NOT_VERIFIED", True, "DECLARED_UNVERIFIED",
             )
+            continue
+        if field in optional:
+            if candidate_values:
+                proposed.append(field)
+                fields[field] = _record(
+                    None, "candidate_comparison", None, "APPLICABLE",
+                    "No approved policy selects an optional field candidate.",
+                    "UNRESOLVED_CHOICE", True, "PROPOSED", candidates=candidate_values,
+                )
             continue
         if candidate_values:
             proposed.append(field)
@@ -242,16 +288,24 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         blockers.append("Unapproved method choices require approval: " + ", ".join(proposed))
     if conflicts:
         blockers.append("Conflicting highest-priority method sources: " + ", ".join(conflicts))
-    status = "BLOCKED_MISSING_METHOD_FIELDS" if missing else (
-        "PROPOSED" if proposed else ("BLOCKED_SOURCE_CONFLICT" if conflicts else "METHOD_FIELDS_RESOLVED")
-    )
+    if missing:
+        status = "BLOCKED_MISSING_METHOD_FIELDS"
+    elif conflicts:
+        status = "BLOCKED_SOURCE_CONFLICT"
+    elif request.get("runtime_version_verified") is not True:
+        status = "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
+    elif proposed:
+        status = "PROPOSED"
+    else:
+        status = "METHOD_FIELDS_RESOLVED"
+    ready = status == "METHOD_FIELDS_RESOLVED" and not blockers
     return {
         "engine": engine, "task_type": task_type, "status": status, "fields": fields,
         "required_fields": required, "missing_fields": missing, "proposed_fields": proposed,
         "conflicting_fields": conflicts, "parameter_defaults_applied": False,
         "source_precedence": ["user_explicit", "frozen_source", "approved_profile", "version_verified_capability_rule", "candidate_only"],
-        "ready_for_core_compilation": not (missing or proposed or conflicts or blockers),
-        "blockers": blockers,
+        "ready_for_core_compilation": ready, "blockers": blockers,
+        "calculation_plan_context": deepcopy(request.get("calculation_plan_context")),
     }
 
 
