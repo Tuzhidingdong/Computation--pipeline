@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 import json
 import hashlib
 from .docx_reader import read_frozen_docx
@@ -23,12 +23,22 @@ class CompilationResult:
         )
 
 
-def compile_docx(docx_path: str | Path, *, project_id: str,
-                 plan_version: str | None = None) -> CompilationResult:
+def compile_docx(
+    docx_path: str | Path, *, project_id: str,
+    plan_version: str | None = None,
+    claim_enricher: Callable[[list, dict[str, dict], list[dict]], None] | None = None,
+    unresolved_fields_extractor: Callable[[list, list[dict], dict[str, dict], list[dict]], list[dict]] | None = None,
+) -> CompilationResult:
     source = Path(docx_path)
     source_bytes = source.read_bytes()
     blocks = read_frozen_docx(source)
-    manifest = build_project_manifest(blocks, project_id=project_id, plan_version=plan_version)
+    manifest = build_project_manifest(
+        blocks,
+        project_id=project_id,
+        plan_version=plan_version,
+        claim_enricher=claim_enricher,
+        unresolved_fields_extractor=unresolved_fields_extractor,
+    )
     manifest["source_document"] = {
         "file_name": source.name,
         "size_bytes": len(source_bytes),
