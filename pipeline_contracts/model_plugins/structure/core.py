@@ -211,8 +211,21 @@ def copy_verified_source(source_path: Path, source_sha: str, destination: Path) 
 
 
 def executable_version(executable: str, distribution: str | None = None) -> dict[str, Any]:
-    """Capture a package version or a bounded --version probe."""
+    """Capture package metadata, or a bounded --version probe for other tools."""
     package_version = dependency_version(distribution, distribution) if distribution else "not-associated"
+    if distribution == "packmol" and package_version != "not-installed":
+        # The Packmol 21.2.3 CLI does not implement --version. Its Python
+        # distribution pins the bundled executable and provides authoritative
+        # version metadata; use that rather than invoking an invalid CLI option.
+        return {
+            "version": package_version,
+            "package_version": package_version,
+            "probe": {
+                "command": ["python", "-m", "importlib.metadata", "version", "packmol"],
+                "returncode": 0,
+                "output": f"Packmol executable supplied by Python distribution packmol=={package_version}",
+            },
+        }
     probe: dict[str, Any] = {"command": [executable, "--version"], "returncode": None, "output": ""}
     import subprocess
     try:

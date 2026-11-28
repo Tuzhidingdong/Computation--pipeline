@@ -313,8 +313,7 @@ def build_explicit_solvent_box(
     log_path = target / "packmol.log"
     try:
         completed = subprocess.run(
-            [str(executable)],
-            input=packmol_input,
+            [str(executable), "-i", str(input_path)],
             cwd=str(target),
             capture_output=True,
             text=True,
