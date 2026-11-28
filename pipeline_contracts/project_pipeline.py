@@ -444,8 +444,12 @@ class ProjectPipeline:
         plan_file = _write_json(root / "calculation_plan.json", plan.as_dict())
         plan_hash = _sha256(plan_file)
 
+        # Candidate package registration already bound Data_analysis to this
+        # project root. All subsequent derived Artifacts and Analysis Runs must
+        # use that same registry root and namespace.
+        data_analysis_project_root = root / "model_candidates"
         adapter = _RegisteredMockAdapter(
-            MockCP2KWorkflowAdapter(), data_analysis_api, root,
+            MockCP2KWorkflowAdapter(), data_analysis_api, data_analysis_project_root,
             approval["artifact_id"], structure_path,
         )
         controller = WorkflowController(self.store, adapter)

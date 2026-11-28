@@ -28,6 +28,7 @@ class FakeDataAnalysis:
         self.files = {}
         self.calls = []
         self.analysis_runs = {}
+        self.analysis_run_paths = {}
         self.evidence_packages = {}
 
     def register_derived_artifact(self, project_root, file_path, *,
@@ -79,6 +80,7 @@ class FakeDataAnalysis:
         }
         record_path.write_text(json.dumps(record), encoding="utf-8")
         self.analysis_runs[analysis_id] = record
+        self.analysis_run_paths[analysis_id] = str(record_path)
         return {"analysis_run": record, "record_path": str(record_path)}
 
     def build_evidence_package(self, *, dft_analysis_runs, question):
@@ -351,12 +353,11 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             self.assertTrue(analysis_record["persist"])
             self.assertEqual(analysis_record["output_artifact_ids"],
                              [x["artifact_id"] for x in energy_payload["output_artifacts"]])
-            self.assertEqual(_FACTORY_API.evidence_packages[energy_payload["evidence_package_id"]]
-                             ["dft_analysis_runs"], [next(
-                                 item["record_path"] for item in _FACTORY_API.calls
-                                 if item["artifact_id"] == analysis_record["output_artifact_ids"][0]
-                             )] if False else _FACTORY_API.evidence_packages[energy_payload["evidence_package_id"]]
-                             ["dft_analysis_runs"])
+            self.assertEqual(
+                _FACTORY_API.evidence_packages[energy_payload["evidence_package_id"]]["dft_analysis_runs"],
+                [_FACTORY_API.analysis_run_paths[energy_payload["analysis_run_id"]]],
+            )
+            self.assertTrue(Path(_FACTORY_API.analysis_run_paths[energy_payload["analysis_run_id"]]).is_file())
             final_report_path = Path(
                 next(stage for stage in report["stages"] if stage["stage"] == "RESULT_DELIVERY")
                 ["outputs"]["final_report"]
