@@ -49,6 +49,20 @@ def _project_cli(args) -> int:
                 args.project_run_id, evidence_ids=args.evidence_id,
                 confirmer=args.confirmed_by, rationale=args.rationale, changes=changes,
             )
+        elif args.project_action == "plan":
+            integrations = {}
+            if args.integration_factory:
+                integrations = load_integration_factory(
+                    args.integration_factory,
+                    project_root=pipeline._run_root(args.project_run_id),
+                    run_root=pipeline._run_root(args.project_run_id),
+                )
+            result = pipeline.plan_scientific(
+                args.project_run_id,
+                profile_path=args.project_profile,
+                data_analysis_api=integrations.get("data_analysis_api"),
+                data_analysis_project_root=args.data_analysis_project_root,
+            )
         elif args.project_action == "approve":
             result = pipeline.approve_model(
                 args.project_run_id, candidate_id=args.candidate_id,
@@ -80,7 +94,7 @@ def _project_cli(args) -> int:
             raise ValueError(f"unsupported project action: {args.project_action}")
         _emit_json(result)
         status = result.get("status") or result.get("project_status")
-        if status == "BLOCKED":
+        if status == "BLOCKED" or result.get("planning_status") in {"BLOCKED", "NEEDS_DECISION", "UNSUPPORTED"}:
             return 2
         if status in {"FAILED", "FAILED_INFRASTRUCTURE"}:
             return 1
@@ -110,6 +124,11 @@ def main(argv=None):
     p.add_argument("--output-root",required=True); p.add_argument("--evidence-id",action="append",required=True)
     p.add_argument("--confirmed-by",required=True); p.add_argument("--rationale",required=True)
     p.add_argument("--changes",required=True,help="JSON object describing the confirmation/change")
+    p=project_sub.add_parser("plan", help="compile an evidence-first Scientific Planning Bundle for an existing Project Run")
+    p.add_argument("project_run_id"); p.add_argument("--state-db",required=True)
+    p.add_argument("--output-root",required=True); p.add_argument("--project-profile")
+    p.add_argument("--integration-factory",help="optional existing Data_analysis API factory module:function")
+    p.add_argument("--data-analysis-project-root")
     p=project_sub.add_parser("approve", help="explicitly approve and freeze a reviewed model candidate")
     p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
     p.add_argument("--candidate-id",required=True); p.add_argument("--approver",required=True)

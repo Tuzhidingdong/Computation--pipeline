@@ -167,6 +167,27 @@
               "type": "null"
             }
           ]
+        },
+        "provenance": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "applicability": {
+          "type": "string"
+        },
+        "approval_required": {
+          "type": "boolean"
+        },
+        "source_status": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -582,6 +603,9 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
         }
       },
       "additionalProperties": false
@@ -761,6 +785,9 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
         }
       },
       "additionalProperties": false
@@ -774,6 +801,7 @@
         "plugin_id",
         "plugin_version",
         "input_artifact_refs",
+        "source_artifact_refs",
         "target_definition",
         "composition",
         "topology",
@@ -1017,6 +1045,16 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
+        },
+        "source_artifact_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "minItems": 0
         }
       },
       "additionalProperties": false
@@ -1158,6 +1196,42 @@
             },
             "license_compatibility": {
               "$ref": "#/$defs/ParameterDecision"
+            },
+            "basis_file_name": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "potential_file_name": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "kind_definitions": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "cutoff_ry": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "rel_cutoff_ry": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "scf_method": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "eps_scf": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "max_scf": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "cell_periodicity": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "poisson_periodicity": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "center_coordinates": {
+              "$ref": "#/$defs/ParameterDecision"
+            },
+            "software_version": {
+              "$ref": "#/$defs/ParameterDecision"
             }
           },
           "additionalProperties": false
@@ -1278,6 +1352,66 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
+        },
+        "agent_a_field_records": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "value",
+              "provenance",
+              "source_ref",
+              "rationale",
+              "applicability",
+              "uncertainty",
+              "approval_required",
+              "status"
+            ],
+            "properties": {
+              "value": {},
+              "provenance": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "source_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "applicability": {
+                "type": "string"
+              },
+              "uncertainty": {
+                "type": "string"
+              },
+              "approval_required": {
+                "type": "boolean"
+              },
+              "status": {
+                "type": "string"
+              },
+              "candidates": {
+                "type": "array"
+              },
+              "conflict_records": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "agent_a_field_records_raw": {
+          "type": "object",
+          "additionalProperties": true
         }
       },
       "additionalProperties": false
@@ -1412,12 +1546,17 @@
           "required": [
             "values",
             "estimate_uncertainty",
-            "provenance_refs"
+            "provenance_refs",
+            "profile_id",
+            "profile_source_ref",
+            "verified_profile",
+            "status"
           ],
           "properties": {
             "values": {
               "type": "object",
               "required": [
+                "nodes",
                 "atom_count",
                 "system_type",
                 "software_task_type",
@@ -1463,6 +1602,9 @@
                 },
                 "scratch_bytes": {
                   "$ref": "#/$defs/ParameterDecision"
+                },
+                "nodes": {
+                  "$ref": "#/$defs/ParameterDecision"
                 }
               },
               "additionalProperties": false
@@ -1504,6 +1646,27 @@
                 "$ref": "#/$defs/EvidenceRef"
               },
               "minItems": 0
+            },
+            "profile_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "profile_source_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "verified_profile": {
+              "type": "boolean"
+            },
+            "status": {
+              "enum": [
+                "READY",
+                "BLOCKED"
+              ]
             }
           },
           "additionalProperties": false
@@ -1548,6 +1711,9 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
         }
       },
       "additionalProperties": false
@@ -1682,6 +1848,9 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
         }
       },
       "additionalProperties": false
@@ -1904,6 +2073,9 @@
               "type": "null"
             }
           ]
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
         }
       },
       "additionalProperties": false
@@ -1918,7 +2090,8 @@
         "model_recipes",
         "method_plan",
         "execution_plan",
-        "qc_plan"
+        "qc_plan",
+        "bundle_id"
       ],
       "properties": {
         "bundle_schema_version": {
@@ -1956,6 +2129,68 @@
         },
         "calculation_plan": {
           "$ref": "#/$defs/CalculationPlan"
+        },
+        "planning_metadata": {
+          "$ref": "#/$defs/PlanningMetadata"
+        },
+        "bundle_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "PlanningMetadata": {
+      "type": "object",
+      "required": [
+        "object_type",
+        "object_sha256",
+        "source_evidence_refs",
+        "upstream_sha256s",
+        "selection_records",
+        "missing_items",
+        "planning_status"
+      ],
+      "properties": {
+        "object_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "object_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "source_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 0
+        },
+        "upstream_sha256s": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          }
+        },
+        "selection_records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DecisionRecord"
+          },
+          "minItems": 0
+        },
+        "missing_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceGap"
+          },
+          "minItems": 0
+        },
+        "planning_status": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false
