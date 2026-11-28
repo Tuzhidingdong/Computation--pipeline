@@ -276,7 +276,10 @@ def extract_corr_v41_unresolved_fields(
     spin_cells = [
         item for item in evidence
         if _source_at(item, table=5, row=6)
-        and (item.get("source") or {}).get("column") in {2, 3}
+    ]
+    spin_value_cells = [
+        item for item in spin_cells
+        if (item.get("source") or {}).get("column") in {2, 3}
     ]
     if spin_cells and any(re.search(r"M\s*=", item.get("text", ""), re.I) for item in spin_cells):
         spin_ids = [item["evidence_id"] for item in spin_cells]
@@ -372,7 +375,7 @@ def extract_corr_v41_unresolved_fields(
             "source_text": reaction_block.get("text", ""),
         })
 
-    spin_evidence_ids = [item["evidence_id"] for item in spin_cells]
+    spin_value_evidence_ids = [item["evidence_id"] for item in spin_value_cells]
     for item in evidence:
         text = item.get("text", "")
         source = item.get("source") or {}
@@ -426,7 +429,7 @@ def extract_corr_v41_unresolved_fields(
                 unresolved.append({
                     "field": "tasks.summary_fragment_single_point_count", "status": "unresolved",
                     "reason": "Isolated-fragment spin verification is described, but this paragraph does not state a WP1 single-point count.",
-                    "evidence_ids": [*spin_evidence_ids, item["evidence_id"]],
+                    "evidence_ids": [*spin_value_evidence_ids, item["evidence_id"]],
                     "source": dict(source), "source_text": text,
                 })
             if re.search(r"protonation branches", text, re.I):
