@@ -171,12 +171,6 @@ def _claim_source_records(claim: dict) -> list[dict]:
 
 
 
-def _claim_label_identity(claim: dict) -> str:
-    """Canonical label identity used only to distinguish repeated descriptions."""
-    label = unicodedata.normalize("NFKC", str(claim.get("label") or "")).casefold()
-    return "".join(char for char in label if char.isalnum())
-
-
 def _output_artifact_identity(claim: dict) -> str:
     """Return an explicitly declared output artifact identity, not its content."""
     explicit = claim.get("artifact_identity") or claim.get("output_artifact") or claim.get("artifact_name")
