@@ -1,3 +1,36 @@
+# Current Follow-up — Generic Manifest Boundary and Evidence Regression
+
+Updated: 2026-11-28
+
+- PR #3 remains Draft, open, unmerged.
+- Base SHA remains 5e6e26fdf94efbac54182f819f4879c1aafb1d4d.
+- Code HEAD verified by Actions run #543: c36b66def19038f0f15578a1222d5ec3e096cafe.
+- Full report: docs/reports/AGENT_B_GENERAL_LAYER_BOUNDARY_AND_EVIDENCE_REGRESSION_20261128.md.
+
+## Layer boundary
+
+CORR v4.1-specific DOCX recognition and unresolved-field semantics are in projects/corr_dft_v4_1/docx_adapter.py. projects/corr_dft_v4_1/plan_compiler.py calls the adapter explicitly through compile_docx() callbacks. pipeline_contracts/plan_compiler/manifest.py contains reusable block/evidence parsing, heading and scope handling, and field conflict rules only. CHARGE numeric/explanation separation stays generic and preserves the complete source evidence.
+
+Conflict detection is label-independent by default and no longer excludes all outputs. Only the explicit CORR adapter marks the exact ASE summary/detail pair as coexisting. Output fields are separated by artifact identity; competing values within one artifact still block.
+
+## Tests and validation
+
+Actions run #543: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092308085
+
+- unittest: 133 total, 131 passed, 2 skipped, 0 failures.
+- pytest: 131 passed, 2 skipped, 108 subtests passed.
+- compileall: passed.
+- 104 Profile CSV rows: fully compared by unique field, status, docx_status and evidence ID list.
+- Expected statuses: 39 consistent / 44 needs_review / 21 profile_only.
+- All referenced evidence IDs are asserted to exist in Manifest evidence.
+- Heading tests cover Normal numbered headings, Heading1–Heading9, ListBullet/ListNumber/list_info 1.1 list items, and ordinary prose.
+
+The run_04 test remains an evidence-block regression using published source text, evidence IDs and coordinates. It is not a Frozen DOCX binary end-to-end acceptance run.
+
+No project_profile.json scientific values changed. No owner scientific choices, topology construction, resolve-v41-planning, CP2K, HPC, Slurm or production DFT. main and PR #1/#2/#4 remain untouched.
+
+---
+
 # Current Development Status — PR #3 run_04 evidence repair
 
 Updated: 2026-11-28
