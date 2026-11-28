@@ -781,7 +781,7 @@ class ScientificPlanningE2ETests(unittest.TestCase):
             method.pop("approved_profile_fields", None)
             profile["scientific_planning"]["execution"]["backend"] = "cp2k"
             profile_path.write_text(
-                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2) + "\\n",
+                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2),
                 encoding="utf-8",
             )
             pipeline = ProjectPipeline(state_db, output_root)
