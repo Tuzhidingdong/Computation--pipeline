@@ -1296,13 +1296,13 @@ class ScientificResearchEngine:
             )
         try:
             if literature_acquisition_config_path:
-                from .literature_acquisition.contracts import load_local_acquisition_config
+                from ..literature_acquisition.contracts import load_local_acquisition_config
                 acquisition_config = load_local_acquisition_config(
                     literature_acquisition_config_path,
                     base_dir=Path(literature_acquisition_config_path).expanduser().resolve().parent,
                 )
             elif acquisition_config_payload or full_text_enabled:
-                from .literature_acquisition.contracts import AcquisitionConfig
+                from ..literature_acquisition.contracts import AcquisitionConfig
                 acquisition_config = AcquisitionConfig.from_mapping(
                     acquisition_config_payload, base_dir=self.pipeline._run_root(run_id),
                 )
@@ -1310,7 +1310,7 @@ class ScientificResearchEngine:
                 acquisition_config = None
             if acquisition_config is not None:
                 if self._full_text_service_factory is None:
-                    from .literature_acquisition.acquisition_service import LiteratureAcquisitionService
+                    from ..literature_acquisition.acquisition_service import LiteratureAcquisitionService
                     service_factory = LiteratureAcquisitionService
                 else:
                     service_factory = self._full_text_service_factory
@@ -1328,7 +1328,7 @@ class ScientificResearchEngine:
                     max_candidates=max_full_text_candidates,
                     project_run_id=run_id,
                 )
-                from .literature_acquisition.evidence import source_package_evidence
+                from ..literature_acquisition.evidence import source_package_evidence
                 full_text_evidence = source_package_evidence(
                     acquisition_report, literature_records=merged,
                 )
@@ -1408,7 +1408,7 @@ class ScientificResearchEngine:
         # silently treat an abstract as a substitute for required SI.
         if not acquisition_report.get("records") and merged:
             try:
-                from .literature_acquisition.contracts import AcquisitionConfig, decide_si_requirement
+                from ..literature_acquisition.contracts import AcquisitionConfig, decide_si_requirement
                 fallback_config = (
                     acquisition_config if "acquisition_config" in locals() and acquisition_config is not None
                     else AcquisitionConfig.from_mapping(
