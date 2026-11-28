@@ -71,6 +71,7 @@ def test_unchanged_package_is_reused():
         first = preprocess_paired_corpus(records, working_dir=root, preprocessed_dir="processed")
         second = preprocess_paired_corpus(records, working_dir=root, preprocessed_dir="processed")
         assert first.iloc[0]["preprocessing_status"] == "COMPLETE"
+        assert first.iloc[0]["preprocessing_action"] == "PROCESSED"
         assert second.iloc[0]["preprocessing_action"] == "REUSED_UNCHANGED", (
             f"status={second.iloc[0]['preprocessing_status']}; "
             f"action={second.iloc[0]['preprocessing_action']}; "

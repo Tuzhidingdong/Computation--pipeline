@@ -664,7 +664,7 @@ def preprocess_paired_corpus(
                 "doi": doi,
                 "preprocessing_path": package_display,
                 "preprocessing_status": "FAILED",
-                "preprocessing_action": "FAILED",
+                "preprocessing_action": "",
                 "preprocessing_error": "",
                 "preprocessing_qc_report": qc_display,
                 "preprocessing_grobid_status": "",
