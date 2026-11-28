@@ -257,7 +257,12 @@ def method_plan_object(*, method_raw: Mapping[str, Any], route: Mapping[str, Any
                 "schema_version": "1.0.0",
                 "sha256": registry_sha,
             } if capability_records else None),
-            "verified_version": str(version) if route.get("runtime_version_verified") else None,
+            "verified_version": (
+                str(route.get("runtime_verified_version"))
+                if route.get("runtime_version_verified") is True
+                and route.get("runtime_version_matches") is True
+                and route.get("runtime_verified_version") else None
+            ),
             "verification_evidence_refs": [],
         },
         "license_assessment": {

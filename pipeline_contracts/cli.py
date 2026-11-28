@@ -62,6 +62,7 @@ def _project_cli(args) -> int:
                 profile_path=args.project_profile,
                 data_analysis_api=integrations.get("data_analysis_api"),
                 data_analysis_project_root=args.data_analysis_project_root,
+                runtime_verified_version=args.runtime_verified_version,
             )
         elif args.project_action == "approve":
             result = pipeline.approve_model(
@@ -129,6 +130,10 @@ def main(argv=None):
     p.add_argument("--output-root",required=True); p.add_argument("--project-profile")
     p.add_argument("--integration-factory",help="optional existing Data_analysis API factory module:function")
     p.add_argument("--data-analysis-project-root")
+    p.add_argument(
+        "--runtime-verified-version",
+        help="independent version observed from the installed runtime; never inferred from Project Profile or source documents",
+    )
     p=project_sub.add_parser("approve", help="explicitly approve and freeze a reviewed model candidate")
     p.add_argument("project_run_id"); p.add_argument("--state-db",required=True); p.add_argument("--output-root",required=True)
     p.add_argument("--candidate-id",required=True); p.add_argument("--approver",required=True)

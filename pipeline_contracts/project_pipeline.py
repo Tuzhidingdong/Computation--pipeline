@@ -449,13 +449,15 @@ class ProjectPipeline:
             raise
 
     def plan_scientific(self, run_id: str, *, profile_path: str | Path | None = None,
-                        data_analysis_api=None, data_analysis_project_root: str | Path | None = None) -> dict:
+                        data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
+                        runtime_verified_version: str | None = None) -> dict:
         """Compile the Scientific Planning Bundle using existing lifecycle and Artifact APIs."""
         from .scientific_planning.planning_orchestrator import plan_project_run
         return plan_project_run(
             self, run_id, profile_path=profile_path,
             data_analysis_api=data_analysis_api,
             data_analysis_project_root=data_analysis_project_root,
+            runtime_verified_version=runtime_verified_version,
         )
 
     def approve_model(self, run_id: str, *, candidate_id: str, approver: str,

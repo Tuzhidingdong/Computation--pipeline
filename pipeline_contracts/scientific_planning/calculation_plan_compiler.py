@@ -7,6 +7,7 @@ from typing import Any, Mapping
 from pipeline_contracts.calculation_plan import CalculationPlan, PlanValidationError
 from .bundle import canonical_sha256, object_ref
 from .engines import to_cp2k_calculation_plan_method
+from .execution_modes import agent_a_execution_mode
 
 def _field_record(fields: Mapping[str, Any], name: str) -> dict:
     cursor: Any = fields.get(name)
@@ -138,7 +139,13 @@ def compile_runtime_calculation_plan(
     backend = execution_plan.get("backend")
     if not isinstance(backend, Mapping):
         raise PlanValidationError(["ExecutionPlan has no executable backend adapter"])
-    if backend.get("backend_id") != "mock":
+    backend_id = str(backend.get("backend_id") or "")
+    agent_mode = agent_a_execution_mode(backend_id)
+    if agent_mode is None:
+        raise PlanValidationError([
+            f"ExecutionPlan backend {backend_id!r} is not registered; refusing to infer an Agent A execution mode."
+        ])
+    if backend_id != "mock":
         raise PlanValidationError([
             "this ProjectPipeline resume path executes only Mock; Real CP2K remains a separately gated "
             "preflight capability and is never dispatched through MockCP2KWorkflowAdapter"
@@ -318,7 +325,7 @@ def compile_runtime_calculation_plan(
         "blockers": [],
         "fields": deepcopy(dict(_get_fields(method_plan))),
         "calculation_plan_context": projection_context,
-        "execution_mode": str(backend.get("backend_id") or "real"),
+        "execution_mode": agent_mode,
         "software_version": software_version,
         "runtime_version_verified": method_plan.get("runtime_version_verified") is True,
         "runtime_verified_version": method_plan.get("runtime_verified_version"),
@@ -347,7 +354,7 @@ def compile_runtime_calculation_plan(
         "retry_policy": deepcopy(dict(retry)),
         "metadata": {
             "project_id": project_id, "planning_core_schema_version": "1.0.0",
-            "execution_mode": str(backend.get("backend_id") or "real"),
+            "execution_mode": agent_mode,
             "planning_scope": "MOCK_ONLY" if backend.get("backend_id") == "mock" else "REAL_PREFLIGHT_CANDIDATE",
             "mock_only": backend.get("backend_id") == "mock",
             "real_execution_preflight_allowed": False if backend.get("backend_id") == "mock" else False,

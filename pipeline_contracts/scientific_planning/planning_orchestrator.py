@@ -14,6 +14,7 @@ from .intent_compiler import compile_intent, compile_model_recipe, evidence_refs
 from .object_adapters import method_plan_object, build_qc_gates, build_resource_profile
 from .plugin_registry import engine_planning, MODEL_PLUGIN_REGISTRY, plugin_capability_status
 from .research_planner import build_research_plan
+from .execution_modes import agent_a_execution_mode
 
 
 def _sha(path: str | Path) -> str:
@@ -242,7 +243,8 @@ def _qc_type(task_type: str) -> str:
 
 
 def _engine_request(config: Mapping[str, Any], structure: Mapping[str, Any] | None,
-                    method_sources: list[dict]) -> dict:
+                    method_sources: list[dict], *,
+                    runtime_verified_version: str | None = None) -> dict:
     model_cfg = config.get("model") or {}
     mapping = structure or {}
     pbc = mapping.get("periodic_boundary_conditions")
@@ -252,10 +254,22 @@ def _engine_request(config: Mapping[str, Any], structure: Mapping[str, Any] | No
     method_config = config.get("method") or {}
     execution_config = config.get("execution") or {}
     execution = config.get("execution") or {}
+    backend = execution.get("backend")
+    agent_mode = agent_a_execution_mode(backend)
+    # This observation must be supplied independently by the caller. Never
+    # promote software_version or source-document/Profile content to runtime evidence.
+    observed_runtime_version = (
+        runtime_verified_version.strip()
+        if isinstance(runtime_verified_version, str) and runtime_verified_version.strip()
+        else None
+    )
     return {
         "engine": str(method_config.get("engine") or config.get("engine") or ""),
         "task_type": str(config.get("task_type") or ""),
-        "execution_mode": str(execution.get("backend") or "not_selected"),
+        "execution_mode": agent_mode if agent_mode is not None else "blocked",
+        "execution_backend": backend,
+        "execution_backend_registered": agent_mode is not None,
+        "runtime_verified_version": observed_runtime_version,
         "software_version": method_config.get("software_version") or config.get("software_version"),
         "software_version_provenance": method_config.get("software_version_provenance") or "project_profile_method_source",
         "software_version_source_ref": method_config.get("software_version_source_ref"),
@@ -346,7 +360,8 @@ def _planning_status_legacy(kind: str, status: str) -> str:
 
 
 def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None = None,
-                     data_analysis_api=None, data_analysis_project_root: str | Path | None = None) -> dict:
+                     data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
+                     runtime_verified_version: str | None = None) -> dict:
     """Compile a deterministic bundle from one existing Project Run and its Project Profile."""
     info = pipeline.lifecycle.run_info(run_id)
     project_id = str(info["project_id"])
@@ -357,6 +372,10 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     if not isinstance(config, Mapping):
         raise ValueError("Project Profile scientific_planning section must be an object")
     config = dict(config)
+    if runtime_verified_version is not None:
+        if not isinstance(runtime_verified_version, str):
+            raise TypeError("runtime_verified_version must be supplied as an independent version string")
+        runtime_verified_version = runtime_verified_version.strip() or None
     refs = evidence_refs(manifest)
     profile_ref = _profile_evidence_ref(resolved_profile_path, profile_sha, project_id)
     all_refs = list(refs) + ([profile_ref] if profile_ref else [])
@@ -373,12 +392,17 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     # Same-input planning is a deterministic read of the existing immutable bundle.
     # Any changed Manifest/Profile/config/Artifact requires a new Project Run.
     generate_stage = pipeline.lifecycle.stage(run_id, "MODEL_GENERATE")
-    input_fingerprint = canonical_sha256({
+    fingerprint_payload = {
         "project_run_id": run_id,
         "manifest_file_sha256": _sha(run_root / "manifest.json"),
         "project_profile_sha256": profile_sha,
         "planning_config": config,
-    })
+    }
+    # Preserve old same-input fingerprints when there is no external runtime
+    # observation; a supplied observation becomes part of this frozen input.
+    if runtime_verified_version is not None:
+        fingerprint_payload["runtime_verified_version"] = runtime_verified_version
+    input_fingerprint = canonical_sha256(fingerprint_payload)
     if generate_stage["status"] != "PENDING":
         outputs = generate_stage.get("outputs") or {}
         bundle_path = outputs.get("planning_bundle_path")
@@ -659,20 +683,64 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     method_config = dict(config.get("method") or {})
     method_sources = _method_sources(method_config, manifest, profile_ref, structure_mapping)
     task_type = str(config.get("task_type") or "")
-    engine_request = _engine_request(config, structure_mapping, method_sources)
-    if not engine_request["engine"] or not task_type:
+    engine_request = _engine_request(
+        config, structure_mapping, method_sources,
+        runtime_verified_version=runtime_verified_version,
+    )
+    if not engine_request["execution_backend_registered"]:
+        backend_error = (
+            f"Execution backend {engine_request.get('execution_backend')!r} is not registered; "
+            "supported Planning Core backends are 'mock' and 'cp2k'."
+        )
+        readiness_gaps.append(evidence_gap(
+            "EXECUTION_BACKEND_UNREGISTERED", "execution.backend",
+            backend_error,
+            "Select a registered backend id ('mock' or 'cp2k'); no backend will be inferred.",
+            all_refs,
+        ))
+        engine_result = {
+            "capability_route": {
+                "engine": engine_request["engine"] or None,
+                "task_type": task_type or None,
+                "execution_mode": "blocked",
+                "software_supported": False,
+                "integration_status": "UNSUPPORTED_BACKEND",
+                "allows_real_execution_plan": False,
+                "can_enter_real_preflight": False,
+                "capability_ids": [],
+                "blockers": [backend_error],
+            },
+            "method_plan": {
+                "engine": engine_request["engine"] or None,
+                "task_type": task_type or None,
+                "execution_mode": "blocked",
+                "status": "BLOCKED_UNREGISTERED_EXECUTION_BACKEND",
+                "fields": {}, "missing_fields": [], "proposed_fields": [],
+                "conflicting_fields": [], "blockers": [backend_error],
+                "ready_for_core_compilation": False,
+                "parameter_defaults_applied": False,
+            },
+            "resource_plan": {
+                "status": "BLOCKED_UNREGISTERED_EXECUTION_BACKEND",
+                "values": {}, "missing_profile_fields": [], "blockers": [backend_error],
+            },
+            "qc_contract": {"status": "UNREGISTERED_QC_CONTRACT", "checks": []},
+        }
+    elif not engine_request["engine"] or not task_type:
         readiness_gaps.append(evidence_gap(
             "ENGINE_TASK_TYPE_MISSING", "method_plan.engine/task_type",
             "A calculation engine and task type must be explicitly selected.",
             "Which registered engine and calculation task type should be planned?", all_refs,
         ))
-    engine_result = engine_planning(engine_request) if engine_request["engine"] and task_type else {
-        "capability_route": {"integration_status": "UNVERIFIED", "blockers": ["engine/task missing"]},
-        "method_plan": {"fields": {}, "missing_fields": [], "ready_for_core_compilation": False,
-                        "blockers": ["engine/task missing"]},
-        "resource_plan": {"status": "BLOCKED_MISSING_RESOURCE_PROFILE", "blockers": ["engine/task missing"]},
-        "qc_contract": {"status": "UNREGISTERED_QC_CONTRACT", "checks": []},
-    }
+        engine_result = {
+            "capability_route": {"integration_status": "UNVERIFIED", "blockers": ["engine/task missing"]},
+            "method_plan": {"fields": {}, "missing_fields": [], "ready_for_core_compilation": False,
+                            "blockers": ["engine/task missing"]},
+            "resource_plan": {"status": "BLOCKED_MISSING_RESOURCE_PROFILE", "blockers": ["engine/task missing"]},
+            "qc_contract": {"status": "UNREGISTERED_QC_CONTRACT", "checks": []},
+        }
+    else:
+        engine_result = engine_planning(engine_request)
     route = engine_result["capability_route"]
     method_raw = engine_result["method_plan"]
     resource_raw = engine_result["resource_plan"]
@@ -1039,6 +1107,7 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
         "schema_version": PLANNING_SCHEMA_VERSION, "project_run_id": run_id,
         "project_id": project_id, "project_profile_path": resolved_profile_path,
         "project_profile_sha256": profile_sha, "planning_config": config,
+        "runtime_verified_version": runtime_verified_version,
         "input_fingerprint": input_fingerprint,
         "data_analysis_project_root": str(data_analysis_project_root or (run_root / "model_candidates")),
         "structure_path": structure_path, "artifact_ref": artifact_ref,
