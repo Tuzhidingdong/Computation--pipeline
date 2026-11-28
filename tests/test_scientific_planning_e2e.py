@@ -525,7 +525,11 @@ class ScientificPlanningE2ETests(unittest.TestCase):
             self.assertEqual(recipe["validation_contract"]["equilibration_status"],
                              "PACKED_NOT_EQUILIBRATED")
             self.assertEqual(recipe["plugin_id"], packed["plugin"])
-            self.assertEqual(recipe["plugin_version"], packed["packmol_version"])
+            self.assertEqual(recipe["plugin_version"], packed["packmol"]["version"])
+            self.assertEqual(
+                recipe["validation_contract"]["structure_plugin"]["plugin_provenance"]["packmol_version"],
+                packed["provenance"]["packmol_version"],
+            )
             self.assertEqual(recipe["input_artifact_refs"][0]["sha256"], packed_sha)
             self.assertEqual(len(recipe["source_artifact_refs"]), 2)
             self.assertEqual(

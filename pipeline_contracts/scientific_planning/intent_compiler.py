@@ -259,10 +259,14 @@ def compile_model_recipe(config: Mapping[str, Any], structure_mapping: Mapping[s
     operation = plugin_config.get("operation") if isinstance(plugin_config, Mapping) else None
     result = dict(plugin_result or {})
     interpolation = result.get("interpolation") if isinstance(result.get("interpolation"), Mapping) else {}
+    packmol_record = result.get("packmol") if isinstance(result.get("packmol"), Mapping) else {}
+    plugin_provenance = result.get("provenance") if isinstance(result.get("provenance"), Mapping) else {}
     plugin_version = (
         result.get("plugin_version") or result.get("packmol_version")
+        or packmol_record.get("version") or plugin_provenance.get("packmol_version")
         or interpolation.get("ase_version") or result.get("ase_version")
-        or result.get("schema_version") or model_cfg.get("plugin_version") or "1.0.0"
+        or plugin_provenance.get("ase_version") or result.get("schema_version")
+        or model_cfg.get("plugin_version") or "1.0.0"
     )
     plugin_id = str(result.get("plugin") or model_cfg.get("plugin_id") or operation or "ase.structure_loader")
     source_inputs = result.get("source_inputs") or result.get("provenance", {}).get("source_artifacts") or {}
