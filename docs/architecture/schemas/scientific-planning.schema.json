@@ -6,22 +6,439 @@
   "$ref": "#/$defs/PlanningBundle",
   "$defs": {
     "EvidenceRef": {
-      "$ref": "#/$defs/EvidenceRef"
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "source_type",
+        "source_sha256",
+        "locator"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "enum": [
+            "user_statement",
+            "document",
+            "literature",
+            "artifact",
+            "software_manual",
+            "software_registry",
+            "approved_policy",
+            "experiment",
+            "database",
+            "other"
+          ]
+        },
+        "source_uri": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "locator": {
+          "type": "object",
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "page",
+                "section",
+                "paragraph",
+                "table",
+                "figure",
+                "record",
+                "file",
+                "uri",
+                "fixture",
+                "other"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "captured_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     },
     "ObjectRef": {
-      "$ref": "#/$defs/ObjectRef"
+      "type": "object",
+      "required": [
+        "object_type",
+        "object_id",
+        "schema_version",
+        "sha256"
+      ],
+      "properties": {
+        "object_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "object_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
     },
     "ParameterDecision": {
-      "$ref": "#/$defs/ParameterDecision"
+      "type": "object",
+      "required": [
+        "status",
+        "value",
+        "unit",
+        "source_evidence_refs",
+        "applicable_scope"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "EVIDENCED",
+            "POLICY_SELECTED",
+            "MISSING",
+            "NOT_APPLICABLE",
+            "NEEDS_APPROVAL"
+          ]
+        },
+        "value": {},
+        "source_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 0
+        },
+        "policy_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "applicable_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uncertainty": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "DecisionRecord": {
-      "$ref": "#/$defs/DecisionRecord"
+      "type": "object",
+      "required": [
+        "decision_id",
+        "subject",
+        "selection_mode",
+        "status",
+        "selected_value",
+        "source_evidence_refs",
+        "applicable_scope",
+        "candidates",
+        "excluded_candidates",
+        "assumptions",
+        "uncertainties",
+        "requires_user_approval"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selection_mode": {
+          "enum": [
+            "A_EVIDENCE_OR_APPROVED_FACT",
+            "B_APPROVED_POLICY",
+            "C_MISSING_DECISIVE_INFORMATION"
+          ]
+        },
+        "status": {
+          "enum": [
+            "SELECTED_FROM_EVIDENCE",
+            "SELECTED_BY_POLICY",
+            "BLOCKED",
+            "AWAITING_USER_APPROVAL"
+          ]
+        },
+        "selected_value": {},
+        "source_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 0
+        },
+        "policy_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "applicable_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "candidate_id",
+              "value"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {},
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/EvidenceRef"
+                },
+                "minItems": 0
+              },
+              "compatibility_status": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "excluded_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "candidate_id",
+              "reason"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/EvidenceRef"
+                },
+                "minItems": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "uncertainties": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "requires_user_approval": {
+          "type": "boolean"
+        },
+        "approval_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "missing_information": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "minimum_questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "question_id",
+              "question",
+              "field_path"
+            ],
+            "properties": {
+              "question_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "question": {
+                "type": "string",
+                "minLength": 1
+              },
+              "field_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "answer_type": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 0
+        }
+      },
+      "additionalProperties": false
     },
     "EvidenceGap": {
-      "$ref": "#/$defs/EvidenceGap"
+      "type": "object",
+      "required": [
+        "code",
+        "field_path",
+        "why_decisive",
+        "minimum_question"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "why_decisive": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minimum_question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "related_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 0
+        }
+      },
+      "additionalProperties": false
     },
     "Provenance": {
-      "$ref": "#/$defs/Provenance"
+      "type": "object",
+      "required": [
+        "source_evidence_refs",
+        "generated_by",
+        "transform_sha256"
+      ],
+      "properties": {
+        "source_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 0
+        },
+        "generated_by": {
+          "type": "object",
+          "required": [
+            "component_id",
+            "version"
+          ],
+          "properties": {
+            "component_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "transform_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
     },
     "ScientificIntent": {
       "type": "object",
