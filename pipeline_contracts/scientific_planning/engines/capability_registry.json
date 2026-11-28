@@ -1,0 +1,596 @@
+{
+  "registry_version": "0.1.0",
+  "as_of": "2026-11-28",
+  "integration_status_values": [
+    "AVAILABLE",
+    "PLANNABLE_ONLY",
+    "NOT_INTEGRATED",
+    "UNVERIFIED"
+  ],
+  "semantics": {
+    "AVAILABLE": "A Pipeline adapter exists for this exact capability; this does not assert live production verification.",
+    "PLANNABLE_ONLY": "The external software supports the capability and the registry can route/describe it, but Pipeline has no production execution adapter.",
+    "NOT_INTEGRATED": "The software/library is documented but no Pipeline adapter or task-specific planner is registered.",
+    "UNVERIFIED": "The capability/version/interface is not verified enough for safe routing.",
+    "version_policy": "Documentation baselines are not claims about installed versions. Real preflight must identify the executable/package version and validate version-specific inputs."
+  },
+  "capabilities": [
+    {
+      "capability_id": "cp2k.geo_opt_energy",
+      "engine": "CP2K",
+      "engine_kind": "electronic_structure_engine",
+      "capability_role": "task",
+      "version": {
+        "documented_versions": [
+          "2025.2",
+          "2026.2"
+        ],
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "cp2k.geo_opt",
+        "cp2k.energy"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "Structure path or registered Artifact ID with verified SHA-256",
+        "Coordinate format and atom identities/order",
+        "Explicit cell including finite-system box",
+        "Explicit cell periodicity and electrostatic/Poisson policy"
+      ],
+      "required_method_fields": [
+        "xc_functional",
+        "dispersion",
+        "basis_set",
+        "pseudopotential",
+        "cutoff_ry",
+        "rel_cutoff_ry",
+        "scf.method",
+        "scf.eps_scf",
+        "scf.max_scf",
+        "charge",
+        "multiplicity",
+        "spin",
+        "uks",
+        "cell",
+        "periodicity",
+        "poisson_solver",
+        "solvation.implicit",
+        "solvation.explicit",
+        "software_version"
+      ],
+      "conditional_method_fields": {
+        "kpoints": "Required when periodic electronic-structure model needs Brillouin-zone sampling; otherwise explicitly not applicable.",
+        "smearing": "Required when the selected periodic/electronic state uses fractional occupations; applicability must be justified."
+      },
+      "expected_outputs": [
+        "CP2K output",
+        "GEO_OPT optimized structure and optimizer convergence evidence",
+        "ENERGY final energy and SCF evidence",
+        "Registered Artifact references and SHA-256 values"
+      ],
+      "capability_sources": [
+        {
+          "title": "CP2K 2025.2 geometry optimization",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/methods/optimization/geometry.html"
+        },
+        {
+          "title": "CP2K GEO_OPT input reference",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/CP2K_INPUT/MOTION/GEO_OPT.html"
+        },
+        {
+          "title": "CP2K downloads and license",
+          "url": "https://www.cp2k.org/download"
+        }
+      ],
+      "license": "GPL-2.0-or-later",
+      "integration_status": "AVAILABLE",
+      "pipeline_adapter": "pipeline_contracts.real_workflow.RealCP2KWorkflowAdapter",
+      "parser_qc_plugins": [
+        "chem_scitoolkit.validate_cp2k_input",
+        "chem_scitoolkit.validate_cp2k_output",
+        "pipeline_contracts.workflow.WorkflowController GEO_OPT convergence/optimized-Artifact gate",
+        "Data_analysis cp2k_output reader via RealDataAnalysisAdapter"
+      ],
+      "allows_real_execution_plan": true,
+      "runtime_verified": false,
+      "limitations": [
+        "AVAILABLE means code-level adapter exists; live cluster, credentials, CP2K binary and production calculations are not verified.",
+        "Current real WorkflowController task range is GEO_OPT then ENERGY only."
+      ]
+    },
+    {
+      "capability_id": "cp2k.band_neb",
+      "engine": "CP2K",
+      "engine_kind": "electronic_structure_engine",
+      "capability_role": "task",
+      "version": {
+        "documented_versions": [
+          "2025.2"
+        ],
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "cp2k.band",
+        "cp2k.neb"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "Explicit initial/final endpoints",
+        "Identical atom count, element identity and atom mapping/order",
+        "Explicit image count/interpolation policy",
+        "Both endpoints optimized with same approved method",
+        "Explicit constraints, cell and periodicity"
+      ],
+      "required_method_fields": [
+        "xc_functional",
+        "dispersion",
+        "basis_set",
+        "pseudopotential",
+        "cutoff_ry",
+        "rel_cutoff_ry",
+        "scf.method",
+        "scf.eps_scf",
+        "scf.max_scf",
+        "charge",
+        "multiplicity",
+        "spin",
+        "uks",
+        "cell",
+        "periodicity",
+        "poisson_solver",
+        "band_type",
+        "number_of_replica",
+        "optimizer",
+        "force_threshold",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "Per-image output/structure/energy",
+        "Per-image convergence and maximum-force evidence",
+        "Atom mapping, path energy profile and Artifact references"
+      ],
+      "capability_sources": [
+        {
+          "title": "CP2K 2025.2 BAND",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/CP2K_INPUT/MOTION/BAND.html"
+        },
+        {
+          "title": "CP2K BAND optimizer",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/CP2K_INPUT/MOTION/BAND/OPTIMIZE_BAND.html"
+        },
+        {
+          "title": "CP2K CI-NEB",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/CP2K_INPUT/MOTION/BAND/CI_NEB.html"
+        }
+      ],
+      "license": "GPL-2.0-or-later",
+      "integration_status": "PLANNABLE_ONLY",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "scientific_planning.engines.qc_planner NEB/BAND contract"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "Software support is not a Pipeline execution adapter.",
+        "A highest-energy image is a path maximum, not a confirmed transition state."
+      ]
+    },
+    {
+      "capability_id": "cp2k.sccs",
+      "engine": "CP2K",
+      "engine_kind": "electronic_structure_feature",
+      "capability_role": "method_feature",
+      "version": {
+        "documented_versions": [
+          "2026.2"
+        ],
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "cp2k.geo_opt",
+        "cp2k.energy"
+      ],
+      "supported_features": [
+        "sccs"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "All GEO_OPT/ENERGY structure requirements",
+        "Explicit solvent identity and sourced dielectric/cavity model",
+        "Explicit cell, periodicity, Poisson and charged-cell/reference-potential policy",
+        "Decision on need for specific explicit solvent coordination"
+      ],
+      "required_method_fields": [
+        "solvation.implicit.model",
+        "solvation.implicit.parameters",
+        "solvation.implicit.source_ref",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "SCCS iteration/convergence evidence",
+        "Solvated energy and optional optimized structure",
+        "Declared energy-cycle terms and solvent/cavity provenance"
+      ],
+      "capability_sources": [
+        {
+          "title": "CP2K 2026.2 SCCS input reference",
+          "url": "https://manual.cp2k.org/cp2k-2026_2-branch/CP2K_INPUT/FORCE_EVAL/DFT/SCCS.html"
+        },
+        {
+          "title": "CP2K 2025.2 implicit Poisson solver",
+          "url": "https://manual.cp2k.org/cp2k-2025_2-branch/CP2K_INPUT/FORCE_EVAL/DFT/POISSON/IMPLICIT.html"
+        }
+      ],
+      "license": "GPL-2.0-or-later",
+      "integration_status": "PLANNABLE_ONLY",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "scientific_planning.engines.qc_planner ENERGY/SCF and SCCS convergence contract"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "Current real CP2K adapter has no SCCS-specific input generation/validation.",
+        "SCCS parameters must be sourced or approved, not filled from defaults.",
+        "Implicit solvent does not model explicit H-bond networks, specific ion coordination or solvent dynamics."
+      ]
+    },
+    {
+      "capability_id": "vasp.engine",
+      "engine": "VASP",
+      "engine_kind": "electronic_structure_engine",
+      "capability_role": "task",
+      "version": {
+        "documented_versions": [
+          "6.x"
+        ],
+        "latest_release_verified_on_registry_date": "6.6.1",
+        "latest_release_date": "2026-07-20",
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "vasp.relax",
+        "vasp.energy",
+        "vasp.freq",
+        "vasp.neb",
+        "vasp.aimd"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "POSCAR with explicit lattice and atom ordering",
+        "POTCAR from an authorized local licensed installation only",
+        "Explicit KPOINTS policy",
+        "Explicit constraints, magnetism and periodicity"
+      ],
+      "required_method_fields": [
+        "xc_functional",
+        "dispersion",
+        "pseudopotential",
+        "cutoff_ev",
+        "scf.algorithm",
+        "scf.ediff",
+        "charge",
+        "spin",
+        "magmom",
+        "cell",
+        "periodicity",
+        "kpoints",
+        "smearing",
+        "solvation.implicit",
+        "solvation.explicit",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "INCAR/POSCAR/POTCAR reference/KPOINTS",
+        "OUTCAR/OSZICAR/vasprun.xml",
+        "CONTCAR and task-specific charge/wavefunction/trajectory data"
+      ],
+      "capability_sources": [
+        {
+          "title": "VASP official website and VASP 6.6.1 release",
+          "url": "https://vasp.at/"
+        },
+        {
+          "title": "VASP NEB documentation",
+          "url": "https://vasp.at/wiki/Nudged_elastic_bands"
+        },
+        {
+          "title": "VASP license purchase FAQ",
+          "url": "https://vasp.at/info/faq/purchase_vasp/"
+        },
+        {
+          "title": "VASP copyright/license FAQ",
+          "url": "https://vasp.at/info/faq/public_domain/"
+        }
+      ],
+      "license": "Proprietary; academic/government/non-profit or commercial license required; do not redistribute binaries or POTCAR data.",
+      "integration_status": "PLANNABLE_ONLY",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "No Pipeline VASP parser/QC adapter registered"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "No VASP Pipeline execution adapter exists.",
+        "A licensed POTCAR must never be copied into this repository or emitted by a planner."
+      ]
+    },
+    {
+      "capability_id": "gaussian.engine",
+      "engine": "Gaussian",
+      "engine_kind": "molecular_quantum_chemistry_engine",
+      "capability_role": "task",
+      "version": {
+        "documented_versions": [
+          "Gaussian 16 family"
+        ],
+        "latest_minor_revision": null,
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "gaussian.opt",
+        "gaussian.energy",
+        "gaussian.freq",
+        "gaussian.ts",
+        "gaussian.irc"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "Explicit molecular geometry",
+        "Explicit integer charge and spin multiplicity",
+        "Explicit ECP/basis assignments where relevant",
+        "Explicit solvent/environment assumptions"
+      ],
+      "required_method_fields": [
+        "xc_functional",
+        "dispersion",
+        "basis_set",
+        "ecp",
+        "scf.method",
+        "scf.convergence",
+        "charge",
+        "multiplicity",
+        "spin",
+        "solvation.implicit",
+        "solvation.explicit",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "Gaussian .log/.out with normal termination",
+        "Checkpoint .chk/.fchk when required",
+        "Geometry/frequencies/normal modes/IRC files according to task"
+      ],
+      "capability_sources": [
+        {
+          "title": "Gaussian official website",
+          "url": "https://gaussian.com/"
+        },
+        {
+          "title": "Gaussian 16 product information",
+          "url": "https://gaussian.com/gaussian16/"
+        }
+      ],
+      "license": "Proprietary commercial software; appropriate Gaussian, Inc. license required.",
+      "integration_status": "PLANNABLE_ONLY",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "No Pipeline Gaussian parser/QC adapter registered"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "Gaussian route is molecular; periodic k-points and plane-wave cutoffs are not applicable.",
+        "TS claims require frequency/mode evidence and, where appropriate, IRC connectivity."
+      ]
+    },
+    {
+      "capability_id": "ase.structure_io_validation",
+      "engine": "ASE",
+      "engine_kind": "atomistic_simulation_python_library",
+      "capability_role": "utility",
+      "version": {
+        "documented_versions": [
+          "3.27.1",
+          "3.28.0",
+          "3.29.0"
+        ],
+        "latest_release_verified_on_registry_date": "3.29.0",
+        "latest_release_date": "2026-06-21",
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "structure.read_validate",
+        "structure.convert"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "ASE Atoms-compatible symbols and positions",
+        "Explicit cell and PBC flags for periodic structures",
+        "Atom identity/order preserved where the structure is used downstream"
+      ],
+      "required_method_fields": [
+        "cell",
+        "periodicity",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "Validated ASE Atoms structure",
+        "Structure conversion with declared source/output formats"
+      ],
+      "capability_sources": [
+        {
+          "title": "ASE docs",
+          "url": "https://docs.ase-lib.org/"
+        },
+        {
+          "title": "ASE NEB docs",
+          "url": "https://docs.ase-lib.org/ase/neb.html"
+        },
+        {
+          "title": "ASE releases",
+          "url": "https://ase.gitlab.io/ase/releasenotes.html"
+        }
+      ],
+      "license": "GNU LGPL-3.0-or-later",
+      "integration_status": "AVAILABLE",
+      "pipeline_adapter": "Existing Pipeline model/structure validation uses ASE; this is not an ASE-backed calculation executor.",
+      "parser_qc_plugins": [
+        "ASE Atoms I/O and structural checks; scientific_planning.engines.qc_planner contract definitions"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "ASE is a workflow/library layer, not an electronic-structure engine.",
+        "No ASE NEB calculator/execution adapter is registered in this Pipeline."
+      ]
+    },
+    {
+      "capability_id": "pymatgen.structures_io",
+      "engine": "pymatgen",
+      "engine_kind": "materials_python_library",
+      "capability_role": "utility",
+      "version": {
+        "documented_versions": [
+          "2026.10.16 documentation"
+        ],
+        "runtime_version_detected": false,
+        "runtime_version_required": true
+      },
+      "supported_task_types": [
+        "structure.read_validate",
+        "structure.symmetry_analysis",
+        "vasp.input_description",
+        "electronic_structure.output_parsing"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "Structure/Molecule with explicit lattice/species/coordinates",
+        "Symmetry tolerances and oxidation-state assumptions explicit",
+        "Authorized local POTCAR data only"
+      ],
+      "required_method_fields": [
+        "cell",
+        "periodicity",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "Structure/Molecule objects",
+        "Module-specific input/output data objects"
+      ],
+      "capability_sources": [
+        {
+          "title": "pymatgen docs and license",
+          "url": "https://pymatgen.org/"
+        },
+        {
+          "title": "pymatgen I/O usage",
+          "url": "https://pymatgen.org/usage.html"
+        },
+        {
+          "title": "pymatgen VASP I/O",
+          "url": "https://pymatgen.org/pymatgen.io.vasp.html"
+        }
+      ],
+      "license": "MIT",
+      "integration_status": "NOT_INTEGRATED",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "No Pipeline pymatgen adapter registered"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "pymatgen input/output support varies by code module and does not imply a Pipeline execution adapter."
+      ]
+    },
+    {
+      "capability_id": "packmol.explicit_solvent",
+      "engine": "Packmol",
+      "engine_kind": "molecular_initial_configuration_builder",
+      "capability_role": "utility",
+      "version": {
+        "documented_versions": [
+          "21.2.3"
+        ],
+        "latest_release_verified_on_registry_date": "21.2.3",
+        "latest_release_date": "2026-05-27",
+        "runtime_version_detected": false,
+        "runtime_version_required": true,
+        "maintenance_note": "The original m3g/packmol README says the project was rewritten and points to Packmol.jl; verify the installed executable/interface."
+      },
+      "supported_task_types": [
+        "solvent.prepare_explicit",
+        "structure.pack_molecules"
+      ],
+      "software_supported": true,
+      "input_structure_requirements": [
+        "Molecular templates with atom identities and coordinates",
+        "Explicit counts and spatial constraints",
+        "Explicit box geometry and boundary policy",
+        "Explicit distance tolerance and seed when supported"
+      ],
+      "required_method_fields": [
+        "molecule_counts",
+        "box",
+        "periodicity",
+        "minimum_distance_policy",
+        "software_version"
+      ],
+      "expected_outputs": [
+        "Packed initial coordinates",
+        "Builder log/output",
+        "Builder version and input provenance"
+      ],
+      "capability_sources": [
+        {
+          "title": "Packmol source and user guide",
+          "url": "https://github.com/m3g/packmol"
+        },
+        {
+          "title": "Packmol 21.2.3 release",
+          "url": "https://github.com/m3g/packmol/releases/tag/v21.2.3"
+        },
+        {
+          "title": "Packmol guide",
+          "url": "https://m3g.github.io/packmol"
+        }
+      ],
+      "license": "MIT",
+      "integration_status": "PLANNABLE_ONLY",
+      "pipeline_adapter": null,
+      "parser_qc_plugins": [
+        "scientific_planning.engines.qc_planner explicit-solvent preparation contract"
+      ],
+      "allows_real_execution_plan": false,
+      "runtime_verified": false,
+      "limitations": [
+        "Packmol creates an initial configuration; it does not equilibrate solvent.",
+        "No Pipeline execution/equilibration adapter is registered."
+      ]
+    }
+  ],
+  "research_inputs": [
+    {
+      "repository": "jianzushen/Computational-chemistry-skill",
+      "commit": "4ea66ea8633e4a65d5b9041928b363b0375bb81b",
+      "version": "1.1.0",
+      "license": "MIT",
+      "use": "Reviewed workflow decomposition and provenance/approval practices; no code or prose copied."
+    },
+    {
+      "repository": "JCLiuGroup/AI-Computational-Chemist",
+      "commit": "e27b555ecfee3a7b66472c19c93b01ad0a1ccae1",
+      "license": "CC BY-NC 4.0",
+      "use": "Conceptual research only for capability routing and technical/scientific validation boundaries; no code or prose copied."
+    }
+  ]
+}
