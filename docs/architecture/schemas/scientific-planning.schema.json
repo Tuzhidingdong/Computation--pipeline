@@ -1412,6 +1412,39 @@
         "agent_a_field_records_raw": {
           "type": "object",
           "additionalProperties": true
+        },
+        "execution_mode": {
+          "enum": [
+            "mock",
+            "real"
+          ]
+        },
+        "planning_scope": {
+          "enum": [
+            "MOCK_ONLY",
+            "REAL_PREFLIGHT_CANDIDATE"
+          ]
+        },
+        "mock_only": {
+          "type": "boolean"
+        },
+        "real_execution_preflight_allowed": {
+          "type": "boolean"
+        },
+        "software_version": {
+          "type": "string"
+        },
+        "runtime_version_verified": {
+          "type": "boolean"
+        },
+        "runtime_verified_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtime_version_matches": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -1665,7 +1698,32 @@
             "status": {
               "enum": [
                 "READY",
-                "BLOCKED"
+                "BLOCKED",
+                "MOCK_ONLY"
+              ]
+            },
+            "execution_mode": {
+              "enum": [
+                "mock",
+                "real"
+              ]
+            },
+            "planning_scope": {
+              "enum": [
+                "MOCK_ONLY",
+                "REAL_PREFLIGHT_CANDIDATE"
+              ]
+            },
+            "mock_only": {
+              "type": "boolean"
+            },
+            "real_execution_preflight_allowed": {
+              "type": "boolean"
+            },
+            "resource_estimate_policy": {
+              "type": [
+                "string",
+                "null"
               ]
             }
           },
@@ -1714,6 +1772,24 @@
         },
         "planning_metadata": {
           "$ref": "#/$defs/PlanningMetadata"
+        },
+        "execution_mode": {
+          "enum": [
+            "mock",
+            "real"
+          ]
+        },
+        "planning_scope": {
+          "enum": [
+            "MOCK_ONLY",
+            "REAL_PREFLIGHT_CANDIDATE"
+          ]
+        },
+        "mock_only": {
+          "type": "boolean"
+        },
+        "real_execution_preflight_allowed": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

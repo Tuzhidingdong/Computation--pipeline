@@ -238,6 +238,14 @@ def method_plan_object(*, method_raw: Mapping[str, Any], route: Mapping[str, Any
     body = {
         "schema_version": "1.0.0", "method_plan_id": "",
         "engine": method_engine,
+        "execution_mode": str(method_raw.get("execution_mode") or engine_request.get("execution_mode") or "real"),
+        "planning_scope": str(method_raw.get("planning_scope") or ("MOCK_ONLY" if engine_request.get("execution_mode") == "mock" else "REAL_CANDIDATE")),
+        "mock_only": bool(method_raw.get("execution_mode") == "mock"),
+        "real_execution_preflight_allowed": bool(route.get("can_enter_real_preflight")),
+        "software_version": str(method_raw.get("software_version") or version or ""),
+        "runtime_version_verified": bool(method_raw.get("runtime_version_verified")),
+        "runtime_verified_version": method_raw.get("runtime_verified_version"),
+        "runtime_version_matches": bool(method_raw.get("runtime_version_matches")),
         "parameters": params,
         "agent_a_field_records": flattened_records("", fields),
         "agent_a_field_records_raw": deepcopy(dict(fields)),
@@ -308,6 +316,7 @@ def build_resource_profile(resource_result: Mapping[str, Any], *, structure_mapp
     profile_refs = [item for item in refs if resource_source_ref and item.get("evidence_id") == resource_source_ref]
     structure_refs = [item for item in refs if item.get("source_type") == "artifact"]
     values: dict[str, dict] = {}
+
     def fixed(name: str, value: Any, unit: str | None, source_refs: list[dict], rationale: str) -> dict:
         status = "EVIDENCED" if value is not None and source_refs else "MISSING"
         return {
@@ -320,11 +329,54 @@ def build_resource_profile(resource_result: Mapping[str, Any], *, structure_mapp
             "applicability": "APPLICABLE", "approval_required": False,
             "source_status": "PROFILE_PROVIDED" if profile_refs else ("SOURCE_CONFIRMED" if structure_refs else "MISSING"),
         }
+
     atom_count = structure_mapping.get("atom_count") if structure_mapping else None
-    values["atom_count"] = fixed("atom_count", atom_count, "atoms", structure_refs, "Count from the loaded hash-pinned structure Artifact.")
+    values["atom_count"] = fixed("atom_count", atom_count, "atoms", structure_refs,
+                                 "Count from the loaded hash-pinned structure Artifact.")
     system_type = model_config.get("system_type") or model_config.get("model_type")
-    values["system_type"] = fixed("system_type", system_type, None, profile_refs, "Declared Project Profile model system type.")
-    values["software_task_type"] = fixed("software_task_type", task_type, None, profile_refs, "Declared Agent A engine/task allocation profile.")
+    values["system_type"] = fixed("system_type", system_type, None, profile_refs,
+                                  "Declared model system type; not a scheduler allocation.")
+    values["software_task_type"] = fixed("software_task_type", task_type, None, profile_refs,
+                                         "Declared engine/task context; not a scheduler allocation.")
+
+    if resource_result.get("mock_only") is True or str(resource_result.get("status") or "").upper() == "MOCK_ONLY":
+        def mock_na(name: str, unit: str | None = None) -> dict:
+            return {
+                "status": "NOT_APPLICABLE", "value": None, "unit": unit,
+                "source_evidence_refs": [], "applicable_scope": "MOCK_ONLY; no real scheduler allocation",
+                "policy_ref": None, "decision_id": "resource-" + name,
+                "uncertainty": "NOT_ESTIMATED_FOR_MOCK",
+                "rationale": "Agent A ResourcePlanner declares real HPC allocation and resource estimation NOT_APPLICABLE in Mock mode.",
+                "provenance": "mock_only_not_estimated", "source_ref": None,
+                "applicability": "NOT_APPLICABLE", "approval_required": False,
+                "source_status": "NOT_APPLICABLE",
+            }
+
+        for field, unit in (
+            ("nodes", "nodes"), ("cpu_cores", None), ("mpi_ranks", None),
+            ("openmp_threads", None), ("gpu_count", None), ("gpu_model", None),
+            ("memory_bytes", "bytes"), ("walltime_seconds", "seconds"), ("scratch_bytes", "bytes"),
+        ):
+            values[field] = mock_na(field, unit)
+        return {
+            "values": values,
+            "estimate_uncertainty": {
+                "class": "UNKNOWN",
+                "basis": "MOCK_ONLY: no resource allocation or numerical estimate was produced.",
+                "limitations": [
+                    "No nodes, CPU, MPI, OpenMP, GPU, memory, walltime or scratch allocation is made.",
+                    "A separately verified Real resource profile is required before any Real preflight.",
+                ],
+            },
+            # Supplied Real profiles are deliberately not treated as inputs in Mock mode.
+            "provenance_refs": structure_refs,
+            "profile_id": None, "profile_source_ref": None,
+            "verified_profile": False, "status": "MOCK_ONLY",
+            "execution_mode": "mock", "planning_scope": "MOCK_ONLY",
+            "mock_only": True, "real_execution_preflight_allowed": False,
+            "resource_estimate_policy": resource_result.get("resource_estimate_policy"),
+        }
+
     nodes_record = values_raw.get("nodes")
     if isinstance(nodes_record, Mapping):
         node_source = [item for item in refs if item.get("evidence_id") == nodes_record.get("source_ref")]
@@ -365,8 +417,6 @@ def build_resource_profile(resource_result: Mapping[str, Any], *, structure_mapp
             values[field] = fixed(field, None, "bytes" if field.endswith("_bytes") else None, [],
                                   "Agent A ResourcePlanner did not resolve this allocation field.")
 
-    # CPU cores are an explicit additional Project Profile allocation, not an
-    # Agent A estimate. Keep its source pinned to the exact approved profile.
     alloc = resource_config.get("allocation") or {}
     values["cpu_cores"] = fixed(
         "cpu_cores", alloc.get("cpu_cores"), None, profile_refs,
@@ -392,6 +442,9 @@ def build_resource_profile(resource_result: Mapping[str, Any], *, structure_mapp
     return {"values": values, "estimate_uncertainty": uncertainty, "provenance_refs": profile_refs + structure_refs,
             "profile_id": resource_result.get("profile_id"), "profile_source_ref": resource_source_ref,
             "verified_profile": bool(resource_result.get("verified_profile")), "status": profile_status}
+
+
+__all__ = ["parameter_decision", "method_plan_object", "build_qc_gates", "build_resource_profile"]
 
 
 __all__ = ["parameter_decision", "method_plan_object", "build_qc_gates", "build_resource_profile"]

@@ -792,7 +792,14 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
         task_type=task_type, refs=all_refs, resource_source_ref=resource_source_ref,
         resource_config=resource_cfg,
     )
-    resource_status = "READY" if resource_profile.get("status") == "READY" else "BLOCKED"
+    mock_execution = str(execution_cfg.get("backend") or "").casefold() == "mock"
+    resource_profile_status = str(resource_profile.get("status") or "").upper()
+    resource_status = "READY" if (
+        resource_profile_status == "READY"
+        or (mock_execution and resource_profile_status == "MOCK_ONLY"
+            and resource_profile.get("mock_only") is True
+            and resource_profile.get("real_execution_preflight_allowed") is False)
+    ) else "BLOCKED"
     resource_gaps = []
     for name, decision in resource_profile.get("values", {}).items():
         if decision.get("status") == "MISSING":
@@ -849,11 +856,17 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
             "depends_on": depends,
             "input_refs": artifact_input_refs,
             "output_contracts": [str(value) for value in output_files.values() if value],
-            "resource_profile_ref": resource_source_ref or "UNRESOLVED_RESOURCE_PROFILE",
-            "preflight_requirements": [
-                "explicit_user_model_approval", "source_complete_method_plan",
-                "runtime_version_preflight", "resource_profile_verified",
-            ],
+            "resource_profile_ref": (
+                "MOCK_ONLY_NOT_APPLICABLE" if execution_mode == "mock"
+                else (resource_source_ref or "UNRESOLVED_RESOURCE_PROFILE")
+            ),
+            "preflight_requirements": (
+                ["explicit_user_model_approval", "source_complete_method_plan",
+                 "mock_execution_only_no_real_preflight"]
+                if execution_mode == "mock" else
+                ["explicit_user_model_approval", "source_complete_method_plan",
+                 "runtime_version_preflight", "resource_profile_verified"]
+            ),
         })
     real_chain = (
         task_type.casefold() == "cp2k.geo_opt"
@@ -878,13 +891,20 @@ def plan_project_run(pipeline, run_id: str, *, profile_path: str | Path | None =
     execution_body = {
         "schema_version": PLANNING_SCHEMA_VERSION, "execution_plan_id": "",
         "backend": backend,
+        "execution_mode": execution_mode,
+        "planning_scope": "MOCK_ONLY" if execution_mode == "mock" else "REAL_PREFLIGHT_CANDIDATE",
+        "mock_only": execution_mode == "mock",
+        "real_execution_preflight_allowed": False if execution_mode == "mock" else bool(route.get("can_enter_real_preflight")),
         "task_nodes": task_nodes,
         "resource_profile": resource_profile,
-        "preflight_requirements": [
-            "explicit_user_model_approval", "method_parameter_provenance_complete",
-            "runtime_version_verification_before_real_execution",
-            "verified_resource_profile", "adapter_scope_check",
-        ],
+        "preflight_requirements": (
+            ["explicit_user_model_approval", "method_parameter_provenance_complete",
+             "mock_execution_only_no_real_preflight"]
+            if execution_mode == "mock" else
+            ["explicit_user_model_approval", "method_parameter_provenance_complete",
+             "runtime_version_verification_before_real_execution", "verified_resource_profile",
+             "adapter_scope_check"]
+        ),
         "source_evidence_refs": all_refs,
         "decision_records": [], "evidence_gaps": resource_gaps,
         "status": "READY_FOR_REVIEW" if execution_status == "READY" else (

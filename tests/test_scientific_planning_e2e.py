@@ -309,6 +309,19 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 self.assertEqual(artifact_ref["object_id"], "registered-structure-001")
                 self.assertEqual(artifact_ref["sha256"], _sha(data_root / "input_structure.extxyz"))
                 self.assertEqual(bundle["execution_plan"]["backend"]["backend_id"], "mock")
+                resource_profile = bundle["execution_plan"]["resource_profile"]
+                self.assertEqual(resource_profile["status"], "MOCK_ONLY")
+                self.assertFalse(resource_profile["verified_profile"])
+                self.assertFalse(resource_profile["real_execution_preflight_allowed"])
+                for field in (
+                    "nodes", "cpu_cores", "mpi_ranks", "openmp_threads", "gpu_count",
+                    "gpu_model", "memory_bytes", "walltime_seconds", "scratch_bytes",
+                ):
+                    self.assertEqual(resource_profile["values"][field]["status"], "NOT_APPLICABLE")
+                    self.assertIsNone(resource_profile["values"][field]["value"])
+                self.assertEqual(bundle["method_plan"]["execution_mode"], "mock")
+                self.assertFalse(bundle["method_plan"]["runtime_version_verified"])
+                self.assertFalse(bundle["method_plan"]["real_execution_preflight_allowed"])
                 method_fields = bundle["method_plan"]["agent_a_field_records"]
                 required_source_fields = (
                     "xc_functional", "basis_set", "pseudopotential", "basis_file_name",
@@ -404,6 +417,15 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 frozen_plan = report["scientific_calculation_plan"]
                 self.assertEqual(frozen_plan["runtime_projection"]["payload_sha256"], runtime_plan_sha)
                 self.assertEqual(frozen_plan["sha256"], frozen_plan["planning_metadata"]["object_sha256"])
+                self.assertEqual(calculation_plan["metadata"]["execution_mode"], "mock")
+                self.assertEqual(calculation_plan["metadata"]["planning_scope"], "MOCK_ONLY")
+                self.assertFalse(calculation_plan["metadata"]["real_execution_preflight_allowed"])
+                mock_resources = calculation_plan["execution"]["resources"]
+                self.assertEqual(mock_resources["planning_scope"], "MOCK_ONLY")
+                self.assertTrue(mock_resources["mock_only"])
+                self.assertFalse(mock_resources["real_execution_preflight_allowed"])
+                self.assertIsNone(mock_resources["allocation"])
+                self.assertFalse(mock_resources["resource_estimate_available"])
                 self.assertEqual(frozen_plan["approval_refs"][0]["object_id"], approved["candidate_id"])
                 self.assertEqual(len(api.analysis_runs), 1)
                 self.assertEqual(len(api.evidence_packages), 1)

@@ -172,61 +172,90 @@ def compile_runtime_calculation_plan(
         calculations.append(stage)
 
     resources_record = execution_plan.get("resource_profile") or {}
-    if resources_record.get("status") != "READY" or resources_record.get("verified_profile") is not True:
-        raise PlanValidationError(["ExecutionPlan ResourceProfile is not verified/ready"])
+    resource_mode_mock = (
+        str(execution_plan.get("execution_mode") or execution_plan.get("planning_scope") or "").casefold() == "mock"
+        or (resources_record.get("status") == "MOCK_ONLY" and resources_record.get("mock_only") is True)
+    )
     values = resources_record.get("values") or {}
-    allocation = {
-        "cpu_cores": _parameter_value(values, "cpu_cores"),
-        "mpi_ranks": _parameter_value(values, "mpi_ranks"),
-        "openmp_threads": _parameter_value(values, "openmp_threads"),
-        "gpu_count": _parameter_value(values, "gpu_count"),
-        "memory_bytes": _parameter_value(values, "memory_bytes"),
-        "walltime_seconds": _parameter_value(values, "walltime_seconds"),
-        "scratch_bytes": _parameter_value(values, "scratch_bytes"),
-        "atom_count": _parameter_value(values, "atom_count"),
-        "system_type": _parameter_value(values, "system_type"),
-    }
-    if values.get("gpu_model", {}).get("status") == "NOT_APPLICABLE":
-        allocation["gpu_model"] = None
+    if resource_mode_mock:
+        if (
+            resources_record.get("status") != "MOCK_ONLY"
+            or resources_record.get("verified_profile") is not False
+            or resources_record.get("real_execution_preflight_allowed") is not False
+        ):
+            raise PlanValidationError(["Mock CalculationPlan requires an explicit MOCK_ONLY ResourcePlan with no Real preflight permission"])
+        for name in ("nodes", "cpu_cores", "mpi_ranks", "openmp_threads", "gpu_count",
+                     "gpu_model", "memory_bytes", "walltime_seconds", "scratch_bytes"):
+            decision = values.get(name) or {}
+            if decision.get("status") != "NOT_APPLICABLE" or decision.get("value") is not None:
+                raise PlanValidationError([f"Mock ResourcePlan {name} must be NOT_APPLICABLE with no numeric value"])
+        resources = {
+            "resource_plan_status": "MOCK_ONLY",
+            "planning_scope": "MOCK_ONLY",
+            "mock_only": True,
+            "real_execution_preflight_allowed": False,
+            "resource_estimate_available": False,
+            "allocation": None,
+            "allocation_provenance": {
+                "status": "NOT_APPLICABLE",
+                "reason": "Agent A ResourcePlanner explicitly disables all HPC allocation and estimates in Mock mode.",
+            },
+        }
     else:
-        allocation["gpu_model"] = _parameter_value(values, "gpu_model")
-    explicit_runtime_resources = runtime_execution.get("resource_profile")
-    if not isinstance(explicit_runtime_resources, Mapping) or not explicit_runtime_resources:
-        raise PlanValidationError(["Project Profile execution.resource_profile must supply explicit nodes and scheduler allocation fields"])
-    for field in ("nodes", "mpi_ranks", "openmp_threads", "gpu_count", "memory_gb", "walltime_seconds", "scratch_gb"):
-        if explicit_runtime_resources.get("allocation", {}).get(field) is None:
-            raise PlanValidationError([f"Project Profile execution.resource_profile.allocation.{field} is required"])
-    planner_allocation_checks = {
-        "nodes": "nodes",
-        "mpi_ranks": "mpi_ranks",
-        "openmp_threads": "openmp_threads",
-        "gpu_count": "gpu_count",
-        "walltime_seconds": "walltime_seconds",
-    }
-    for profile_field, allocation_field in planner_allocation_checks.items():
-        planned_value = _parameter_value(values, profile_field)
-        declared_value = explicit_runtime_resources.get("allocation", {}).get(allocation_field)
-        if planned_value != declared_value:
-            raise PlanValidationError([
-                f"Project Profile allocation.{allocation_field} differs from Agent A ResourcePlanner's source-backed value"
-            ])
-    for profile_field, allocation_field in (("memory_bytes", "memory_gb"), ("scratch_bytes", "scratch_gb")):
-        planned_bytes = _parameter_value(values, profile_field)
-        declared_gb = explicit_runtime_resources.get("allocation", {}).get(allocation_field)
-        expected_bytes = int(float(declared_gb) * 1_000_000_000) if declared_gb is not None else None
-        if planned_bytes != expected_bytes:
-            raise PlanValidationError([
-                f"Project Profile allocation.{allocation_field} differs from Agent A ResourcePlanner's source-backed value"
-            ])
-    resources = deepcopy(dict(explicit_runtime_resources["allocation"]))
-    resources.update({
-        "profile_id": str(resources_record.get("profile_id") or ""),
-        "profile_source_ref": str(resources_record.get("profile_source_ref") or ""),
-        "uncertainty": deepcopy(resources_record.get("estimate_uncertainty")),
-        "allocation_provenance": allocation,
-    })
-    if not resources["profile_id"] or not resources["profile_source_ref"]:
-        raise PlanValidationError(["ExecutionPlan ResourceProfile ID/source_ref are required"])
+        if resources_record.get("status") != "READY" or resources_record.get("verified_profile") is not True:
+            raise PlanValidationError(["ExecutionPlan Real ResourceProfile is not verified/ready"])
+        allocation = {
+            "cpu_cores": _parameter_value(values, "cpu_cores"),
+            "mpi_ranks": _parameter_value(values, "mpi_ranks"),
+            "openmp_threads": _parameter_value(values, "openmp_threads"),
+            "gpu_count": _parameter_value(values, "gpu_count"),
+            "memory_bytes": _parameter_value(values, "memory_bytes"),
+            "walltime_seconds": _parameter_value(values, "walltime_seconds"),
+            "scratch_bytes": _parameter_value(values, "scratch_bytes"),
+            "atom_count": _parameter_value(values, "atom_count"),
+            "system_type": _parameter_value(values, "system_type"),
+        }
+        if values.get("gpu_model", {}).get("status") == "NOT_APPLICABLE":
+            allocation["gpu_model"] = None
+        else:
+            allocation["gpu_model"] = _parameter_value(values, "gpu_model")
+        explicit_runtime_resources = runtime_execution.get("resource_profile")
+        if not isinstance(explicit_runtime_resources, Mapping) or not explicit_runtime_resources:
+            raise PlanValidationError(["Project Profile execution.resource_profile must supply explicit nodes and scheduler allocation fields"])
+        for field in ("nodes", "mpi_ranks", "openmp_threads", "gpu_count", "memory_gb", "walltime_seconds", "scratch_gb"):
+            if explicit_runtime_resources.get("allocation", {}).get(field) is None:
+                raise PlanValidationError([f"Project Profile execution.resource_profile.allocation.{field} is required"])
+        planner_allocation_checks = {
+            "nodes": "nodes",
+            "mpi_ranks": "mpi_ranks",
+            "openmp_threads": "openmp_threads",
+            "gpu_count": "gpu_count",
+            "walltime_seconds": "walltime_seconds",
+        }
+        for profile_field, allocation_field in planner_allocation_checks.items():
+            planned_value = _parameter_value(values, profile_field)
+            declared_value = explicit_runtime_resources.get("allocation", {}).get(allocation_field)
+            if planned_value != declared_value:
+                raise PlanValidationError([
+                    f"Project Profile allocation.{allocation_field} differs from Agent A ResourcePlanner's source-backed value"
+                ])
+        for profile_field, allocation_field in (("memory_bytes", "memory_gb"), ("scratch_bytes", "scratch_gb")):
+            planned_bytes = _parameter_value(values, profile_field)
+            declared_gb = explicit_runtime_resources.get("allocation", {}).get(allocation_field)
+            expected_bytes = int(float(declared_gb) * 1_000_000_000) if declared_gb is not None else None
+            if planned_bytes != expected_bytes:
+                raise PlanValidationError([
+                    f"Project Profile allocation.{allocation_field} differs from Agent A ResourcePlanner's source-backed value"
+                ])
+        resources = deepcopy(dict(explicit_runtime_resources["allocation"]))
+        resources.update({
+            "profile_id": str(resources_record.get("profile_id") or ""),
+            "profile_source_ref": str(resources_record.get("profile_source_ref") or ""),
+            "uncertainty": deepcopy(resources_record.get("estimate_uncertainty")),
+            "allocation_provenance": deepcopy(allocation),
+        })
+        if not resources["profile_id"] or not resources["profile_source_ref"]:
+            raise PlanValidationError(["ExecutionPlan Real ResourceProfile ID/source_ref are required"])
 
     analysis = runtime_config.get("analysis")
     if not isinstance(analysis, Mapping) or analysis.get("operation") != "dft.artifact.read":
@@ -289,6 +318,11 @@ def compile_runtime_calculation_plan(
         "blockers": [],
         "fields": deepcopy(dict(_get_fields(method_plan))),
         "calculation_plan_context": projection_context,
+        "execution_mode": str(backend.get("backend_id") or "real"),
+        "software_version": software_version,
+        "runtime_version_verified": method_plan.get("runtime_version_verified") is True,
+        "runtime_verified_version": method_plan.get("runtime_verified_version"),
+        "runtime_version_matches": method_plan.get("runtime_version_matches") is True,
     })
     if projection_method.get("status") != "READY":
         raise PlanValidationError(list(projection_method.get("blockers") or [
@@ -313,6 +347,10 @@ def compile_runtime_calculation_plan(
         "retry_policy": deepcopy(dict(retry)),
         "metadata": {
             "project_id": project_id, "planning_core_schema_version": "1.0.0",
+            "execution_mode": str(backend.get("backend_id") or "real"),
+            "planning_scope": "MOCK_ONLY" if backend.get("backend_id") == "mock" else "REAL_PREFLIGHT_CANDIDATE",
+            "mock_only": backend.get("backend_id") == "mock",
+            "real_execution_preflight_allowed": False if backend.get("backend_id") == "mock" else False,
             "model_recipe_sha256": model_recipe["planning_metadata"]["object_sha256"],
             "method_plan_sha256": method_plan["planning_metadata"]["object_sha256"],
             "execution_plan_sha256": execution_plan["planning_metadata"]["object_sha256"],
