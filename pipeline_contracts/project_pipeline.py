@@ -150,6 +150,11 @@ class _RegisteredMockAdapter:
             raise ValueError("Data_analysis derived Artifact response missing: " + ", ".join(sorted(missing)))
         if str(registered["sha256"]).lower() != digest.lower():
             raise ValueError("Data_analysis mock result Artifact SHA-256 does not match persisted bytes")
+        resolved_result = Path(self.api.resolve_artifact_path(
+            str(self.root), str(registered["artifact_id"])
+        )).resolve(strict=True)
+        if not resolved_result.is_file() or _sha256(resolved_result).lower() != digest.lower():
+            raise ValueError("Data_analysis resolver returned mock result bytes with a different SHA-256")
         analysis_response = self.api.create_dft_analysis_run_from_project(
             project_root=str(self.root),
             input_artifact_ids=[input_id] if input_id else [self.approved_artifact_id],
@@ -180,6 +185,11 @@ class _RegisteredMockAdapter:
         analysis_id = str(analysis_run.get("analysis_run_id") or "")
         if not analysis_id:
             raise ValueError("Data_analysis Analysis Run has no analysis_run_id")
+        if str(registered["artifact_id"]) not in list(analysis_run.get("output_artifact_ids", [])):
+            raise ValueError("Data_analysis Analysis Run did not retain the registered Mock result Artifact ID")
+        output_hashes = dict(analysis_run.get("output_hashes", {}))
+        if str(output_hashes.get(str(registered["artifact_id"]), "")).lower() != digest.lower():
+            raise ValueError("Data_analysis Analysis Run did not retain the registered Mock result Artifact SHA-256")
         evidence_response = self.api.build_evidence_package(
             dft_analysis_runs=[analysis_response["record_path"]],
             question="Mock Pipeline workflow result and provenance (not scientific evidence)",
