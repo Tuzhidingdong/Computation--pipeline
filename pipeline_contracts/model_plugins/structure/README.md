@@ -132,7 +132,7 @@ Missing mapping/image count/context/IDPP controls/geometry threshold, ambiguous 
 
 A successful path has status = INITIAL_PATH_READY_FOR_REVIEW. It stores the original endpoint files, ASE IDPP trajectory/log, each images/image_NNN.extxyz, initial_path.extxyz, and path_manifest.json, with file hashes and source hashes.
 
-The interpolation.method is ase.mep.neb.idpp_interpolate, with ASE version, image count, atom map, settings, cell/PBC and method fingerprint.
+The interpolation method is ase.mep.neb.idpp_interpolate, with the NEB force-projection method explicitly pinned to improvedtangent (not an ASE default), plus ASE version, image count, atom map, settings, cell/PBC and method fingerprint.
 
 **Scientific boundary:** this is only an IDPP-improved initial guess. It is not a converged NEB, transition state, Dimer result, frequency result, or IRC pathway. No production calculator or HPC task is invoked.
 

@@ -221,7 +221,7 @@ def build_neb_initial_path(
     idpp_log = target / "idpp_optimization.log"
     try:
         from ase.mep import NEB, idpp_interpolate
-        neb = NEB(image_list)
+        neb = NEB(image_list, method="improvedtangent")
         neb.interpolate(method="linear", mic=mic)
         idpp_interpolate(
             neb,
@@ -310,6 +310,7 @@ def build_neb_initial_path(
         "interpolation": {
             "library": "ASE",
             "method": "ase.mep.neb.idpp_interpolate",
+            "neb_force_projection_method": "improvedtangent",
             "idpp_fmax_angstrom_per_step": float(fmax),
             "idpp_steps": steps,
             "mic": mic,

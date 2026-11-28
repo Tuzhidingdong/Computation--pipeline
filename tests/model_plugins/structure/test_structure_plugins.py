@@ -292,6 +292,7 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
             result = build_neb_initial_path(initial, final, recipe, output)
             self.assertEqual(result["status"], "INITIAL_PATH_READY_FOR_REVIEW", result)
             self.assertEqual(result["interpolation"]["method"], "ase.mep.neb.idpp_interpolate")
+            self.assertEqual(result["interpolation"]["neb_force_projection_method"], "improvedtangent")
             self.assertEqual(result["number_of_images"], 5)
             image_paths = sorted((output / "images").glob("image_*.extxyz"))
             self.assertEqual(len(image_paths), 5)
