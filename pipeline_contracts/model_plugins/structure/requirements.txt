@@ -1,0 +1,5 @@
+# Install only when the corresponding structure plugins are needed.
+ase>=3.23
+packmol==21.2.3
+pymatgen>=2024.1
+rdkit>=2024.3

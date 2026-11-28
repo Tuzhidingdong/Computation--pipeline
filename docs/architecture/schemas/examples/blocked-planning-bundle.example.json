@@ -1,0 +1,629 @@
+{
+  "bundle_schema_version": "1.0.0",
+  "status": "BLOCKED",
+  "scientific_intent": {
+    "schema_version": "1.0.0",
+    "intent_id": "intent-demo-001",
+    "project_id": "demo-project",
+    "research_question": "Compare two candidate catalyst interface models for a specified observable.",
+    "research_goal": {
+      "research_object": "catalyst interface",
+      "comparison": "two candidate interfaces",
+      "phenomenon": "not supplied",
+      "target_conclusion": "not specified"
+    },
+    "requested_observables": [
+      "target observable to be confirmed"
+    ],
+    "requested_task_families": [
+      "STRUCTURE",
+      "THERMODYNAMICS"
+    ],
+    "constraints": [],
+    "source_evidence_refs": [
+      {
+        "evidence_id": "E-DEMO-USER",
+        "source_type": "user_statement",
+        "source_uri": "fixture://synthetic-example",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "locator": {
+          "kind": "fixture",
+          "value": "synthetic example only"
+        },
+        "scope": "illustrative schema fixture"
+      }
+    ],
+    "unresolved_questions": [
+      {
+        "code": "SYSTEM_IDENTITY_UNRESOLVED",
+        "field_path": "research_goal.research_object",
+        "why_decisive": "The available example provides no exact chemical system or topology.",
+        "minimum_question": "Which exact systems or structure artifacts are to be compared?"
+      }
+    ],
+    "status": "BLOCKED",
+    "provenance": {
+      "source_evidence_refs": [
+        {
+          "evidence_id": "E-DEMO-USER",
+          "source_type": "user_statement",
+          "source_uri": "fixture://synthetic-example",
+          "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "locator": {
+            "kind": "fixture",
+            "value": "synthetic example only"
+          },
+          "scope": "illustrative schema fixture"
+        }
+      ],
+      "generated_by": {
+        "component_id": "schema-example",
+        "version": "1.0.0"
+      },
+      "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "research_plan": {
+    "schema_version": "1.0.0",
+    "plan_id": "research-demo-001",
+    "intent_ref": {
+      "object_type": "ScientificIntent",
+      "object_id": "intent-demo-001",
+      "schema_version": "1.0.0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "intent_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "objectives": [
+      {
+        "objective_id": "OBJ-1",
+        "statement": "Resolve exact systems and observable before formal calculation planning.",
+        "success_observable": "System identity and target observable have evidence-backed definitions."
+      }
+    ],
+    "work_packages": [
+      {
+        "work_package_id": "WP-INTAKE",
+        "question_ids": [
+          "Q-SYSTEM"
+        ],
+        "task_family": "EVIDENCE_INTAKE",
+        "purpose": "Collect only the decisive missing system and observable definitions.",
+        "depends_on": [],
+        "required_inputs": [
+          "original source document or structure Artifact"
+        ],
+        "expected_outputs": [
+          "resolved system evidence"
+        ],
+        "status": "BLOCKED"
+      }
+    ],
+    "decision_records": [
+      {
+        "decision_id": "D-001",
+        "subject": "system identity",
+        "selection_mode": "C_MISSING_DECISIVE_INFORMATION",
+        "status": "BLOCKED",
+        "selected_value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "whole project",
+        "candidates": [],
+        "excluded_candidates": [],
+        "assumptions": [],
+        "uncertainties": [
+          "No topology or system identity evidence is present."
+        ],
+        "requires_user_approval": true,
+        "approval_ref": null,
+        "missing_information": [
+          "composition",
+          "topology",
+          "charge",
+          "spin"
+        ],
+        "minimum_questions": [
+          {
+            "question_id": "Q-SYSTEM",
+            "question": "Which exact systems or structure artifacts are to be compared?",
+            "field_path": "model_recipes[0].input_artifact_refs",
+            "answer_type": "Artifact reference or explicit system definition"
+          }
+        ]
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "code": "SYSTEM_IDENTITY_UNRESOLVED",
+        "field_path": "model_recipes[0].target_definition",
+        "why_decisive": "A structure cannot be compiled from the research question alone.",
+        "minimum_question": "Which exact systems or structure artifacts are to be compared?"
+      }
+    ],
+    "assumptions": [],
+    "status": "BLOCKED",
+    "provenance": {
+      "source_evidence_refs": [],
+      "generated_by": {
+        "component_id": "research-planner",
+        "version": "1.0.0"
+      },
+      "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "model_recipes": [
+    {
+      "schema_version": "1.0.0",
+      "recipe_id": "model-demo-001",
+      "model_type": "INTERFACE",
+      "plugin_id": "structure.interface",
+      "plugin_version": "unregistered",
+      "input_artifact_refs": [],
+      "target_definition": {
+        "scientific_role": "candidate interface for comparison",
+        "model_origin": "DESIGNED"
+      },
+      "composition": null,
+      "topology": null,
+      "electronic_state": {
+        "charge": null,
+        "multiplicity": null,
+        "spin_label": null,
+        "source_evidence_refs": []
+      },
+      "construction_steps": [],
+      "constraints": [],
+      "validation_contract": {
+        "status": "NOT_DEFINED"
+      },
+      "source_evidence_refs": [],
+      "decision_records": [],
+      "evidence_gaps": [
+        {
+          "code": "TOPOLOGY_MISSING",
+          "field_path": "model_recipes[0].topology",
+          "why_decisive": "Composition or formula alone does not define atom-level topology or coordinates.",
+          "minimum_question": "Provide a structure Artifact or the required topology and construction constraints."
+        }
+      ],
+      "status": "BLOCKED",
+      "provenance": {
+        "source_evidence_refs": [],
+        "generated_by": {
+          "component_id": "structure-planner",
+          "version": "1.0.0"
+        },
+        "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "method_plan": {
+    "schema_version": "1.0.0",
+    "method_plan_id": "method-demo-001",
+    "engine": null,
+    "parameters": {
+      "xc_functional": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "dispersion": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "basis_set": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "pseudopotential": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "cutoff": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "relative_cutoff": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "scf_strategy": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "scf_convergence": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "charge": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "multiplicity": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "spin": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "uks": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "periodicity": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "cell": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "poisson_solver": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "k_points": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "smearing": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "solvation": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "software_compatibility": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      },
+      "license_compatibility": {
+        "status": "MISSING",
+        "value": null,
+        "source_evidence_refs": [],
+        "policy_ref": null,
+        "applicable_scope": "not selected",
+        "uncertainty": "No source or approved policy supplied.",
+        "unit": null
+      }
+    },
+    "capability_assessment": {
+      "status": "UNVERIFIED",
+      "capability_record_ref": null,
+      "verified_version": null,
+      "verification_evidence_refs": []
+    },
+    "license_assessment": {
+      "status": "UNKNOWN",
+      "license_identifier": null,
+      "evidence_refs": []
+    },
+    "source_evidence_refs": [],
+    "decision_records": [],
+    "evidence_gaps": [
+      {
+        "code": "METHOD_NOT_SPECIFIED",
+        "field_path": "method_plan.parameters",
+        "why_decisive": "No method source or approved policy supplies the required values.",
+        "minimum_question": "Provide the original method specification or approve a scoped method policy."
+      }
+    ],
+    "status": "BLOCKED",
+    "provenance": {
+      "source_evidence_refs": [],
+      "generated_by": {
+        "component_id": "method-planner",
+        "version": "1.0.0"
+      },
+      "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "execution_plan": {
+    "schema_version": "1.0.0",
+    "execution_plan_id": "execution-demo-001",
+    "backend": null,
+    "task_nodes": [],
+    "resource_profile": {
+      "values": {
+        "atom_count": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "system_type": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "software_task_type": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "cpu_cores": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "mpi_ranks": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "openmp_threads": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "gpu_count": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "gpu_model": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "memory_bytes": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "walltime_seconds": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        },
+        "scratch_bytes": {
+          "status": "MISSING",
+          "value": null,
+          "source_evidence_refs": [],
+          "policy_ref": null,
+          "applicable_scope": "not selected",
+          "uncertainty": "No source or approved policy supplied.",
+          "unit": null
+        }
+      },
+      "estimate_uncertainty": {
+        "class": "UNKNOWN",
+        "basis": "No calibrated comparable job evidence is present.",
+        "limitations": [
+          "No runtime prediction is made.",
+          "No resource request is ready for submission."
+        ]
+      },
+      "provenance_refs": []
+    },
+    "preflight_requirements": [
+      "engine executable/version verification",
+      "basis and pseudopotential availability",
+      "backend and queue policy",
+      "input/output path validation"
+    ],
+    "source_evidence_refs": [],
+    "decision_records": [],
+    "evidence_gaps": [
+      {
+        "code": "ENGINE_AND_RESOURCE_UNRESOLVED",
+        "field_path": "execution_plan",
+        "why_decisive": "No verified engine adapter or resource policy has been selected.",
+        "minimum_question": "Which approved engine environment and resource policy should be used?"
+      }
+    ],
+    "status": "BLOCKED",
+    "provenance": {
+      "source_evidence_refs": [],
+      "generated_by": {
+        "component_id": "execution-planner",
+        "version": "1.0.0"
+      },
+      "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "qc_plan": {
+    "schema_version": "1.0.0",
+    "qc_plan_id": "qc-demo-001",
+    "task_type": "GEO_OPT",
+    "gates": [
+      {
+        "gate_id": "G1",
+        "gate_type": "FILE_COMPLETENESS",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.file_completeness.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      },
+      {
+        "gate_id": "G2",
+        "gate_type": "PROGRAM_NORMAL_TERMINATION",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.program_normal_termination.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      },
+      {
+        "gate_id": "G3",
+        "gate_type": "TECHNICAL_CONVERGENCE",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.technical_convergence.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      },
+      {
+        "gate_id": "G4",
+        "gate_type": "STRUCTURAL_PLAUSIBILITY",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.structural_plausibility.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      },
+      {
+        "gate_id": "G5",
+        "gate_type": "SCIENTIFIC_VALIDITY",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.scientific_validity.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      },
+      {
+        "gate_id": "G6",
+        "gate_type": "USER_ACCEPTANCE",
+        "status": "NOT_ASSESSED",
+        "contract_id": "qc.geo_opt.user_acceptance.v1",
+        "required_evidence_types": [],
+        "failure_action": "BLOCK_DOWNSTREAM"
+      }
+    ],
+    "acceptance_policy": {
+      "scientific_validity_owner": "designated scientific reviewer",
+      "user_acceptance_required": true
+    },
+    "source_evidence_refs": [],
+    "status": "BLOCKED",
+    "provenance": {
+      "source_evidence_refs": [],
+      "generated_by": {
+        "component_id": "qc-planner",
+        "version": "1.0.0"
+      },
+      "transform_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}

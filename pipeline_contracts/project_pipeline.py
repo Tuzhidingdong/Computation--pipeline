@@ -62,7 +62,33 @@ class _RegisteredMockAdapter:
 
     def execute(self, task, existing_job_id=None):
         result = self.delegate.execute(task, existing_job_id=existing_job_id)
-        if result.status != "COMPLETED" or task.get("operation") != "cp2k.geo_opt":
+        if result.status != "COMPLETED":
+            return result
+        if task.get("operation") == "cp2k.geo_opt":
+            from .scientific_planning.engines import evaluate_qc
+            evidence = {
+                "output_files_complete": bool(result.output_artifacts),
+                "artifact_hashes_verified": all(len(str(x.get("sha256", ""))) == 64 for x in result.output_artifacts),
+                "program_normal_termination": result.scheduler_state == "COMPLETED",
+                "scheduler_completed": result.scheduler_state == "COMPLETED" and result.application_exit_code == 0,
+                "technical_convergence": result.converged is True,
+                "all_optimizer_criteria_met": result.converged is True,
+                "numerical_values_finite": True,
+                "structural_anomalies_absent": True,
+                "atom_count_and_identity_preserved": True,
+                "cell_constraints_preserved": True,
+            }
+            qc_result = evaluate_qc("geo_opt", evidence)
+            mock_qc = {
+                "agent_a_qc": qc_result,
+                "qc_evidence_mode": "MOCK_ADAPTER_SYNTHETIC_EVIDENCE_NOT_SCIENTIFIC_VALIDATION",
+                "scientific_conclusion_status": "REQUIRES_SCIENTIFIC_REVIEW",
+                "user_acceptance_status": "WAITING_FOR_USER_ACCEPTANCE",
+            }
+            result = replace(result, converged=(result.converged is True and
+                                                 qc_result.get("technical_qc_status") == "TECHNICAL_QC_PASSED"),
+                             qc={**dict(result.qc), **mock_qc})
+        if task.get("operation") != "cp2k.geo_opt":
             return result
         # Mock output bytes are explicitly copied from the approved input; they do
         # not claim a geometry optimization. They still exercise Artifact custody/SHA.
@@ -105,6 +131,19 @@ class _RegisteredMockAdapter:
         mock = self.delegate.analyze(task, artifacts)
         if mock.status != "COMPLETED":
             return mock
+        from .scientific_planning.engines import evaluate_qc
+        analysis_qc = evaluate_qc("energy_scf", {
+            "output_files_complete": bool(artifacts),
+            "artifact_hashes_verified": all(len(str(x.get("sha256", ""))) == 64 for x in artifacts),
+            "program_normal_termination": True,
+            "scheduler_completed": True,
+            "technical_convergence": True,
+            "scf_converged": True,
+            "numerical_values_finite": True,
+            "structural_anomalies_absent": True,
+            "electronic_state_consistent": True,
+            "energy_reference_declared": True,
+        })
         task_id = str(task["task_id"])
         mock_dir = self.root / "mock_execution_outputs"
         mock_dir.mkdir(parents=True, exist_ok=True)
@@ -116,6 +155,8 @@ class _RegisteredMockAdapter:
             "input_artifact_id": str(task.get("input", {}).get("artifact_id", "")),
             "mock_cp2k_output_artifacts": [dict(item) for item in artifacts],
             "scientific_qc": "not_assessed",
+            "agent_a_qc": analysis_qc,
+            "qc_evidence_mode": "MOCK_ADAPTER_SYNTHETIC_EVIDENCE_NOT_SCIENTIFIC_VALIDATION",
         }
         _write_json(result_path, result_payload)
         digest = _sha256(result_path)
@@ -407,6 +448,18 @@ class ProjectPipeline:
                 self.lifecycle.transition(run_id, stage, "FAILED", error=f"{type(exc).__name__}: {exc}")
             raise
 
+    def plan_scientific(self, run_id: str, *, profile_path: str | Path | None = None,
+                        data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
+                        runtime_verified_version: str | None = None) -> dict:
+        """Compile the Scientific Planning Bundle using existing lifecycle and Artifact APIs."""
+        from .scientific_planning.planning_orchestrator import plan_project_run
+        return plan_project_run(
+            self, run_id, profile_path=profile_path,
+            data_analysis_api=data_analysis_api,
+            data_analysis_project_root=data_analysis_project_root,
+            runtime_verified_version=runtime_verified_version,
+        )
+
     def approve_model(self, run_id: str, *, candidate_id: str, approver: str,
                       approved: bool, approval_record_path: str | Path | None = None) -> dict:
         if approved is not True:
@@ -418,6 +471,27 @@ class ProjectPipeline:
         pipeline_result = _load_json(result_path)
         record_path = Path(approval_record_path) if approval_record_path else self._run_root(run_id) / "approval" / "approval_record.json"
         record_path.parent.mkdir(parents=True, exist_ok=True)
+        if pipeline_result.get("planning_mode") == "scientific_planning_core":
+            from projects.corr_dft_v4_1.model_plugin.approval import create_approval_record
+            candidate = next((item for item in pipeline_result.get("candidate_results", [])
+                              if item.get("candidate_id") == candidate_id), None)
+            if candidate is None:
+                raise KeyError(f"unknown Planning Core model candidate {candidate_id!r}")
+            record = create_approval_record(
+                record_path, approver=approver, candidate_id=candidate_id,
+                artifact_ref=candidate["artifact_ref"], structure_path=candidate["structure_path"],
+                validation_report=candidate["validation_report"], approved=True,
+            )
+            self.lifecycle.freeze_approval(run_id, record)
+            freeze_outputs = self.lifecycle.stage(run_id, "MODEL_ARTIFACT_FREEZE")["outputs"]
+            freeze_outputs.update({
+                "approval_record": str(record_path),
+                "approval_record_sha256": _sha256(record_path),
+            })
+            self.lifecycle.transition(run_id, "MODEL_ARTIFACT_FREEZE", "COMPLETED",
+                                      outputs=freeze_outputs)
+            return record
+
         record = approve_candidate(
             pipeline_result, candidate_id, approver=approver,
             approval_record_path=record_path, lifecycle=self.lifecycle,
@@ -564,10 +638,76 @@ class ProjectPipeline:
             # First Workflow Run: the complete input is still editable only
             # until this point. Persist it once, bind the approved Artifact ID/SHA,
             # validate and freeze the compiled Plan before creating the Run.
-            if calculation_plan_data is not None:
-                _write_json(plan_path, calculation_plan_data)
-            if not plan_path.is_file():
-                raise ValueError("approved model is frozen; an explicit complete CalculationPlan JSON is required")
+            approval_outputs = self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]
+            pipeline_result_path = approval_outputs.get("pipeline_result")
+            planning_mode = bool(
+                pipeline_result_path and Path(pipeline_result_path).is_file()
+                and _load_json(pipeline_result_path).get("planning_mode") == "scientific_planning_core"
+            )
+            if planning_mode:
+                if calculation_plan_data is not None:
+                    raise ValueError("Scientific Planning Core owns CalculationPlan compilation; caller-supplied Plan JSON is rejected")
+                planner_context_path = self.lifecycle.stage(run_id, "MODEL_GENERATE")["outputs"].get("planner_context_path")
+                bundle_path = self.lifecycle.stage(run_id, "MODEL_GENERATE")["outputs"].get("planning_bundle_path")
+                if not planner_context_path or not bundle_path:
+                    raise ValueError("Planning Core bundle/context references are missing from MODEL_GENERATE")
+                context = _load_json(planner_context_path)
+                bundle = _load_json(bundle_path)
+                from .scientific_planning.calculation_plan_compiler import compile_runtime_calculation_plan
+                approval_stage_outputs = self.lifecycle.stage(run_id, "MODEL_ARTIFACT_FREEZE")["outputs"]
+                approval_record_path = Path(approval_stage_outputs["approval_record"])
+                approval_ref = {
+                    "object_type": "ModelApproval",
+                    "object_id": str(approval["candidate_id"]),
+                    "schema_version": "1.0.0",
+                    "sha256": _sha256(approval_record_path),
+                }
+                from .scientific_planning.calculation_plan_compiler import (
+                    compile_runtime_calculation_plan, build_frozen_calculation_plan_object,
+                )
+                runtime_plan = compile_runtime_calculation_plan(
+                    project_id=str(context["project_id"]), project_root=str(root),
+                    title=str(context["planning_config"].get("title") or bundle["scientific_intent"]["research_question"]),
+                    scientific_question=str(bundle["scientific_intent"]["research_question"]),
+                    model_recipe=bundle["model_recipes"][0], method_plan=bundle["method_plan"],
+                    execution_plan=bundle["execution_plan"], qc_plan=bundle["qc_plan"],
+                    runtime_config=context["runtime_config"],
+                    runtime_execution=context["runtime_execution"],
+                    approved_artifact={"artifact_id": approval["artifact_id"],
+                                        "structure_sha256": approval["structure_sha256"]},
+                    approval_ref=approval_ref,
+                )
+                runtime_plan.require_valid()
+                frozen_plan_object = build_frozen_calculation_plan_object(
+                    bundle=bundle, runtime_plan=runtime_plan, approval_ref=approval_ref,
+                    frozen_at=str(approval.get("approved_at") or ""),
+                )
+                planning_directory = Path(planner_context_path).parent
+                frozen_object_path = planning_directory / "calculation_plan_object.json"
+                from .scientific_planning.bundle import write_immutable_json
+                write_immutable_json(frozen_object_path, frozen_plan_object)
+                calculation_index_entry = {
+                    "object_type": "CalculationPlan",
+                    "object_id": frozen_plan_object["plan_id"],
+                    "schema_version": frozen_plan_object["schema_version"],
+                    "sha256": frozen_plan_object["sha256"],
+                    "approval_ref": approval_ref,
+                    "runtime_projection_sha256": runtime_plan.sha256,
+                }
+                write_immutable_json(
+                    planning_directory / "calculation_plan_object.index.json",
+                    calculation_index_entry,
+                )
+                if plan_path.exists():
+                    existing = CalculationPlan.from_mapping(_load_json(plan_path))
+                    self._require_same_calculation_plan(existing, runtime_plan, source="Existing generated input")
+                else:
+                    _write_json(plan_path, runtime_plan.as_dict())
+            else:
+                if calculation_plan_data is not None:
+                    _write_json(plan_path, calculation_plan_data)
+                if not plan_path.is_file():
+                    raise ValueError("approved model is frozen; an explicit complete CalculationPlan JSON is required")
             plan = self._bind_approved_calculation_plan(
                 run_id, _load_json(plan_path), approval
             )
@@ -579,11 +719,27 @@ class ProjectPipeline:
             workflow_run_id = self.lifecycle.create_calculation_run(
                 run_id, candidate_id, structure_path, plan, controller,
             )
+            if planning_mode:
+                calculation_outputs = self.lifecycle.stage(run_id, "CALCULATION_PLAN")["outputs"]
+                calculation_outputs.update({
+                    "planning_calculation_plan_object_path": str(frozen_object_path),
+                    "planning_calculation_plan_object_sha256": frozen_plan_object["sha256"],
+                    "runtime_calculation_plan_sha256": runtime_plan.sha256,
+                })
+                self.lifecycle.transition(run_id, "CALCULATION_PLAN", "COMPLETED",
+                                          outputs=calculation_outputs)
 
         # Candidate package registration already bound Data_analysis to this
         # project root. All subsequent derived Artifacts and Analysis Runs must
         # use that same registry root and namespace.
         data_analysis_project_root = root / "model_candidates"
+        if pipeline_result.get("planning_mode") == "scientific_planning_core":
+            planner_context_path = self.lifecycle.stage(run_id, "MODEL_GENERATE")["outputs"].get("planner_context_path")
+            if planner_context_path:
+                planner_context = _load_json(planner_context_path)
+                configured_root = planner_context.get("data_analysis_project_root")
+                if configured_root:
+                    data_analysis_project_root = Path(configured_root)
         adapter = _RegisteredMockAdapter(
             MockCP2KWorkflowAdapter(), data_analysis_api, data_analysis_project_root,
             approval["artifact_id"], structure_path,
@@ -674,13 +830,31 @@ class ProjectPipeline:
                                   if item.get("candidate_id") == approval_record.get("candidate_id")), None)
                 if candidate and candidate.get("structure_path"):
                     structure_integrity = verify_approval_record(approval_record, candidate["structure_path"])
+        planning_bundle = None
+        planning_index = None
+        planning_outputs = self.lifecycle.stage(run_id, "MODEL_GENERATE")["outputs"]
+        planning_path = planning_outputs.get("planning_bundle_path")
+        if planning_path and Path(planning_path).is_file():
+            planning_bundle = _load_json(planning_path)
+            index_path = Path(planning_path).with_name("planning_index.json")
+            if index_path.is_file():
+                planning_index = _load_json(index_path)
+        calculation_plan_object = None
+        calculation_plan_object_path = (
+            self.lifecycle.stage(run_id, "CALCULATION_PLAN")["outputs"].get("planning_calculation_plan_object_path")
+        )
+        if calculation_plan_object_path and Path(calculation_plan_object_path).is_file():
+            calculation_plan_object = _load_json(calculation_plan_object_path)
         result = {
             "schema_version": "1.0.0", "project_run_id": run_id, "project_id": info["project_id"],
             "project_status": info["status"], "created_at": info["created_at"],
             "source_document": manifest.get("source_document"),
             "manifest": manifest, "manifest_sha256": _sha256(root / "manifest.json") if (root / "manifest.json").is_file() else None,
             "confirmations": manifest.get("confirmations", []),
-            "model_pipeline": candidate_pipeline, "approval_record": approval_record,
+            "model_pipeline": candidate_pipeline, "scientific_planning_bundle": planning_bundle,
+            "scientific_planning_index": planning_index,
+            "scientific_calculation_plan": calculation_plan_object,
+            "approval_record": approval_record,
             "approval_integrity_verified": approval_integrity,
             "approved_structure_current_sha_verified": structure_integrity,
             "approval_artifact_id": (approval_record or {}).get("artifact_id"),
