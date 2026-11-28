@@ -5,7 +5,7 @@
 PR #3：https://github.com/Tuzhidingdong/Computation--pipeline/pull/3  
 分支：agent-b/plan-compiler-v41-model-plugin-20261127  
 本轮基线：530e56f3b77027ffb9203e26f6422f21df336e1a  
-最终代码 HEAD：c36b66def19038f0f15578a1222d5ec3e096cafe  
+最终实现与回归测试 HEAD：5666a0c98a0f6bb4d660af29de12ea32966285a2  
 PR Base SHA：5e6e26fdf94efbac54182f819f4879c1aafb1d4d
 
 ## 1. 最终状态
@@ -47,7 +47,7 @@ pipeline_contracts/plan_compiler/compiler.py 只暴露可选 adapter callback。
 
 projects/corr_dft_v4_1/docx_adapter.py 负责上述项目专属字段和不充分证据状态。
 
-projects/corr_dft_v4_1/plan_compiler.py::compile_v41_docx() 显式传入 adapter callbacks。普通 compile_docx(..., project_id="unrelated-project") 不会因此抽取 CORR 专属字段。
+projects/corr_dft_v4_1/plan_compiler.py::compile_v41_docx() 显式传入 adapter callbacks。普通 compile_docx(..., project_id="unrelated-project") 不会因此抽取 CORR 专属字段。 新增对照测试也使用 project_id="corr_dft_v4_1" 但不传 adapter；该输出与 unrelated-project 的通用 Manifest（规范化 project_id 后）必须完全相同，防止 project_id 本身隐式触发项目解析。
 
 ### CHARGE 修复
 
@@ -98,8 +98,8 @@ run_04 原文证据 block 62（paragraph 18）补入回归夹具，确保 topolo
 
 ## 7. 测试与 CI
 
-最新 GitHub Actions run #543：
-https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092308085
+代码与回归测试 GitHub Actions run #549：
+https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092520597
 
 最终结果：
 - python -m unittest discover -s tests -v：133 tests，131 passed，2 skipped，0 failures。
