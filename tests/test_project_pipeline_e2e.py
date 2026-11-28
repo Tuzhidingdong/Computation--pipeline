@@ -267,6 +267,7 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             ])
             self.assertEqual(report["project_status"], "COMPLETED")
             self.assertTrue(report["approval_integrity_verified"])
+            self.assertTrue(report["approved_structure_current_sha_verified"])
             self.assertEqual(report["approval_artifact_id"], approved["artifact_id"])
             self.assertEqual(report["approval_structure_sha256"], approved["structure_sha256"])
             self.assertEqual(report["source_document"]["sha256"],
