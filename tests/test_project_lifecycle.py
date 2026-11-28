@@ -19,7 +19,7 @@ class ProjectLifecycleTests(unittest.TestCase):
             try:
                 lifecycle = ProjectLifecycle(store)
                 project_run = lifecycle.create("v41-test", {"schema_version":"1.0.0"})
-                for stage in PROJECT_STAGES[:6]:
+                for stage in PROJECT_STAGES[:5]:
                     lifecycle.transition(project_run, stage, "COMPLETED")
                 lifecycle.transition(project_run, "MODEL_APPROVAL", "AWAITING_APPROVAL")
 

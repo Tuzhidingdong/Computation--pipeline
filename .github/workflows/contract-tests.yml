@@ -27,7 +27,7 @@ jobs:
       - name: Run mock contract tests
         run: python -m unittest discover -s tests -v
       - name: Install pytest
-        run: python -m pip install pytest ase
+        run: python -m pip install pytest
       - name: Run full pytest suite
         run: python -m pytest -q
       - name: Compile contract modules
