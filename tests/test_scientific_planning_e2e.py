@@ -718,7 +718,7 @@ class ScientificPlanningE2ETests(unittest.TestCase):
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
             profile["scientific_planning"]["execution"]["backend"] = "orca"
             profile_path.write_text(
-                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2) + "\\n",
+                json.dumps(profile, ensure_ascii=False, sort_keys=True, indent=2),
                 encoding="utf-8",
             )
             try:
