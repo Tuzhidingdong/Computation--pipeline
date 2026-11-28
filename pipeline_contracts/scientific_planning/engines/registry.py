@@ -25,6 +25,7 @@ def find_capabilities(engine: str, task_type: str) -> list[dict[str, Any]]:
     return [
         item for item in load_registry().get("capabilities", [])
         if str(item.get("engine", "")).casefold() == engine_token
+        and item.get("capability_role", "task") != "method_feature"
         and task_token in {str(x).casefold() for x in item.get("supported_task_types", [])}
     ]
 
