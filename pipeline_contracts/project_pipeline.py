@@ -302,10 +302,36 @@ class ProjectPipeline:
 
     def confirm_evidence(self, run_id: str, *, evidence_ids: list[str], confirmer: str,
                          rationale: str, changes: Mapping[str, Any]) -> dict:
-        if not changes:
-            raise ValueError("confirmation changes must describe what was confirmed or changed")
         if _stage_status(self.lifecycle, run_id, "PLAN_COMPILE") != "COMPLETED":
             raise RuntimeError("evidence confirmation cannot override a blocked compilation or scientific blocker")
+
+        # Evidence Review is the only mutable confirmation window. BLOCKED is
+        # intentional here: it permits additional batches while unresolved
+        # source definitions remain. Once completed, the Manifest is immutable.
+        review_status = _stage_status(self.lifecycle, run_id, "EVIDENCE_REVIEW")
+        if review_status not in {"RUNNING", "BLOCKED"}:
+            raise RuntimeError(
+                f"Manifest confirmation is closed when EVIDENCE_REVIEW is {review_status}"
+            )
+        downstream_stages = (
+            "MODEL_GENERATE", "MODEL_VALIDATE", "MODEL_REVIEW", "MODEL_APPROVAL",
+            "MODEL_ARTIFACT_FREEZE", "CALCULATION_PLAN", "WORKFLOW_EXECUTION",
+            "RESULT_DELIVERY",
+        )
+        started = [
+            stage for stage in downstream_stages
+            if _stage_status(self.lifecycle, run_id, stage) != "PENDING"
+        ]
+        if started:
+            raise RuntimeError(
+                "Manifest confirmation is closed after downstream stages have started: "
+                + ", ".join(started)
+            )
+        if not changes:
+            raise ValueError("confirmation changes must describe what was confirmed or changed")
+
+        # No Manifest read/transform or persistent write occurs before the phase
+        # and downstream-stage guards above have passed.
         manifest = self.lifecycle.manifest(run_id)
         confirmed = confirm_manifest_claims(manifest, evidence_ids=evidence_ids,
                                              confirmer=confirmer, rationale=rationale)
@@ -404,6 +430,46 @@ class ProjectPipeline:
                                             "structure_sha256": record["structure_sha256"]})
         return record
 
+    def _bind_approved_calculation_plan(self, run_id: str, raw_plan: Mapping[str, Any],
+                                        approval: Mapping[str, Any]) -> CalculationPlan:
+        if not isinstance(raw_plan, Mapping):
+            raise ValueError("CalculationPlan input must be a JSON object")
+        bound = dict(raw_plan)
+        structure = dict(bound.get("structure") or {})
+        structure.pop("path", None)
+        structure["artifact_id"] = approval["artifact_id"]
+        structure["sha256"] = approval["structure_sha256"]
+        bound["structure"] = structure
+        return compile_confirmed_manifest(self.lifecycle.manifest(run_id), bound)
+
+    @staticmethod
+    def _require_same_calculation_plan(candidate: CalculationPlan, frozen: CalculationPlan,
+                                       *, source: str) -> None:
+        if (candidate.plan_id != frozen.plan_id
+                or candidate.sha256 != frozen.sha256
+                or candidate.as_dict() != frozen.as_dict()):
+            raise ValueError(
+                f"{source} CalculationPlan differs from the WorkflowStore-frozen Plan "
+                f"(plan_id={frozen.plan_id}, sha256={frozen.sha256})"
+            )
+
+    def _load_frozen_workflow_plan(self, workflow_run_id: str) -> tuple[CalculationPlan, dict]:
+        info = self.store.run_info(workflow_run_id)
+        try:
+            persisted_json = json.loads(info["plan_json"])
+            frozen = CalculationPlan.from_mapping(persisted_json)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("WorkflowStore contains an unreadable frozen CalculationPlan") from exc
+        normalized = frozen.as_dict()
+        if (persisted_json != normalized
+                or frozen.plan_id != info["plan_id"]
+                or frozen.sha256 != info["plan_hash"]):
+            raise ValueError(
+                "WorkflowStore frozen CalculationPlan integrity failed: plan_json, plan_id and plan_hash disagree"
+            )
+        frozen.require_valid()
+        return frozen, info
+
     def resume_mock(self, run_id: str, *, data_analysis_api,
                     model_config: Mapping[str, Any] | None = None,
                     calculation_plan_data: Mapping[str, Any] | None = None,
@@ -417,11 +483,12 @@ class ProjectPipeline:
         root.mkdir(parents=True, exist_ok=True)
         model_config_path = root / "model_spec_bundle.json"
         plan_path = root / "calculation_plan_input.json"
-        if model_config is not None:
+        model_generation_pending = _stage_status(self.lifecycle, run_id, "MODEL_GENERATE") == "PENDING"
+        if model_config is not None and model_generation_pending:
             _write_json(model_config_path, model_config)
-        if calculation_plan_data is not None:
-            _write_json(plan_path, calculation_plan_data)
         if _stage_status(self.lifecycle, run_id, "MODEL_GENERATE") == "PENDING":
+            if calculation_plan_data is not None:
+                _write_json(plan_path, calculation_plan_data)
             if not model_config_path.is_file() or preview_renderer is None:
                 raise ValueError("first project resume requires a ModelSpec bundle and a 3D preview renderer")
             self.generate_models(run_id, _load_json(model_config_path),
@@ -431,28 +498,87 @@ class ProjectPipeline:
             return self.status(run_id)
         approval_stage = _stage_status(self.lifecycle, run_id, "MODEL_APPROVAL")
         if approval_stage == "AWAITING_APPROVAL":
+            # Before a Workflow Run exists the owner may still provide the
+            # complete Plan that will be compiled after explicit approval.
+            if calculation_plan_data is not None:
+                _write_json(plan_path, calculation_plan_data)
             return self.status(run_id)
         if approval_stage != "COMPLETED" or _stage_status(self.lifecycle, run_id, "MODEL_ARTIFACT_FREEZE") != "COMPLETED":
             return self.status(run_id)
 
-        approval = self.lifecycle.approval(run_id, self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]["candidate_id"])
-        # The full record in stage output is the authoritative candidate binding.
+        approval = self.lifecycle.approval(
+            run_id, self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]["candidate_id"]
+        )
         candidate_id = approval["candidate_id"]
-        pipeline_result = _load_json(self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]["pipeline_result"])
+        pipeline_result = _load_json(
+            self.lifecycle.stage(run_id, "MODEL_APPROVAL")["outputs"]["pipeline_result"]
+        )
         candidate = next(item for item in pipeline_result["candidate_results"]
                          if item["candidate_id"] == candidate_id)
         structure_path = Path(candidate["structure_path"])
         if not verify_frozen_structure(approval, structure_path):
             raise ValueError("approved structure changed after freeze")
-        if not plan_path.is_file():
-            raise ValueError("approved model is frozen; an explicit complete CalculationPlan JSON is required")
-        plan_raw = _load_json(plan_path)
-        plan_raw.setdefault("structure", {}).pop("path", None)
-        plan_raw["structure"]["artifact_id"] = approval["artifact_id"]
-        plan_raw["structure"]["sha256"] = approval["structure_sha256"]
-        plan = compile_confirmed_manifest(self.lifecycle.manifest(run_id), plan_raw)
-        plan_file = _write_json(root / "calculation_plan.json", plan.as_dict())
-        plan_hash = _sha256(plan_file)
+
+        calculation_stage_outputs = self.lifecycle.stage(run_id, "CALCULATION_PLAN")["outputs"]
+        existing_workflow = calculation_stage_outputs.get("workflow_run_id")
+        if existing_workflow:
+            # Once a Workflow Run exists, its WorkflowStore plan_json/plan_hash
+            # is the only executable Plan. Check every supplied representation
+            # before any input/final Plan file can be overwritten.
+            frozen_plan, workflow_info = self._load_frozen_workflow_plan(existing_workflow)
+            if (calculation_stage_outputs.get("plan_id") != frozen_plan.plan_id
+                    or calculation_stage_outputs.get("plan_sha256") != frozen_plan.sha256):
+                raise ValueError("ProjectLifecycle CalculationPlan reference differs from WorkflowStore frozen Plan")
+
+            if not plan_path.is_file():
+                raise ValueError("frozen Workflow Run is missing its original calculation_plan_input.json")
+            disk_plan = self._bind_approved_calculation_plan(
+                run_id, _load_json(plan_path), approval
+            )
+            self._require_same_calculation_plan(disk_plan, frozen_plan, source="On-disk input")
+            if calculation_plan_data is not None:
+                supplied_plan = self._bind_approved_calculation_plan(
+                    run_id, calculation_plan_data, approval
+                )
+                self._require_same_calculation_plan(
+                    supplied_plan, frozen_plan, source="Newly supplied"
+                )
+
+            plan_file = root / "calculation_plan.json"
+            if not plan_file.is_file():
+                raise ValueError("frozen Workflow Run is missing its final calculation_plan.json")
+            frozen_file_plan = CalculationPlan.from_mapping(_load_json(plan_file))
+            self._require_same_calculation_plan(
+                frozen_file_plan, frozen_plan, source="Persisted final"
+            )
+            plan_hash = _sha256(plan_file)
+            workflow_stage_outputs = self.lifecycle.stage(run_id, "WORKFLOW_EXECUTION")["outputs"]
+            recorded_file_hash = workflow_stage_outputs.get("calculation_plan_sha256")
+            if recorded_file_hash and recorded_file_hash != plan_hash:
+                raise ValueError("Persisted final CalculationPlan file SHA-256 differs from its recorded value")
+            # Resume with the exact object reconstructed from the WorkflowStore,
+            # never with a caller-provided or disk-recompiled replacement.
+            plan = frozen_plan
+            workflow_run_id = existing_workflow
+        else:
+            # First Workflow Run: the complete input is still editable only
+            # until this point. Persist it once, bind the approved Artifact ID/SHA,
+            # validate and freeze the compiled Plan before creating the Run.
+            if calculation_plan_data is not None:
+                _write_json(plan_path, calculation_plan_data)
+            if not plan_path.is_file():
+                raise ValueError("approved model is frozen; an explicit complete CalculationPlan JSON is required")
+            plan = self._bind_approved_calculation_plan(
+                run_id, _load_json(plan_path), approval
+            )
+            plan.require_valid()
+            plan_file = _write_json(root / "calculation_plan.json", plan.as_dict())
+            plan_hash = _sha256(plan_file)
+
+            controller = WorkflowController(self.store, MockCP2KWorkflowAdapter())
+            workflow_run_id = self.lifecycle.create_calculation_run(
+                run_id, candidate_id, structure_path, plan, controller,
+            )
 
         # Candidate package registration already bound Data_analysis to this
         # project root. All subsequent derived Artifacts and Analysis Runs must
@@ -463,17 +589,13 @@ class ProjectPipeline:
             approval["artifact_id"], structure_path,
         )
         controller = WorkflowController(self.store, adapter)
-        existing_workflow = self.lifecycle.stage(run_id, "CALCULATION_PLAN")["outputs"].get("workflow_run_id")
-        if existing_workflow:
-            workflow_run_id = existing_workflow
-        else:
-            workflow_run_id = self.lifecycle.create_calculation_run(
-                run_id, candidate_id, structure_path, plan, controller,
-            )
         self.lifecycle.transition(run_id, "WORKFLOW_EXECUTION", "RUNNING",
                                    outputs={"workflow_run_id": workflow_run_id,
                                             "execution_mode": "mock", "calculation_plan_sha256": plan_hash})
-        workflow_status = controller.resume(workflow_run_id, plan) if existing_workflow else controller.run(workflow_run_id, plan)
+        workflow_status = (
+            controller.resume(workflow_run_id, plan) if existing_workflow
+            else controller.run(workflow_run_id, plan)
+        )
         workflow_report = controller.report(workflow_run_id)
         _write_json(root / "workflow_report.json", workflow_report)
         if workflow_status != "COMPLETED":
