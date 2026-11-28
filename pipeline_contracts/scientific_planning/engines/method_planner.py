@@ -120,6 +120,15 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         raise TypeError("request must be a Mapping")
     engine = str(request.get("engine", "")).strip().casefold()
     task_type = str(request.get("task_type", "")).strip()
+    execution_mode = str(request.get("execution_mode", "real")).strip().casefold() or "real"
+    if execution_mode not in {"mock", "real"}:
+        return {
+            "engine": engine or None, "task_type": task_type or None,
+            "execution_mode": execution_mode, "status": "BLOCKED_INVALID_EXECUTION_MODE",
+            "fields": {}, "missing_fields": [], "proposed_fields": [],
+            "conflicting_fields": [], "blockers": ["execution_mode must be 'mock' or 'real'."],
+            "ready_for_core_compilation": False, "parameter_defaults_applied": False,
+        }
     if engine not in _FIELD_SPECS:
         return {"engine": engine or None, "task_type": task_type or None,
                 "status": "UNVERIFIED_ENGINE", "fields": {}, "missing_fields": [],
@@ -138,7 +147,19 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     priority = {"user_explicit": 0, "frozen_source": 1, "approved_profile": 2, "capability_rule": 3}
     ordered = sorted(sources, key=lambda s: priority.get(_source_kind(s), 99))
 
-    requested_version = request.get("software_version")
+    requested_version_raw = request.get("software_version")
+    requested_version = str(requested_version_raw).strip() if requested_version_raw is not None else ""
+    requested_version = requested_version or None
+    runtime_version_verified = request.get("runtime_version_verified") is True
+    runtime_verified_version_raw = request.get("runtime_verified_version")
+    runtime_verified_version = (
+        str(runtime_verified_version_raw).strip()
+        if runtime_verified_version_raw is not None else ""
+    ) or None
+    runtime_version_matches = bool(
+        requested_version and runtime_verified_version
+        and runtime_verified_version == requested_version
+    )
     fields: dict[str, Any] = {}
     missing: list[str] = []
     proposed: list[str] = []
@@ -216,6 +237,52 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
                 continue
             _, source, value, metadata = best[0]
             kind, ref = _source_kind(source), metadata.get("source_ref") or source.get("source_ref")
+            if field == "software_version":
+                if metadata.get("_explicit_not_applicable") is True or value is None or not str(value).strip():
+                    missing.append(field)
+                    fields[field] = _record(
+                        None, "missing", ref, "APPLICABLE",
+                        "software_version must be a concrete source-backed version; NOT_APPLICABLE/empty values are not accepted.",
+                        "UNKNOWN", True, "MISSING",
+                        declared_value=requested_version,
+                    )
+                    continue
+                if not requested_version:
+                    missing.append(field)
+                    fields[field] = _record(
+                        None, "missing", ref, "APPLICABLE",
+                        "A non-empty request software_version is required and must be supported by source evidence.",
+                        "UNKNOWN", True, "MISSING",
+                        source_value=deepcopy(value),
+                    )
+                    continue
+                if not ref or not str(ref).strip() or str(ref).strip() == "request.software_version":
+                    missing.append(field)
+                    fields[field] = _record(
+                        None, "missing", None, "APPLICABLE",
+                        "software_version source evidence requires a non-empty source_ref; the request declaration is not evidence.",
+                        "UNKNOWN", True, "MISSING",
+                        declared_value=requested_version, source_value=deepcopy(value),
+                    )
+                    continue
+                if str(value).strip() != requested_version:
+                    conflicts.append(field)
+                    fields[field] = _record(
+                        None, "conflicting_sources", ref, "APPLICABLE",
+                        "The source-backed software_version does not exactly match request.software_version.",
+                        "CONFLICT", True, "CONFLICT",
+                        declared_value=requested_version, source_value=deepcopy(value),
+                    )
+                    continue
+                if metadata.get("approval_required") is True:
+                    proposed.append(field)
+                    fields[field] = _record(
+                        value, kind, ref, "APPLICABLE",
+                        str(metadata.get("rationale", source.get("rationale", "Software version source requires approval."))),
+                        str(metadata.get("uncertainty", "APPROVAL_REQUIRED")),
+                        True, "PROPOSED",
+                    )
+                    continue
             if metadata.get("_explicit_not_applicable") is True:
                 fields[field] = _record(
                     None, kind, ref, "NOT_APPLICABLE", str(metadata["rationale"]),
@@ -233,12 +300,32 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
 
         if field == "software_version" and requested_version:
             source_ref = request.get("software_version_source_ref")
-            fields[field] = _record(
-                requested_version, str(request.get("software_version_provenance", "request_metadata")),
-                str(source_ref).strip() if source_ref is not None and str(source_ref).strip() else None,
-                "APPLICABLE", "Version is declared in request metadata but is not supported by a selected source record.",
-                "RUNTIME_VERSION_NOT_VERIFIED", True, "DECLARED_UNVERIFIED",
-            )
+            source_ref = str(source_ref).strip() if source_ref is not None else ""
+            if source_ref and source_ref != "request.software_version":
+                provenance_value = str(request.get("software_version_provenance") or "explicit_source_reference")
+                rationale_value = str(request.get("software_version_rationale") or
+                    "The caller explicitly supplied this source reference for the requested software version.")
+                approval_required = request.get("software_version_approval_required") is True
+                requested_status = str(request.get("software_version_status") or "SOURCE_CONFIRMED")
+                if requested_status not in {"SOURCE_CONFIRMED", "APPROVED_POLICY", "VERSION_VERIFIED_RULE"}:
+                    approval_required = True
+                if approval_required:
+                    proposed.append(field)
+                fields[field] = _record(
+                    requested_version, provenance_value, source_ref, "APPLICABLE",
+                    rationale_value,
+                    "APPROVAL_REQUIRED" if approval_required else "SOURCE_DECLARED_NOT_RUNTIME_VERIFIED",
+                    approval_required,
+                    "PROPOSED" if approval_required else requested_status,
+                )
+            else:
+                missing.append(field)
+                fields[field] = _record(
+                    None, "missing", None, "APPLICABLE",
+                    "A source-backed software_version record with a non-empty source_ref is required; request.software_version alone is only a declaration.",
+                    "UNKNOWN", True, "MISSING",
+                    declared_value=requested_version,
+                )
             continue
         if field in optional:
             if candidate_values:
@@ -279,23 +366,11 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
     )
 
     blockers: list[str] = []
-    version_record = fields.get("software_version")
-    source_backed_version = (
-        isinstance(version_record, Mapping)
-        and version_record.get("status") in {"SOURCE_CONFIRMED", "APPROVED_POLICY", "VERSION_VERIFIED_RULE"}
-        and bool(str(version_record.get("source_ref") or "").strip())
-        and bool(str(version_record.get("provenance") or "").strip())
-    )
-    mock_only_source_version = (
-        str(request.get("execution_mode", "")).strip().casefold() == "mock"
-        and source_backed_version
-    )
-    runtime_version_unverified = request.get("runtime_version_verified") is not True
-    if runtime_version_unverified and not mock_only_source_version:
-        blockers.append(
-            "Exact software version must be verified against the installed executable before real preflight; "
-            "Mock-only planning is allowed only with a source-backed software_version record."
-        )
+    if execution_mode == "real":
+        if not runtime_version_verified:
+            blockers.append("Exact software version must be verified against the installed executable before Real planning.")
+        if not runtime_version_matches:
+            blockers.append("runtime_verified_version must exactly match the requested software_version for Real planning.")
     if periodic is None and conditional:
         if "structure.periodicity" not in missing:
             missing.append("structure.periodicity")
@@ -310,7 +385,7 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         status = "BLOCKED_MISSING_METHOD_FIELDS"
     elif conflicts:
         status = "BLOCKED_SOURCE_CONFLICT"
-    elif runtime_version_unverified and not mock_only_source_version:
+    elif execution_mode == "real" and (not runtime_version_verified or not runtime_version_matches):
         status = "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
     elif proposed:
         status = "PROPOSED"
@@ -318,7 +393,12 @@ def plan_method(request: Mapping[str, Any]) -> dict[str, Any]:
         status = "METHOD_FIELDS_RESOLVED"
     ready = status == "METHOD_FIELDS_RESOLVED" and not blockers
     return {
-        "engine": engine, "task_type": task_type, "status": status, "fields": fields,
+        "engine": engine, "task_type": task_type, "execution_mode": execution_mode,
+        "software_version": requested_version,
+        "runtime_version_verified": runtime_version_verified,
+        "runtime_verified_version": runtime_verified_version,
+        "runtime_version_matches": runtime_version_matches,
+        "status": status, "fields": fields,
         "required_fields": required, "missing_fields": missing, "proposed_fields": proposed,
         "conflicting_fields": conflicts, "parameter_defaults_applied": False,
         "source_precedence": ["user_explicit", "frozen_source", "approved_profile", "version_verified_capability_rule", "candidate_only"],

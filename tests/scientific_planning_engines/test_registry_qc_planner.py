@@ -6,13 +6,13 @@ from pipeline_contracts.scientific_planning.engines import (
 def test_cp2k_geo_opt_and_energy_are_only_available_real_adapter_routes():
     for operation in ("cp2k.geo_opt", "cp2k.energy"):
         route = route_capability({"engine": "CP2K", "task_type": operation,
-                                  "software_version": "2025.2", "runtime_version_verified": True})
+                                  "software_version": "2025.2", "runtime_version_verified": True, "runtime_verified_version": "2025.2"})
         assert route["integration_status"] == "AVAILABLE"
         assert route["allows_real_execution_plan"] is True
 
     for engine, task in (("CP2K", "cp2k.band"), ("CP2K", "cp2k.neb")):
         route = route_capability({"engine": engine, "task_type": task,
-                                  "software_version": "2025.2", "runtime_version_verified": True})
+                                  "software_version": "2025.2", "runtime_version_verified": True, "runtime_verified_version": "2025.2"})
         assert route["integration_status"] == "PLANNABLE_ONLY"
         assert route["allows_real_execution_plan"] is False
         assert route["can_enter_real_preflight"] is False
@@ -21,7 +21,7 @@ def test_cp2k_geo_opt_and_energy_are_only_available_real_adapter_routes():
 def test_cp2k_sccs_is_plannable_feature_not_real_adapter():
     route = route_capability({
         "engine": "CP2K", "task_type": "cp2k.energy",
-        "software_version": "2026.2", "runtime_version_verified": True,
+        "software_version": "2026.2", "runtime_version_verified": True, "runtime_verified_version": "2026.2",
         "features": ["sccs"],
     })
 

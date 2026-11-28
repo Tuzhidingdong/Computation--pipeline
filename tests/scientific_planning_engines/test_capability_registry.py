@@ -48,3 +48,34 @@ def test_available_adapter_requires_exact_runtime_version_for_real_preflight():
     assert route["integration_status"] == "AVAILABLE"
     assert route["allows_real_execution_plan"] is True
     assert route["can_enter_real_preflight"] is False
+
+
+
+def test_real_preflight_requires_exact_runtime_verified_version_match():
+    matching = route_capability({
+        "engine": "CP2K", "task_type": "cp2k.geo_opt",
+        "software_version": "2025.2", "runtime_version_verified": True,
+        "runtime_verified_version": "2025.2",
+    })
+    mismatched = route_capability({
+        "engine": "CP2K", "task_type": "cp2k.geo_opt",
+        "software_version": "2025.2", "runtime_version_verified": True,
+        "runtime_verified_version": "2025.1",
+    })
+
+    assert matching["can_enter_real_preflight"] is True
+    assert matching["runtime_version_matches"] is True
+    assert mismatched["can_enter_real_preflight"] is False
+    assert mismatched["runtime_version_matches"] is False
+
+
+def test_mock_capability_route_never_enters_real_preflight():
+    route = route_capability({
+        "engine": "CP2K", "task_type": "cp2k.geo_opt",
+        "execution_mode": "mock", "software_version": "2025.2",
+        "runtime_version_verified": True, "runtime_verified_version": "2025.2",
+    })
+
+    assert route["execution_mode"] == "mock"
+    assert route["can_enter_real_preflight"] is False
+    assert any("Mock-only" in item for item in route["blockers"])
