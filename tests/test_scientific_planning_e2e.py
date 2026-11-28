@@ -350,6 +350,19 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 self.assertTrue(repeated["idempotent_reuse"])
                 self.assertEqual(repeated["bundle_sha256"], planned["bundle_sha256"])
 
+                # A newly supplied independent runtime observation changes the
+                # frozen Planning input fingerprint and cannot reuse the old Bundle.
+                fingerprint_guard = ProjectPipeline(state_db, output_root)
+                try:
+                    with self.assertRaisesRegex(FileExistsError, "planning input changed"):
+                        fingerprint_guard.plan_scientific(
+                            run_id, profile_path=profile_path, data_analysis_api=api,
+                            data_analysis_project_root=data_root,
+                            runtime_verified_version="2025.2",
+                        )
+                finally:
+                    fingerprint_guard.close()
+
                 original_profile_text = profile_path.read_text(encoding="utf-8")
                 changed_profile = json.loads(original_profile_text)
                 changed_profile["scientific_planning"]["title"] += " source-changed"

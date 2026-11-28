@@ -273,7 +273,11 @@ def _engine_request(config: Mapping[str, Any], structure: Mapping[str, Any] | No
         "software_version": method_config.get("software_version") or config.get("software_version"),
         "software_version_provenance": method_config.get("software_version_provenance") or "project_profile_method_source",
         "software_version_source_ref": method_config.get("software_version_source_ref"),
-        "runtime_version_verified": method_config.get("runtime_version_verified", config.get("runtime_version_verified")) is True,
+        # Agent A's runtime_version_verified gate is authorized only by an
+        # independently supplied runtime observation. Project Profile/document
+        # declarations are not runtime evidence. Exact version equality is
+        # evaluated separately by Agent A's method and capability planners.
+        "runtime_version_verified": observed_runtime_version is not None,
         "features": list(config.get("features") or []),
         "sources": method_sources,
         "structure": {

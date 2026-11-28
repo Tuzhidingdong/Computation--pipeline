@@ -6,6 +6,7 @@ from pipeline_contracts.scientific_planning.execution_modes import agent_a_execu
 from pipeline_contracts.scientific_planning.object_adapters import method_plan_object
 from pipeline_contracts.scientific_planning.engines import plan_method, to_cp2k_calculation_plan_method
 from pipeline_contracts.scientific_planning.planning_orchestrator import _engine_request
+from pipeline_contracts.scientific_planning.plugin_registry import engine_planning
 
 
 def _source_fields():
@@ -115,37 +116,58 @@ class ScientificPlanningExecutionModeTests(unittest.TestCase):
         self.assertFalse(blocked_method.get("mock_only", False))
         self.assertFalse(blocked_method["real_execution_preflight_allowed"])
 
-    def test_runtime_verified_version_is_independent_of_profile_fields(self):
-        missing = _request("cp2k", verified=True)
-        self.assertIsNone(missing["runtime_verified_version"])
-        self.assertNotEqual(missing["runtime_verified_version"], "PROFILE-MUST-NOT-BE-USED")
+    def test_profile_true_without_independent_observation_is_blocked_and_not_preflight_ready(self):
+        request = _request("cp2k", verified=True)
+        self.assertIsNone(request["runtime_verified_version"])
+        self.assertFalse(request["runtime_version_verified"])
 
-        supplied = _request("cp2k", verified=True, runtime_version="2025.2")
-        self.assertEqual(supplied["runtime_verified_version"], "2025.2")
-        self.assertEqual(supplied["software_version"], "2025.2")
+        method = plan_method(request)
+        route = engine_planning(request)["capability_route"]
+        self.assertEqual(method["status"], "BLOCKED_RUNTIME_VERSION_UNVERIFIED")
+        self.assertFalse(method["runtime_version_verified"])
+        self.assertFalse(route["runtime_version_verified"])
+        self.assertFalse(route["can_enter_real_preflight"])
 
-    def test_real_cp2k_unverified_missing_and_mismatched_versions_are_blocked(self):
-        unverified = plan_method(_request("cp2k", verified=False, runtime_version="2025.2"))
-        self.assertEqual(unverified["status"], "BLOCKED_RUNTIME_VERSION_UNVERIFIED")
-        self.assertTrue(unverified["runtime_version_matches"])
-        self.assertFalse(unverified["runtime_version_verified"])
-        self.assertTrue(any("verified against the installed executable" in item
-                            for item in unverified["blockers"]))
+    def test_profile_false_with_independent_exact_observation_passes_version_gate(self):
+        request = _request("cp2k", verified=False, runtime_version="2025.2")
+        self.assertEqual(request["runtime_verified_version"], "2025.2")
+        self.assertTrue(request["runtime_version_verified"])
 
-        missing = plan_method(_request("cp2k", verified=True))
+        method = plan_method(request)
+        route = engine_planning(request)["capability_route"]
+        self.assertEqual(method["status"], "METHOD_FIELDS_RESOLVED")
+        self.assertTrue(method["runtime_version_verified"])
+        self.assertTrue(method["runtime_version_matches"])
+        self.assertTrue(route["runtime_version_verified"])
+        self.assertTrue(route["runtime_version_matches"])
+        self.assertTrue(route["can_enter_real_preflight"])
+
+    def test_runtime_version_missing_and_mismatched_are_blocked(self):
+        missing = plan_method(_request("cp2k", verified=False))
         self.assertEqual(missing["status"], "BLOCKED_RUNTIME_VERSION_UNVERIFIED")
+        self.assertFalse(missing["runtime_version_verified"])
         self.assertFalse(missing["runtime_version_matches"])
-        self.assertTrue(any("runtime_verified_version must exactly match" in item
-                            for item in missing["blockers"]))
 
-        mismatched = plan_method(_request("cp2k", verified=True, runtime_version="2025.1"))
+        mismatched = plan_method(_request("cp2k", verified=False, runtime_version="2025.1"))
         self.assertEqual(mismatched["status"], "BLOCKED_RUNTIME_VERSION_UNVERIFIED")
+        self.assertTrue(mismatched["runtime_version_verified"])
         self.assertFalse(mismatched["runtime_version_matches"])
         self.assertTrue(any("runtime_verified_version must exactly match" in item
                             for item in mismatched["blockers"]))
 
+    def test_mock_planning_uses_source_backed_software_version_without_runtime_observation(self):
+        request = _request("mock", verified=True)
+        self.assertFalse(request["runtime_version_verified"])
+        self.assertIsNone(request["runtime_verified_version"])
+        result = plan_method(request)
+        route = engine_planning(request)["capability_route"]
+        self.assertEqual(result["status"], "METHOD_FIELDS_RESOLVED")
+        self.assertEqual(result["software_version"], "2025.2")
+        self.assertFalse(result["runtime_version_verified"])
+        self.assertFalse(route["can_enter_real_preflight"])
+
     def test_real_cp2k_requires_exact_independent_runtime_version_match(self):
-        result = plan_method(_request("cp2k", verified=True, runtime_version="2025.2"))
+        result = plan_method(_request("cp2k", verified=False, runtime_version="2025.2"))
         self.assertEqual(result["status"], "METHOD_FIELDS_RESOLVED")
         self.assertTrue(result["ready_for_core_compilation"])
         self.assertTrue(result["runtime_version_verified"])
