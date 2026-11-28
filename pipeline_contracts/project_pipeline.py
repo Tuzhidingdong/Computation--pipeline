@@ -428,10 +428,22 @@ class ProjectPipeline:
         if pipeline_path and Path(pipeline_path).is_file():
             candidate_pipeline = _load_json(pipeline_path)
         approval_record = None
-        if approval_stage["outputs"].get("approval_record"):
-            record_path = Path(approval_stage["outputs"]["approval_record"])
+        if freeze_stage["outputs"].get("approval_record"):
+            record_path = Path(freeze_stage["outputs"]["approval_record"])
             if record_path.is_file():
                 approval_record = _load_json(record_path)
+        approval_integrity = False
+        structure_integrity = False
+        if approval_record:
+            from projects.corr_dft_v4_1.model_plugin.approval import (
+                verify_approval_record_integrity, verify_approval_record,
+            )
+            approval_integrity = verify_approval_record_integrity(approval_record)
+            if candidate_pipeline:
+                candidate = next((item for item in candidate_pipeline.get("candidate_results", [])
+                                  if item.get("candidate_id") == approval_record.get("candidate_id")), None)
+                if candidate and candidate.get("structure_path"):
+                    structure_integrity = verify_approval_record(approval_record, candidate["structure_path"])
         result = {
             "schema_version": "1.0.0", "project_run_id": run_id, "project_id": info["project_id"],
             "project_status": info["status"], "created_at": info["created_at"],
@@ -439,11 +451,11 @@ class ProjectPipeline:
             "manifest": manifest, "manifest_sha256": _sha256(root / "manifest.json") if (root / "manifest.json").is_file() else None,
             "confirmations": manifest.get("confirmations", []),
             "model_pipeline": candidate_pipeline, "approval_record": approval_record,
-            "approval_integrity_verified": bool(approval_record and
-                __import__("projects.corr_dft_v4_1.model_plugin.approval", fromlist=["verify_approval_record_integrity"])
-                .verify_approval_record_integrity(approval_record)),
+            "approval_integrity_verified": approval_integrity,
+            "approved_structure_current_sha_verified": structure_integrity,
             "approval_artifact_id": (approval_record or {}).get("artifact_id"),
             "approval_structure_sha256": (approval_record or {}).get("structure_sha256"),
+            "approval_validation_report_sha256": (approval_record or {}).get("validation_report_sha256"),
             "workflow_run_id": workflow_id, "workflow": workflow_report,
             "stages": stages,
             "diagnostics": {
