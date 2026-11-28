@@ -1,0 +1,5 @@
+# ASE is required for production structure serialization and readback.
+ase>=3.23
+# RDKit is required when the model spec declares organic fragments for topology sanitization.
+rdkit>=2024.3
+# molSimplify and MACE are optional adapters, not currently invoked by the Pipeline builder.

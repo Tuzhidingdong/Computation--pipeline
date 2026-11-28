@@ -21,3 +21,9 @@ from .workflow import ExecutionResult, MockCP2KWorkflowAdapter, WorkflowControll
 
 __all__ += ["CalculationPlan", "PlanValidationError", "compile_initial_tasks", "compile_energy_task",
             "ExecutionResult", "MockCP2KWorkflowAdapter", "WorkflowController", "WorkflowStore"]
+
+from .project_lifecycle import ProjectLifecycle
+from .plan_compiler import CompilationResult, compile_confirmed_manifest, compile_docx, write_manifest
+
+__all__ += ["ProjectLifecycle", "CompilationResult", "compile_confirmed_manifest",
+            "compile_docx", "write_manifest"]

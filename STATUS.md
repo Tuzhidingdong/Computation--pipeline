@@ -1,89 +1,94 @@
-# Development Status — coordination-dft-publication-pipeline
+# Current Follow-up — Generic Manifest Boundary and Evidence Regression
 
-Governing objective: TASK_PLAN_v1.0.0.md remains unchanged and authoritative. This status separates code/test evidence from real-cluster and scientific verification.
+Updated: 2026-11-28
 
-## Repository and branch protection
+- PR #3 remains Draft, open, unmerged.
+- Base SHA remains 5e6e26fdf94efbac54182f819f4879c1aafb1d4d.
+- Implementation and regression HEAD verified by Actions run #549: 5666a0c98a0f6bb4d660af29de12ea32966285a2.
+- Full report: docs/reports/AGENT_B_GENERAL_LAYER_BOUNDARY_AND_EVIDENCE_REGRESSION_20261128.md.
+
+
+The generic builder is also tested with project_id=corr_dft_v4_1 but without adapter callbacks; its Manifest must match the same input compiled under an unrelated project ID, apart from the project ID field itself. This verifies adapter opt-in is callback-driven, not project-ID-driven.
+
+## Layer boundary
+
+CORR v4.1-specific DOCX recognition and unresolved-field semantics are in projects/corr_dft_v4_1/docx_adapter.py. projects/corr_dft_v4_1/plan_compiler.py calls the adapter explicitly through compile_docx() callbacks. pipeline_contracts/plan_compiler/manifest.py contains reusable block/evidence parsing, heading and scope handling, and field conflict rules only. CHARGE numeric/explanation separation stays generic and preserves the complete source evidence.
+
+Conflict detection is label-independent by default and no longer excludes all outputs. Only the explicit CORR adapter marks the exact ASE summary/detail pair as coexisting. Output fields are separated by artifact identity; competing values within one artifact still block.
+
+## Tests and validation
+
+Actions run #543: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092520597
+
+- unittest: 133 total, 131 passed, 2 skipped, 0 failures.
+- pytest: 131 passed, 2 skipped, 108 subtests passed.
+- compileall: passed.
+- 104 Profile CSV rows: fully compared by unique field, status, docx_status and evidence ID list.
+- Expected statuses: 39 consistent / 44 needs_review / 21 profile_only.
+- All referenced evidence IDs are asserted to exist in Manifest evidence.
+- Heading tests cover Normal numbered headings, Heading1–Heading9, ListBullet/ListNumber/list_info 1.1 list items, and ordinary prose.
+
+The run_04 test remains an evidence-block regression using published source text, evidence IDs and coordinates. It is not a Frozen DOCX binary end-to-end acceptance run.
+
+No project_profile.json scientific values changed. No owner scientific choices, topology construction, resolve-v41-planning, CP2K, HPC, Slurm or production DFT. main and PR #1/#2/#4 remain untouched.
+
+---
+
+# Current Development Status — PR #3 run_04 evidence repair
+
+Updated: 2026-11-28
+
+## Repository / PR
 
 - Repository: Tuzhidingdong/Computation--pipeline
-- Branch: agent-b/pipeline-mock-contracts-20261127
-- Existing PR #1: Open / Draft / unmerged.
-- PR base and main are at the original base SHA cf5adb90cd2e1fc24da2d08fcff160d63cf3574a.
-- BeiLong_HPC, UCAS_hpc, Data_analysis and chem-scitoolkit are read-only dependencies in this phase.
-- No live cluster SSH/SCP, sbatch, production CP2K/DFT/AIMD, cancellation or real output retrieval was performed.
+- Branch: agent-b/plan-compiler-v41-model-plugin-20261127
+- PR #3: https://github.com/Tuzhidingdong/Computation--pipeline/pull/3
+- PR remains open and Draft; not merged.
+- Base branch/SHA unchanged.
+- Implementation, regression and Profile CSV HEAD validated by Actions: d66570408fb3682bfc36c029bc9c5e645657bcfd.
+- The run_04 evidence-driven report is docs/reports/AGENT_B_RUN04_EVIDENCE_DRIVEN_PR3_FIX_20261128.md.
+- The 104-row mapping is docs/reports/real_docx_run04_20261127/PR3_PROFILE_RECONCILIATION_AFTER_FIX.csv.
 
-## Real CP2K GEO_OPT → ENERGY
+## run_04 evidence-driven repair
 
-| Capability | Status | Evidence / boundary |
-|---|---|---|
-| Real adapter factory | IMPLEMENTED | build_real_workflow_adapter(plan, project_root, runtime_config); explicit UNAVAILABLE reason; no Mock fallback |
-| Local-only runtime config | IMPLEMENTED | .pipeline/runtime.local.example.json; private runtime.local.json is Git-ignored; relative local paths resolved from config location |
-| Real CST CP2K input generation | IMPLEMENTED — fake API tested | Reuses RealCSTAdapter and chem-scitoolkit CP2KInputBuilder.build_finite_system(); CalculationPlan now requires relative cutoff, Poisson solver, UKS/centering and full cell angles instead of accepting builder defaults. |
-| CST input lint | IMPLEMENTED — fake API tested | Calls upstream validate_cp2k_input(); local ASE and cp2klint are required |
-| BeiLong_HPC backend | IMPLEMENTED — injected subprocess tested | Dedicated SSH config for both SSH/SCP, wcl privacy header/job name, opaque workspace, external Skill log directory, upstream Job Record script |
-| UCAS_hpc backend | IMPLEMENTED — injected subprocess tested | Existing hpc alias, CP2K Slurm template/module setup, configured account/resources, upstream Job Record script |
-| Staged input SHA-256 | IMPLEMENTED — injected subprocess tested | Local and remote per-file digests compared before submission |
-| Submission intent + Job ID persistence | IMPLEMENTED — SQLite callback tested | Intent and input hashes committed before sbatch; returned Job ID committed immediately |
-| Lost sbatch response reconciliation | IMPLEMENTED — fake subprocess tested | Search by opaque work directory; uncertain result becomes SUBMISSION_UNKNOWN; no duplicate sbatch |
-| Known Job ID resume | IMPLEMENTED — fake real-adapter test | Reattaches prepared context and checks original Job ID, without second submission for the same task |
-| Scheduler/application separation | IMPLEMENTED — tests | Slurm COMPLETED alone is not success; exit code must be known and zero |
-| Output retrieval and integrity | IMPLEMENTED — fake adapter/runner tests | Selective CP2K output, optimized geometry and scheduler logs; local/remote hashes checked |
-| Data_analysis intake and derived input | IMPLEMENTED — injected API test | register_inputs → resolve; derived input under data/derived → register_derived_artifact(parent structure Artifact ID) → resolve |
-| Retrieved Data_analysis source Artifacts | IMPLEMENTED — injected API test | Output/logs first staged outside Data_analysis; then register_inputs and resolver/SHA verification |
-| CST output QC/version | IMPLEMENTED — fake CST test | Normal termination, SCF, GEO_OPT completion and CP2K version must match plan |
-| Dynamic ENERGY | IMPLEMENTED — fake Real adapter E2E | Only after GEO_OPT convergence and registered optimized-structure Artifact SHA; ENERGY reads the final trajectory frame |
-| Analysis Run / Evidence | IMPLEMENTED — injected Data_analysis test | Existing DFT operation/reader/provenance/evidence APIs; true Job ID and Artifact IDs/SHA passed |
-| CLI real mode | IMPLEMENTED | plan/validate/preflight/run/status/resume/report; --mock must be explicit |
-| SQLite run lock | IMPLEMENTED — unit test | Prevents two processes/controllers from executing one Workflow Run concurrently |
-| Automatic retry loop | NOT IMPLEMENTED | No automatic retry; terminal failures are not restarted by ordinary resume |
-| Real cluster execution | NOT YET VERIFIED | Requires user local config, read-only preflight and separately approved run |
+Five reports on branch diagnostics/pr3-real-docx-run04-evidence-20261127 were read and used. The repair is based on source text, evidence IDs and DOCX paragraph/table locations, not on Profile defaults.
 
-## Data_analysis Artifact lookup boundary
+- CHARGE: split scalar 0 from explanatory spin text; preserve explanation and evidence; no false conflict.
+- ase_vibrations_cp2k: table summary and paragraph detail classified as consistent summary/detail evidence; preserve all table cells and paragraph evidence.
+- copy_ready_english_text: Computational Details and Results Report Template remain two distinct output artifacts.
+- ADDED_MOS 80: independently extracted from table 6, row 5, column 2, evidence docx-block-000103; row label and correction evidence remain 000102/000104.
+- Paragraph structure: 18 explicitly numbered headings recovered from Normal-style paragraphs; ordinary ListBullet entries are not promoted to headings.
+- Scope: WP2 gate and WP4 table-row scope are structured only where source labels establish them. Uncertain system/WP mappings remain needs_review.
 
-- A supplied Artifact ID is resolved using Data_analysis and its registered bytes are re-hashed.
-- An external source file is registered through register_inputs(); the returned Artifact ID is resolved and re-hashed.
-- Data_analysis exposes no public lookup-by-path/SHA operation that returns the already registered Artifact ID. For a path already under data/original_received/, the user must supply the existing Artifact ID. The adapter refuses to re-intake this managed path.
-- Pipeline does not read/write Data_analysis registry JSON and does not copy its path-safety or SHA implementation.
-- Generated CP2K input is stored under data/derived/ with a task-specific unique filename and parent Artifact ID. Remote task filenames and Slurm-visible labels remain generic.
-- HPC outputs are staged outside Data_analysis raw intake and then registered through register_inputs().
+## Profile 104 reconciliation
 
-## HPC Skill revisions inspected
+- consistent: 39
+- needs_review: 44
+- profile_only: 21
 
-- BeiLong_HPC: read-only skill/scripts/templates inspected. Dedicated config_bscc_a, fixed wcl name, opaque remote workspace and external hpc/logs path are retained.
-- UCAS_hpc: read-only skill/scripts/templates inspected. The existing hpc alias, module initialization, account/partition/resource profile and selective retrieval behavior are retained.
-- Neither repository was modified. The adapter uses subprocess with timeout/return code/bounded diagnostics and invokes the existing Job Record scripts. No Paramiko/AsyncSSH or parallel Slurm implementation was introduced.
+The CSV records all 104 fields, previous status, new status and evidence IDs. There are no Profile-invented DOCX evidence IDs. Values in project_profile.json were not changed.
 
-## Verification
+The remaining 21 profile_only entries are metadata, unmentioned optional alternatives/prohibitions/blocker records, and topology requirements for which no corresponding source assertion was found. Related but insufficient source statements are needs_review, including the unnumbered orientation mention, MACE threshold, spin lists, WP3 candidate/gas fields, WP5 sensitivity counts and atom-indexed topology requirements.
 
-Latest successful Actions run before the final docs/runtime-config test commit: 74 tests, 72 passed, 2 optional upstream tests skipped; compileall passed.
+## Automated verification
 
-The suite uses injected command runners and fake HPC/CST/Data_analysis implementations. Tests cover:
-- BeiLong/UCAS command construction and SSH config differences;
-- script privacy, upload hash checks and Job Record commands;
-- submission intent, Job ID persistence, lost-response reconciliation and resume;
-- one-controller lock, terminal failure/resume rules and application/scheduler failure classification;
-- Data_analysis intake/derived registration order and Analysis Run/Evidence mapping;
-- fake Real adapter GEO_OPT → ENERGY, non-convergence, missing output/hash failure and known-job resume.
+Actions runs #517 and #518 on d66570408fb3682bfc36c029bc9c5e645657bcfd both passed:
 
-No test connects to a real cluster or runs a real CP2K calculation. The two optional upstream-source tests are skipped unless the owner configures those source checkouts in CI.
+- 128 tests total
+- 126 passed
+- 2 optional upstream integration tests skipped
+- 0 failures / 0 errors
+- python -m compileall -q pipeline_contracts tests examples passed
 
-## Workflow states and safety
+The new run_04 regression module covers the three original conflict classes, true conflicting values, real table-cell ADDED_MOS extraction, numbered headings/ListBullet boundaries, unit handling and all 104 Profile reconciliation entries.
 
-Persisted states include PENDING, READY, SUBMITTING, SUBMITTED, QUEUED, RUNNING, POSTPROCESSING, QC_PASSED, COMPLETED, RETRY_WAIT, BLOCKED, FAILED_PERMANENT, FAILED_INFRASTRUCTURE, CANCELLED, INTERRUPTED_RECOVERY, SUBMISSION_UNKNOWN and UNAVAILABLE.
+## Acceptance boundary
 
-- Submission intent and remote working directory are durable before sbatch.
-- Known Job IDs are queried on resume, never resubmitted.
-- A lost sbatch response is reconciled; unresolved state blocks instead of risking a duplicate submission.
-- Slurm COMPLETED alone is not scientific success.
-- FAILED_PERMANENT, FAILED_INFRASTRUCTURE and CANCELLED are terminal for ordinary resume.
-- Scientific parameters are never automatically changed.
-- Monitoring is a single remote status check per resume invocation, not a resident background poller.
+The diagnostic branch provided the extracted source blocks and all requested targeted evidence reports. The regression fixture uses those report-backed raw text blocks, their original evidence IDs and locations, and tests the compiler's Manifest creation/reconciliation paths. The Frozen DOCX binary and complete 160-block extraction package were not present in the evidence branch, so a complete read_frozen_docx() run on the original binary is not claimed. The targeted run_04 evidence repair and CI verification are complete; full binary-level DOCX acceptance remains a separate verification step.
 
-## Remaining real-environment checks
+## Unchanged safety boundaries
 
-1. Copy .pipeline/runtime.local.example.json to the local Data_analysis project and fill the paths/aliases/resources already approved for the chosen backend.
-2. Ensure the approved Data_analysis and chem-scitoolkit Python environments, ASE and cp2klint are available.
-3. Run the documented read-only CLI preflight and inspect every UNAVAILABLE diagnostic.
-4. Review the actual CalculationPlan and resource profile.
-5. Only after user approval, execute GEO_OPT → ENERGY and inspect its real Analysis Run, Evidence Package and workflow report.
-
-No production job is submitted automatically by CI or by the development agent.
+- P0 Windows GBK JSON stdout fix was already complete and was not re-developed.
+- WP1_ORIENTATION_SCOPE_UNRESOLVED and WP1_FRAGMENT_SPIN_COUNT_MISMATCH remain blockers; no decision was selected.
+- No resolve-v41-planning, no topology construction, no CP2K, HPC, Slurm or production DFT.
+- Agent C / PR #4, main, PR #1 and PR #2 were not modified.
