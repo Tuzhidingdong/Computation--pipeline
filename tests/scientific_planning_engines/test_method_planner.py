@@ -1,4 +1,4 @@
-from pipeline_contracts.scientific_planning.engines import plan_method
+from pipeline_contracts.scientific_planning.engines import plan_method, route_capability
 
 
 def _request(sources):
@@ -116,3 +116,69 @@ def test_unverified_runtime_version_blocks_final_method_compilation():
 
     assert result["ready_for_core_compilation"] is False
     assert any("software version must be verified" in item.lower() for item in result["blockers"])
+
+
+def _complete_cp2k_source(*, include_software_version=True):
+    fields = {
+        "xc_functional": "PBE",
+        "dispersion": "D3(BJ)",
+        "basis_set": "DZVP-MOLOPT-SR-GTH",
+        "pseudopotential": "GTH-PBE",
+        "basis_file_name": "BASIS_MOLOPT",
+        "potential_file_name": "GTH_POTENTIALS",
+        "kind_definitions": [{"element": "H", "basis": "DZVP-MOLOPT-SR-GTH", "potential": "GTH-PBE"}],
+        "cutoff_ry": 600,
+        "rel_cutoff_ry": 60,
+        "scf": {"method": "OT", "eps_scf": 1e-6, "max_scf": 150},
+        "charge": 0,
+        "multiplicity": 1,
+        "spin": 0,
+        "uks": False,
+        "center_coordinates": True,
+        "periodicity": "NONE",
+        "poisson_periodicity": "NONE",
+        "poisson_solver": "MT",
+        "solvation": {"implicit": "NONE", "explicit": "NONE"},
+    }
+    if include_software_version:
+        fields["software_version"] = "2025.2"
+    return {
+        "source_kind": "frozen_source",
+        "source_ref": "frozen-docx-sha256:page-4/table-1",
+        "fields": fields,
+    }
+
+
+def test_source_backed_version_allows_mock_only_planning_but_not_real_preflight():
+    request = _request([_complete_cp2k_source()])
+    request["execution_mode"] = "mock"
+    request["runtime_version_verified"] = False
+
+    result = plan_method(request)
+    route = route_capability(request)
+
+    version = result["fields"]["software_version"]
+    assert version["value"] == "2025.2"
+    assert version["status"] == "SOURCE_CONFIRMED"
+    assert version["source_ref"] == "frozen-docx-sha256:page-4/table-1"
+    assert result["status"] == "METHOD_FIELDS_RESOLVED"
+    assert result["ready_for_core_compilation"] is True
+    assert not any("software version must be verified" in item.lower() for item in result["blockers"])
+    assert route["runtime_version_verified"] is False
+    assert route["can_enter_real_preflight"] is False
+
+
+def test_request_metadata_version_without_source_stays_blocked_for_mock_planning():
+    request = _request([_complete_cp2k_source(include_software_version=False)])
+    request["execution_mode"] = "mock"
+    request["runtime_version_verified"] = False
+
+    result = plan_method(request)
+
+    version = result["fields"]["software_version"]
+    assert version["status"] == "DECLARED_UNVERIFIED"
+    assert version["source_ref"] is None
+    assert result["status"] == "BLOCKED_RUNTIME_VERSION_UNVERIFIED"
+    assert result["ready_for_core_compilation"] is False
+    assert any("software_version" in item.lower() or "software version" in item.lower()
+               for item in result["blockers"])
