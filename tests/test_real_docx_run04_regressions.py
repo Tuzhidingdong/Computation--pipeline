@@ -46,6 +46,8 @@ def _run04_blocks() -> list[ExtractedBlock]:
         location={"part": "word/document.xml", "paragraph": 16})
     put(61, "3.1 四没食子酸双核配位局域结构（70–71 基底原子）",
         location={"part": "word/document.xml", "paragraph": 17})
+    put(62, "为精准匹配 70–80 个基底原子 的规模并合理表征单宁酸的局域金属配位微环境，本方案构建电中性（CHARGE = 0）的四没食子酸双核配位局域结构（Four-gallate dinuclear coordination motif），在配位口袋上方负载同一二十面体 Cu13 团簇（注：该局域模型由四个没食子酸单体通过酚羟基/羧酸氧原子与金属中心配位形成，不包含单体间的 depside 酯键，也不代表天然单宁酸的完整高分子网络）：",
+        location={"part": "word/document.xml", "paragraph": 18})
     put(85, "3.2 非周期超胞与 MT 电子密度尾部校验（30.0 Å vs. 34.0 Å）",
         location={"part": "word/document.xml", "paragraph": 20})
     put(88, "四、计算方法与核心参数规范（Parameters）",
