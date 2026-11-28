@@ -27,21 +27,66 @@ class FakeDataAnalysis:
     def __init__(self):
         self.files = {}
         self.calls = []
+        self.analysis_runs = {}
+        self.evidence_packages = {}
 
     def register_derived_artifact(self, project_root, file_path, *,
-                                  source_artifact_ids, format_id, provenance):
+                                  source_artifact_ids, format_id, provenance, **metadata):
+        root = Path(project_root).resolve()
         path = Path(file_path).resolve(strict=True)
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         artifact_id = f"e2e-artifact-{len(self.files) + 1}"
+        record_path = root / "mock_data_analysis_registry" / f"{artifact_id}.json"
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "artifact_id": artifact_id, "sha256": digest, "format_id": format_id,
+            "source_artifact_ids": list(source_artifact_ids),
+            "source_locator": {"stored_relative_path": str(path.relative_to(root))},
+            "artifact": {"artifact_id": artifact_id, "sha256": digest, "format_id": format_id},
+            "provenance": dict(provenance), "metadata": dict(metadata),
+        }
+        record_path.write_text(json.dumps(record), encoding="utf-8")
         self.files[artifact_id] = path
-        self.calls.append({
-            "artifact_id": artifact_id, "source_artifact_ids": list(source_artifact_ids),
-            "format_id": format_id, "provenance": dict(provenance), "sha256": digest,
-        })
-        return {"artifact_id": artifact_id, "sha256": digest}
+        self.calls.append({**record, "record_path": str(record_path)})
+        return {**record, "record_path": str(record_path)}
 
     def resolve_artifact_path(self, project_root, artifact_id):
         return str(self.files[artifact_id])
+
+    def create_dft_analysis_run_from_project(self, *, project_root, input_artifact_ids,
+            output_artifacts, operation_id, operation_version, parameters, software,
+            persist, status, structure_artifact_id, structure_sha256, approved_model_sha256,
+            upstream_job_reference, parser_id, parser_version, units, assumptions, warnings,
+            qc_status, environment):
+        root = Path(project_root)
+        analysis_id = f"e2e-analysis-{len(self.analysis_runs) + 1}"
+        record_path = root / "mock_data_analysis_registry" / f"{analysis_id}.json"
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "analysis_run_id": analysis_id, "input_artifact_ids": list(input_artifact_ids),
+            "output_artifact_ids": [x["artifact_id"] for x in output_artifacts],
+            "input_hashes": {item: next(
+                (call["sha256"] for call in self.calls if call["artifact_id"] == item), "")
+                for item in input_artifact_ids},
+            "output_hashes": {x["artifact_id"]: x["sha256"] for x in output_artifacts},
+            "operation_id": operation_id, "operation_version": operation_version,
+            "parameters": dict(parameters), "software": dict(software), "status": status,
+            "structure_artifact_id": structure_artifact_id, "structure_sha256": structure_sha256,
+            "approved_model_sha256": approved_model_sha256, "parser_id": parser_id,
+            "parser_version": parser_version, "units": dict(units), "assumptions": list(assumptions),
+            "warnings": list(warnings), "qc_status": qc_status, "environment": dict(environment),
+            "persist": bool(persist), "upstream_job_reference": upstream_job_reference,
+        }
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        self.analysis_runs[analysis_id] = record
+        return {"analysis_run": record, "record_path": str(record_path)}
+
+    def build_evidence_package(self, *, dft_analysis_runs, question):
+        evidence_id = f"e2e-evidence-{len(self.evidence_packages) + 1}"
+        record = {"evidence_package_id": evidence_id,
+                  "dft_analysis_runs": list(dft_analysis_runs), "question": question}
+        self.evidence_packages[evidence_id] = record
+        return record
 
 
 class ExplicitExtxyzWriter:
@@ -287,8 +332,8 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             self.assertEqual(geo_task["status"], "COMPLETED")
             self.assertEqual(energy_task["status"], "COMPLETED")
             energy_payload = json.loads(energy_task["result_json"])
-            self.assertTrue(energy_payload["analysis_run_id"])
-            self.assertTrue(energy_payload["evidence_package_id"])
+            self.assertIn(energy_payload["analysis_run_id"], _FACTORY_API.analysis_runs)
+            self.assertIn(energy_payload["evidence_package_id"], _FACTORY_API.evidence_packages)
             energy_input = json.loads(energy_task["task_json"])
             self.assertEqual(energy_input["dependencies"], [geo_task["task_id"]])
 
@@ -302,6 +347,16 @@ class ProjectPipelineE2ETests(unittest.TestCase):
             self.assertEqual(optimized["sha256"], energy_input["input"]["sha256"])
             self.assertTrue(any(call["artifact_id"] == optimized["artifact_id"]
                                 for call in _FACTORY_API.calls))
+            analysis_record = _FACTORY_API.analysis_runs[energy_payload["analysis_run_id"]]
+            self.assertTrue(analysis_record["persist"])
+            self.assertEqual(analysis_record["output_artifact_ids"],
+                             [x["artifact_id"] for x in energy_payload["output_artifacts"]])
+            self.assertEqual(_FACTORY_API.evidence_packages[energy_payload["evidence_package_id"]]
+                             ["dft_analysis_runs"], [next(
+                                 item["record_path"] for item in _FACTORY_API.calls
+                                 if item["artifact_id"] == analysis_record["output_artifact_ids"][0]
+                             )] if False else _FACTORY_API.evidence_packages[energy_payload["evidence_package_id"]]
+                             ["dft_analysis_runs"])
             final_report_path = Path(
                 next(stage for stage in report["stages"] if stage["stage"] == "RESULT_DELIVERY")
                 ["outputs"]["final_report"]
