@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -45,7 +46,7 @@ def endpoint_context() -> dict:
             "fingerprint_version": 1,
         },
     }
-    return {"initial": dict(common), "final": dict(common)}
+    return {"initial": copy.deepcopy(common), "final": copy.deepcopy(common)}
 
 
 class StructureMappingAndRoutingTests(unittest.TestCase):
