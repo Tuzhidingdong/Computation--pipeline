@@ -168,7 +168,7 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         self.assertTrue(diagnostics[0].blocks_execution)
 
     def test_ase_description_granularity_and_copy_ready_outputs_are_not_conflicts(self):
-        manifest = build_project_manifest(_run04_blocks(), project_id="corr_dft_v4_1")
+        manifest = _corr_manifest()
         self.assertFalse(any(d["code"] == "PLAN_FIELD_CONFLICT"
                              and d["field"] in {"ase_vibrations_cp2k", "copy_ready_english_text"}
                              for d in manifest["diagnostics"]))
@@ -215,7 +215,7 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         self.assertEqual(len(diagnostics), 1)
         self.assertEqual(diagnostics[0].code, "PLAN_FIELD_CONFLICT")
         self.assertTrue(diagnostics[0].blocks_execution)
-        self.assertEqual(diagnostics[0].evidence_ids, ["ev-label-a", "ev-label-b"])
+        self.assertEqual(list(diagnostics[0].evidence_ids), ["ev-label-a", "ev-label-b"])
 
     def test_distinct_output_artifacts_coexist_but_same_artifact_contents_conflict(self):
         different_artifacts = [
@@ -235,6 +235,18 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
         diagnostics = detect_conflicts(same_artifact)
         self.assertEqual(len(diagnostics), 1)
         self.assertEqual(diagnostics[0].code, "PLAN_FIELD_CONFLICT")
+        self.assertTrue(diagnostics[0].blocks_execution)
+
+    def test_same_field_long_prose_with_different_labels_still_blocks_by_default(self):
+        diagnostics = detect_conflicts([
+            {"field": "canonical_method", "label": "First description",
+             "value": "The system uses the PBE exchange correlation functional.",
+             "evidence_id": "ev-prose-a"},
+            {"field": "canonical_method", "label": "Second description",
+             "value": "The system uses the BLYP exchange correlation functional.",
+             "evidence_id": "ev-prose-b"},
+        ])
+        self.assertEqual(len(diagnostics), 1)
         self.assertTrue(diagnostics[0].blocks_execution)
 
     def test_ase_same_label_with_different_parameter_values_still_blocks(self):
