@@ -101,12 +101,31 @@ def failed_result(reason: str, *, plugin: str, output_dir: str | Path | None = N
 
 
 def validate_source_spec(source: Any, field_name: str) -> tuple[Path | None, str | None, list[str]]:
-    """Validate an explicit {path, sha256} source record without creating output."""
+    """Validate local path/SHA and an optional paired upstream Artifact identity.
+
+    Optional artifact_id and artifact_sha256 preserve compatibility with local
+    {path, sha256} callers. When present, the Artifact digest must exactly equal
+    the SHA-256 of the verified local bytes. This function creates no output.
+    """
     issues: list[str] = []
     if not isinstance(source, Mapping):
         return None, None, [f"{field_name} must be an object containing path and sha256"]
     raw_path = source.get("path")
     expected = source.get("sha256")
+    artifact_id = source.get("artifact_id")
+    artifact_digest = source.get("artifact_sha256")
+    has_artifact_id = artifact_id is not None
+    has_artifact_digest = artifact_digest is not None
+    if has_artifact_id != has_artifact_digest:
+        issues.append(
+            f"{field_name}.artifact_id and {field_name}.artifact_sha256 must be provided together"
+        )
+    elif has_artifact_id:
+        if not isinstance(artifact_id, str) or not artifact_id.strip():
+            issues.append(f"{field_name}.artifact_id must be a non-empty string identifier")
+        if not validate_sha256(artifact_digest):
+            issues.append(f"{field_name}.artifact_sha256 must be a 64-character hexadecimal SHA-256")
+
     if not isinstance(raw_path, str) or not raw_path.strip():
         issues.append(f"{field_name}.path is missing")
         path = None
@@ -114,16 +133,23 @@ def validate_source_spec(source: Any, field_name: str) -> tuple[Path | None, str
         path = Path(raw_path).expanduser().resolve()
         if not path.is_file():
             issues.append(f"{field_name}.path does not exist or is not a file: {raw_path}")
-    if not isinstance(expected, str) or len(expected) != 64:
-        issues.append(f"{field_name}.sha256 must be an explicit 64-character digest")
-        expected = None
-    elif any(character not in "0123456789abcdefABCDEF" for character in expected):
-        issues.append(f"{field_name}.sha256 must be hexadecimal")
-    if path is not None and path.is_file() and expected is not None:
+
+    expected_valid = isinstance(expected, str) and len(expected) == 64 and all(
+        character in "0123456789abcdefABCDEF" for character in expected
+    )
+    if not expected_valid:
+        issues.append(f"{field_name}.sha256 must be an explicit 64-character hexadecimal digest")
+
+    if path is not None and path.is_file():
         actual = sha256_file(path)
-        if actual.lower() != expected.lower():
+        if expected_valid and actual.lower() != expected.lower():
             issues.append(f"{field_name}.sha256 does not match the source file")
-    return path, expected.lower() if expected else None, issues
+        if has_artifact_id and has_artifact_digest and validate_sha256(artifact_digest):
+            if artifact_digest != actual:
+                issues.append(
+                    f"{field_name}.artifact_sha256 does not exactly match the verified source file SHA-256"
+                )
+    return path, expected.lower() if expected_valid else None, issues
 
 
 def read_ase_source(source: Mapping[str, Any], field_name: str):
@@ -140,11 +166,15 @@ def read_ase_source(source: Mapping[str, Any], field_name: str):
         raise ValueError(f"{field_name} contains zero atoms")
     if not all(math.isfinite(float(x)) for x in atoms.positions.flatten()):
         raise ValueError(f"{field_name} contains non-finite coordinates")
-    return atoms, {
+    source_record = {
         "path": str(path),
         "sha256": expected,
         "size_bytes": path.stat().st_size,
     }
+    if source.get("artifact_id") is not None:
+        source_record["artifact_id"] = source["artifact_id"]
+        source_record["artifact_sha256"] = source["artifact_sha256"]
+    return atoms, source_record
 
 
 def ase_structure_mapping(atoms: Any, *, structure_type: str = "atomistic",

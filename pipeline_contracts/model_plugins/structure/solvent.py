@@ -249,12 +249,17 @@ def build_explicit_solvent_box(
     inputs_dir.mkdir(parents=True, exist_ok=True)
 
     original_sources = []
-    original_paths = [solute_spec] + solvent_specs
+    verified_source_records = [solute_source, *solvent_sources]
     for index, (label, path, digest) in enumerate(verified):
         original = path
         suffix = original.suffix or ".structure"
         copied = copy_verified_source(original, digest, inputs_dir / f"source_{index:02d}_{label.replace('[','_').replace(']','')}{suffix}")
-        original_sources.append({"role": label, **copied})
+        source_identity = {
+            key: verified_source_records[index][key]
+            for key in ("artifact_id", "artifact_sha256")
+            if key in verified_source_records[index]
+        }
+        original_sources.append({"role": label, **copied, **source_identity})
 
     from ase.io import write
     template_records: list[dict[str, Any]] = []
@@ -326,6 +331,13 @@ def build_explicit_solvent_box(
             **failed_result(f"Packmol invocation failed: {type(exc).__name__}: {exc}", plugin=plugin, output_dir=target),
             "packmol_version": version,
             "random_seed": seed,
+            "source_inputs": original_sources,
+            "provenance": {
+                "source_artifacts": [
+                    {key: item[key] for key in ("role", "artifact_id", "artifact_sha256") if key in item}
+                    for item in original_sources if "artifact_id" in item
+                ]
+            },
             "artifacts": [artifact_record(input_path, target), artifact_record(log_path, target)],
         }
     log_text = (completed.stdout or "") + ("\n" + completed.stderr if completed.stderr else "")
@@ -339,6 +351,13 @@ def build_explicit_solvent_box(
             "packmol_returncode": completed.returncode,
             "packmol_version": version,
             "random_seed": seed,
+            "source_inputs": original_sources,
+            "provenance": {
+                "source_artifacts": [
+                    {key: item[key] for key in ("role", "artifact_id", "artifact_sha256") if key in item}
+                    for item in original_sources if "artifact_id" in item
+                ]
+            },
             "artifacts": [
                 artifact_record(input_path, target),
                 artifact_record(log_path, target),
@@ -498,6 +517,10 @@ def build_explicit_solvent_box(
             "packmol_version": version,
             "random_seed": seed,
             "source_sha256": [item["sha256"] for item in original_sources],
+            "source_artifacts": [
+                {key: item[key] for key in ("role", "artifact_id", "artifact_sha256") if key in item}
+                for item in original_sources if "artifact_id" in item
+            ],
         },
         "scientific_limit": (
             "Packmol creates an initial geometric packing only. This is not solvent equilibration, "

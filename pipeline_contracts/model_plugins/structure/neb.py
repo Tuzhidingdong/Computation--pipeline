@@ -351,6 +351,10 @@ def build_neb_initial_path(
                 "initial": initial_source["sha256"],
                 "final": final_source["sha256"],
             },
+            "source_inputs": {
+                "initial": initial_source,
+                "final": final_source,
+            },
             "artifacts": [
                 artifact_record(initial_copy, target),
                 artifact_record(final_copy, target),
@@ -378,6 +382,22 @@ def build_neb_initial_path(
         "endpoint_sha256": {
             "initial": initial_source["sha256"],
             "final": final_source["sha256"],
+        },
+        "source_inputs": {
+            "initial": initial_source,
+            "final": final_source,
+        },
+        "provenance": {
+            "source_artifacts": {
+                endpoint: {
+                    "artifact_id": source_record["artifact_id"],
+                    "artifact_sha256": source_record["artifact_sha256"],
+                }
+                for endpoint, source_record in (
+                    ("initial", initial_source), ("final", final_source)
+                )
+                if "artifact_id" in source_record
+            }
         },
         "cell_angstrom": initial.cell.array.tolist(),
         "pbc": initial.pbc.tolist(),

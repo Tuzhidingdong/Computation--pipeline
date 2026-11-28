@@ -24,7 +24,12 @@ from pipeline_contracts.model_plugins.structure import (
     get_model_plugin_route,
     load_structure_model,
 )
-from pipeline_contracts.model_plugins.structure.core import atoms_from_mapping, sha256_file
+from pipeline_contracts.model_plugins.structure.core import (
+    atoms_from_mapping,
+    read_ase_source,
+    sha256_file,
+    validate_source_spec,
+)
 
 
 def source_record(path: Path) -> dict:
@@ -34,6 +39,14 @@ def source_record(path: Path) -> dict:
 def write_xyz(path: Path, atoms: Atoms) -> dict:
     write(str(path), atoms, format="extxyz" if path.suffix.lower() == ".extxyz" else "xyz")
     return source_record(path)
+
+
+def with_artifact_identity(source: dict, artifact_id: str) -> dict:
+    return {
+        **source,
+        "artifact_id": artifact_id,
+        "artifact_sha256": source["sha256"],
+    }
 
 
 
@@ -64,6 +77,61 @@ def endpoint_context() -> dict:
         },
     }
     return {"initial": copy.deepcopy(common), "final": copy.deepcopy(common)}
+
+
+class SourceArtifactIdentityContractTests(unittest.TestCase):
+    def test_read_ase_source_and_structure_mapping_preserve_optional_artifact_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "source.extxyz"
+            source = with_artifact_identity(
+                write_xyz(path, Atoms("H", positions=[[0, 0, 0]])),
+                "data-analysis:structure:00017",
+            )
+            atoms, record = read_ase_source(source, "source")
+            self.assertEqual(atoms.get_chemical_symbols(), ["H"])
+            self.assertEqual(record["artifact_id"], source["artifact_id"])
+            self.assertEqual(record["artifact_sha256"], source["artifact_sha256"])
+            loaded = load_structure_model(source)
+            self.assertEqual(loaded["source"]["artifact_id"], source["artifact_id"])
+            self.assertEqual(loaded["source"]["artifact_sha256"], source["artifact_sha256"])
+
+    def test_artifact_sha_mismatch_is_rejected_by_validation_and_reader(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "source.xyz"
+            source = with_artifact_identity(
+                write_xyz(path, Atoms("H", positions=[[0, 0, 0]])),
+                "data-analysis:structure:bad-digest",
+            )
+            source["artifact_sha256"] = "0" * 64
+            checked_path, digest, issues = validate_source_spec(source, "source")
+            self.assertIsNone(checked_path)
+            self.assertTrue(any("artifact_sha256" in issue for issue in issues))
+            with self.assertRaisesRegex(ValueError, "artifact_sha256"):
+                read_ase_source(source, "source")
+
+    def test_artifact_id_and_sha_must_be_provided_together(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "source.xyz"
+            base = write_xyz(path, Atoms("H", positions=[[0, 0, 0]]))
+            for partial in (
+                {**base, "artifact_id": "data-analysis:only-id"},
+                {**base, "artifact_sha256": base["sha256"]},
+            ):
+                with self.subTest(partial=partial):
+                    _, _, issues = validate_source_spec(partial, "source")
+                    self.assertTrue(any("must be provided together" in issue for issue in issues))
+
+    def test_legacy_path_and_sha_source_remains_compatible(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "legacy.xyz"
+            source = write_xyz(path, Atoms("H", positions=[[0, 0, 0]]))
+            atoms, record = read_ase_source(source, "legacy")
+            self.assertEqual(len(atoms), 1)
+            self.assertEqual(record["sha256"], source["sha256"])
+            self.assertNotIn("artifact_id", record)
+            self.assertNotIn("artifact_sha256", record)
+            loaded = load_structure_model(source)
+            self.assertEqual(loaded["source"]["sha256"], source["sha256"])
 
 
 class StructureMappingAndRoutingTests(unittest.TestCase):
@@ -155,6 +223,57 @@ class ExplicitSolventPreflightTests(unittest.TestCase):
             self.assertEqual(result["status"], "NEEDS_DECISION")
             self.assertFalse(output.exists())
 
+
+    def test_invalid_solute_or_solvent_artifact_identity_rejected_before_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            solute, water = self._files(root)
+            output = root / "must_not_be_created"
+            solute = with_artifact_identity(solute, "data-analysis:solute:1")
+            water = with_artifact_identity(water, "data-analysis:solvent:1")
+            solute["artifact_sha256"] = "f" * 64
+            result = build_explicit_solvent_box(
+                {
+                    "solute": solute,
+                    "solvents": [{"id": "water", "count": 2, **water}],
+                    "box": {
+                        "bounds_angstrom": [[0, 0, 0], [14, 14, 14]],
+                        "pbc": [False, False, False],
+                    },
+                    "distance_tolerance_angstrom": 1.2,
+                    "random_seed": 20261128,
+                    "output_format": "xyz",
+                    "validation": {"minimum_inter_molecular_distance_angstrom": 0.6},
+                },
+                output,
+            )
+            self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertFalse(output.exists())
+
+    def test_partial_solvent_artifact_identity_rejected_before_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            solute, water = self._files(root)
+            water["artifact_id"] = "data-analysis:water:only-id"
+            output = root / "must_not_be_created"
+            result = build_explicit_solvent_box(
+                {
+                    "solute": solute,
+                    "solvents": [{"id": "water", "count": 2, **water}],
+                    "box": {
+                        "bounds_angstrom": [[0, 0, 0], [14, 14, 14]],
+                        "pbc": [False, False, False],
+                    },
+                    "distance_tolerance_angstrom": 1.2,
+                    "random_seed": 20261128,
+                    "output_format": "xyz",
+                    "validation": {"minimum_inter_molecular_distance_angstrom": 0.6},
+                },
+                output,
+            )
+            self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertFalse(output.exists())
+
     def test_wrong_source_sha_is_rejected_before_output_creation(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -210,12 +329,23 @@ class RealPackmolEndToEndTests(unittest.TestCase):
                 "OH2",
                 positions=[[0.0, 0.0, 0.0], [0.9572, 0.0, 0.0], [-0.239987, 0.927297, 0.0]],
             )
-            solute = write_xyz(root / "solute.xyz", solute_atoms)
-            water = write_xyz(root / "water.xyz", water_atoms)
+            argon_atoms = Atoms("Ar", positions=[[0.0, 0.0, 0.0]])
+            solute = with_artifact_identity(
+                write_xyz(root / "solute.xyz", solute_atoms), "data-analysis:solute:real-packmol"
+            )
+            water = with_artifact_identity(
+                write_xyz(root / "water.xyz", water_atoms), "data-analysis:solvent:water:real-packmol"
+            )
+            argon = with_artifact_identity(
+                write_xyz(root / "argon.xyz", argon_atoms), "data-analysis:solvent:argon:real-packmol"
+            )
             output = root / "packmol-output"
             recipe = {
                 "solute": solute,
-                "solvents": [{"id": "water", "count": 4, **water}],
+                "solvents": [
+                    {"id": "water", "count": 4, **water},
+                    {"id": "argon", "count": 2, **argon},
+                ],
                 "box": {
                     "bounds_angstrom": [[0, 0, 0], [14, 14, 14]],
                     "pbc": [True, True, True],
@@ -237,10 +367,11 @@ class RealPackmolEndToEndTests(unittest.TestCase):
             structure = output / "structure.extxyz"
             self.assertTrue(structure.is_file())
             packed = read(str(structure), index=0)
-            self.assertEqual(len(packed), 13)
+            self.assertEqual(len(packed), 15)
             self.assertEqual(packed.get_chemical_symbols().count("C"), 1)
             self.assertEqual(packed.get_chemical_symbols().count("O"), 4)
             self.assertEqual(packed.get_chemical_symbols().count("H"), 8)
+            self.assertEqual(packed.get_chemical_symbols().count("Ar"), 2)
             self.assertTrue(packed.pbc.all())
             np.testing.assert_allclose(packed.cell.lengths(), [14, 14, 14], atol=1e-6)
             self.assertEqual(packed.arrays["molecule_id"].shape, (13,))
@@ -249,9 +380,33 @@ class RealPackmolEndToEndTests(unittest.TestCase):
             mask = molecule_ids[:, None] != molecule_ids[None, :]
             observed_minimum = float(np.min(distance_matrix[mask]))
             self.assertGreaterEqual(observed_minimum + 1e-7, 0.6)
-            self.assertEqual(result["validation"]["molecule_counts"], {"solute": 1, "water": 4})
-            self.assertEqual(result["source_inputs"][0]["sha256"], solute["sha256"])
-            self.assertEqual(result["source_inputs"][1]["sha256"], water["sha256"])
+            self.assertEqual(
+                result["validation"]["molecule_counts"],
+                {"solute": 1, "water": 4, "argon": 2},
+            )
+            self.assertEqual(len(result["source_inputs"]), 3)
+            expected_sources = [
+                ("solute", solute),
+                ("solvents[0]", water),
+                ("solvents[1]", argon),
+            ]
+            for output_source, (role, input_source) in zip(result["source_inputs"], expected_sources):
+                self.assertEqual(output_source["role"], role)
+                self.assertEqual(output_source["sha256"], input_source["sha256"])
+                self.assertEqual(output_source["artifact_id"], input_source["artifact_id"])
+                self.assertEqual(
+                    output_source["artifact_sha256"], input_source["artifact_sha256"]
+                )
+            manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["source_inputs"], result["source_inputs"])
+            self.assertEqual(
+                manifest["provenance"]["source_artifacts"],
+                [
+                    {"role": role, "artifact_id": input_source["artifact_id"],
+                     "artifact_sha256": input_source["artifact_sha256"]}
+                    for role, input_source in expected_sources
+                ],
+            )
             for artifact in result["artifacts"]:
                 artifact_path = output / artifact["path"]
                 self.assertTrue(artifact_path.is_file(), artifact)
@@ -283,8 +438,12 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
         ])
         final_atoms = initial_atoms.copy()
         final_atoms.positions = initial_atoms.positions @ rotation.T + np.array([0.15, 0.0, 0.0])
-        initial = write_xyz(root / "initial.extxyz", initial_atoms)
-        final = write_xyz(root / "final.extxyz", final_atoms)
+        initial = with_artifact_identity(
+            write_xyz(root / "initial.extxyz", initial_atoms), "data-analysis:neb:initial-001"
+        )
+        final = with_artifact_identity(
+            write_xyz(root / "final.extxyz", final_atoms), "data-analysis:neb:final-001"
+        )
         return initial, final, initial_atoms, final_atoms
 
     def test_real_ase_idpp_generates_reviewable_images_and_preserves_endpoints(self):
@@ -324,6 +483,21 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
             self.assertEqual(len(path_frames), 5)
             self.assertEqual(result["endpoint_sha256"]["initial"], initial["sha256"])
             self.assertEqual(result["endpoint_sha256"]["final"], final["sha256"])
+            manifest = json.loads((output / "path_manifest.json").read_text(encoding="utf-8"))
+            for endpoint, source in (("initial", initial), ("final", final)):
+                self.assertEqual(
+                    manifest["source_inputs"][endpoint]["artifact_id"], source["artifact_id"]
+                )
+                self.assertEqual(
+                    manifest["source_inputs"][endpoint]["artifact_sha256"], source["artifact_sha256"]
+                )
+                self.assertEqual(
+                    manifest["source_inputs"][endpoint]["sha256"], source["sha256"]
+                )
+            self.assertEqual(manifest["provenance"]["source_artifacts"], {
+                "initial": {"artifact_id": initial["artifact_id"], "artifact_sha256": initial["artifact_sha256"]},
+                "final": {"artifact_id": final["artifact_id"], "artifact_sha256": final["artifact_sha256"]},
+            })
             for artifact in result["artifacts"]:
                 artifact_path = output / artifact["path"]
                 self.assertTrue(artifact_path.is_file(), artifact)
@@ -545,6 +719,25 @@ class RealASEIDPPEndToEndTests(unittest.TestCase):
                 output,
             )
             self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertFalse(output.exists())
+
+
+    def test_neb_artifact_sha_mismatch_rejected_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            initial, final, _, _ = self._endpoint_files(root)
+            final["artifact_sha256"] = "0" * 64
+            output = root / "must_not_be_created"
+            recipe = {
+                "atom_mapping_initial_to_final": [0, 1, 2],
+                "number_of_images": 5,
+                "endpoint_context": endpoint_context(),
+                "idpp": {"steps": 20, "fmax_angstrom_per_step": 0.05, "mic": False},
+                "validation": {"minimum_pair_distance_angstrom": 0.55},
+            }
+            result = build_neb_initial_path(initial, final, recipe, output)
+            self.assertEqual(result["status"], "NEEDS_DECISION")
+            self.assertTrue(any("artifact_sha256" in item for item in result["decision_required"]))
             self.assertFalse(output.exists())
 
     def test_context_fingerprint_mismatch_returns_needs_decision(self):
