@@ -1,0 +1,83 @@
+{
+  "project_run_id": "project-1020e2056fa24f06",
+  "bundle_id": "bundle-c0754c30b3143ad15315",
+  "bundle_sha256": "8de065ebdb6f9fd523f83c0fc1d55cb3b82862a4d51696aed82b4bda0aa04aa4",
+  "planning_status": "BLOCKED",
+  "seven_object_statuses": {
+    "scientific_intent": {
+      "status": "BLOCKED",
+      "object_sha256": "527b480bcd1afc59006616b2b001c43959b142b6feb6fd8cb19ab1a5b93680cf",
+      "evidence_refs": 2,
+      "evidence_gaps": 0
+    },
+    "research_plan": {
+      "status": "BLOCKED",
+      "object_sha256": "3f277f67eeb558f33a9cf5acd77eef7ca62f640941076e10dbb26c091298162c",
+      "evidence_refs": 0,
+      "evidence_gaps": 139
+    },
+    "model_recipe": {
+      "status": "BLOCKED",
+      "object_sha256": "0777e99fc4bd59cca5c9f85ac99a25e32849e0cbdb987e21eeedbe33a7b80f17",
+      "evidence_refs": 2,
+      "evidence_gaps": 9
+    },
+    "method_plan": {
+      "status": "BLOCKED",
+      "object_sha256": "c04e5be7be6d6b4a355edd7392381fca97d634ca0ec7ad91cd3ddafee27317e0",
+      "evidence_refs": 0,
+      "evidence_gaps": 19
+    },
+    "execution_plan": {
+      "status": "BLOCKED",
+      "object_sha256": "bb43515ccfbd4be1122329c2ba5a747577591ab84c0f434afe3f7e7a362630ba",
+      "evidence_refs": 2,
+      "evidence_gaps": 12
+    },
+    "qc_plan": {
+      "status": "BLOCKED",
+      "object_sha256": "b2adef92563dca8f50841f40eab680bc8ff96e1611c3c2c2a67f13e02603f571",
+      "evidence_refs": 2,
+      "evidence_gaps": 0
+    }
+  },
+  "planning_bundle_status": "BLOCKED",
+  "missing_items_count": 181,
+  "missing_item_code_counts": {
+    "RESEARCH_QUESTION_MISSING": 1,
+    "RESEARCH_GOAL_FIELD_MISSING": 3,
+    "OBSERVABLES_MISSING": 1,
+    "TASK_FAMILY_MISSING": 1,
+    "WP1_ORIENTATION_SCOPE_UNRESOLVED": 1,
+    "WP1_FRAGMENT_SPIN_COUNT_MISMATCH": 1,
+    "UNCONFIRMED_MANIFEST_DEFINITION": 130,
+    "EVIDENCE_REVIEW_INCOMPLETE": 2,
+    "MODEL_TYPE_MISSING_OR_INVALID": 1,
+    "MODEL_ELECTRONIC_STATE_MISSING": 3,
+    "MODEL_TARGET_DEFINITION_MISSING": 2,
+    "MODEL_ARTIFACT_MISSING": 1,
+    "MODEL_TOPOLOGY_MISSING": 1,
+    "MODEL_COMPOSITION_MISSING": 1,
+    "EXECUTION_BACKEND_UNREGISTERED": 1,
+    "CALCULATION_PLAN_FIELD_UNRESOLVED": 19,
+    "RESOURCE_PROFILE_FIELD_MISSING": 12
+  },
+  "questions_count": 181,
+  "workflow_created": false,
+  "calculation_plan_created": false,
+  "method_status": "BLOCKED",
+  "execution_status": "BLOCKED",
+  "resource_profile_status": "BLOCKED_UNREGISTERED_EXECUTION_BACKEND",
+  "qc_status": "UNSUPPORTED",
+  "qa_backend_override_only": false,
+  "blocker_codes": [
+    "EVIDENCE_REVIEW_INCOMPLETE",
+    "RESEARCH_QUESTION_MISSING",
+    "RESEARCH_GOAL_FIELD_MISSING",
+    "STRUCTURE_ARTIFACT_ID_MISSING",
+    "DATA_ANALYSIS_ARTIFACT_RESOLVER_MISSING",
+    "WP1_ORIENTATION_SCOPE_UNRESOLVED",
+    "WP1_FRAGMENT_SPIN_COUNT_MISMATCH"
+  ],
+  "result": "BLOCKED"
+}

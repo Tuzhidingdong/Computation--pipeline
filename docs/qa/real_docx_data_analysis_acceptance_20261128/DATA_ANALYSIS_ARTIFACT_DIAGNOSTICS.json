@@ -1,0 +1,31 @@
+{
+  "da_src": "<REDACTED_LOCAL_PATH> practical<REDACTED_LOCAL_PATH>",
+  "da_src_exists": true,
+  "load_data_analysis_api": "OK",
+  "api_attrs": [
+    "build_evidence_package",
+    "create_dft_analysis_run_from_project",
+    "get_dft_operation",
+    "list_dft_operations",
+    "list_dft_readers",
+    "read_dft_file",
+    "register_derived_artifact",
+    "register_inputs",
+    "resolve_artifact_path",
+    "run_dft_operation"
+  ],
+  "all_callable": true,
+  "resolve_artifact_path_file": "data_analysis.artifact_store",
+  "resolve_artifact_path_file_path": "<REDACTED_LOCAL_PATH> practical<REDACTED_LOCAL_PATH>",
+  "artifact_id_from_profile": null,
+  "artifact_sha_from_profile": null,
+  "note": "Project Profile for corr_dft_v4_1 contains no structure_artifact field; no registered Data_analysis Artifact ID/SHA and no Data_analysis project root were configured, so resolve_artifact_path() cannot be exercised against a real Artifact.",
+  "artifact_identity_status": "NEEDS_OWNER_SELECTION",
+  "real_api_called": true,
+  "artifact_id_resolved": false,
+  "file_sha_verified": false,
+  "ase_structure_read": false,
+  "identity_forwarded_to_planning": false,
+  "blocker": "No registered structure_artifact ID/SHA or Data_analysis project root in the authoritative Project Profile or any existing local config.",
+  "result": "BLOCKED"
+}

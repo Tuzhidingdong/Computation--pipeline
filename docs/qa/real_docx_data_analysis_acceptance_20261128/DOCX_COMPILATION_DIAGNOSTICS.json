@@ -1,0 +1,79 @@
+{
+  "compilation_status": "BLOCKED",
+  "source_document": {
+    "file_name": "CORR_DFT_Computational_Plan_v4.1_Frozen.docx",
+    "size_bytes": 330696,
+    "sha256": "eaa40442835c533833d5328745b07517237ed1df08b7f78fb2fd137b7cff3ef6",
+    "parser": "pipeline_contracts.plan_compiler.docx_reader",
+    "compiler": "corr_dft_v4_1"
+  },
+  "evidence_count": 160,
+  "evidence_kinds": {
+    "table_cell": 115,
+    "paragraph": 45
+  },
+  "paragraph_count": 45,
+  "table_count": 10,
+  "claims_count": 205,
+  "claim_status_counts": {
+    "requires_confirmation": 130,
+    "mention_only": 75
+  },
+  "blocking_diagnostics": [
+    {
+      "code": "WP1_ORIENTATION_SCOPE_UNRESOLVED",
+      "severity": "error",
+      "field": "tasks.WP1.orientation_scope",
+      "message": "The 15 docking orientations are not scoped as per catalyst or across both systems.",
+      "candidate_values": [
+        "per_catalyst",
+        "across_both_systems"
+      ],
+      "evidence": [
+        {
+          "source": "projects/corr_dft_v4_1/project_profile.json",
+          "field": "tasks.WP1.support_cluster_docking_orientation_count"
+        }
+      ],
+      "blocks_execution": true
+    },
+    {
+      "code": "WP1_FRAGMENT_SPIN_COUNT_MISMATCH",
+      "severity": "error",
+      "field": "tasks.WP1.isolated_fragment_spin_candidate_count",
+      "message": "The explicit isolated-fragment spin list contains 6 candidates, but the WP1 summary states 4. An owner must either retain all detailed candidates or identify exactly four selected candidates; no candidate is inferred.",
+      "detailed_list_count": 6,
+      "summary_count": 4,
+      "candidate_ids": [
+        "Cu13:M2",
+        "Cu13:M4",
+        "Cu13:M6",
+        "Cu20_support:M1",
+        "Cu20_support:M3",
+        "SnCu20_support:M2"
+      ],
+      "allowed_resolutions": [
+        "retain_all_six",
+        "select_four_explicitly"
+      ],
+      "evidence": [
+        {
+          "source": "projects/corr_dft_v4_1/project_profile.json",
+          "field": "tasks.WP1.isolated_fragment_spin_candidates"
+        },
+        {
+          "source": "projects/corr_dft_v4_1/project_profile.json",
+          "field": "tasks.WP1.summary_fragment_single_point_count"
+        }
+      ],
+      "blocks_execution": true
+    }
+  ],
+  "profile_reconciliation_status_counts": {
+    "profile_only": 21,
+    "consistent": 39,
+    "needs_review": 44
+  },
+  "result": "BLOCKED",
+  "note": "DOCX was actually ingested and compiled; WP1 blockers preserved unchanged."
+}

@@ -1,0 +1,32 @@
+{
+  "project_run_id": "project-1020e2056fa24f06",
+  "project_status": "BLOCKED",
+  "stages": {
+    "DOCX_INGEST": "COMPLETED",
+    "PLAN_COMPILE": "BLOCKED",
+    "EVIDENCE_REVIEW": "PENDING",
+    "MODEL_GENERATE": "PENDING",
+    "MODEL_VALIDATE": "PENDING",
+    "MODEL_REVIEW": "PENDING",
+    "MODEL_APPROVAL": "PENDING",
+    "MODEL_ARTIFACT_FREEZE": "PENDING",
+    "CALCULATION_PLAN": "PENDING",
+    "WORKFLOW_EXECUTION": "PENDING",
+    "RESULT_DELIVERY": "PENDING"
+  },
+  "model_approval": "PENDING",
+  "calculation_plan_created": false,
+  "workflow_run_created": false,
+  "workflow_runs_in_qa_db": 0,
+  "approval_records_in_qa_db": 0,
+  "real_computation_executed": false,
+  "hpc_accessed": false,
+  "data_analysis_write_operations": 0,
+  "approve_model_called": false,
+  "project_approve_called": false,
+  "resolve_v41_planning_called": false,
+  "evidence_review_confirmed": false,
+  "reached_model_approval_gate": false,
+  "final_result": "BLOCKED_BEFORE_MODEL_APPROVAL",
+  "note": "Stops at PLAN_COMPILE blocked / EVIDENCE_REVIEW pending; model candidates were not generated."
+}

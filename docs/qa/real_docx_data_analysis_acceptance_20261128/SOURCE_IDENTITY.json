@@ -1,0 +1,33 @@
+{
+  "git_sha": "54a8a942773fbbb31421181ae23b04e11e6a3f2f",
+  "python": "3.12.4",
+  "docx": {
+    "name": "CORR_DFT_Computational_Plan_v4.1_Frozen.docx",
+    "source_path": "<REDACTED_LOCAL_PATH> practical<REDACTED_LOCAL_PATH>",
+    "sha256": "eaa40442835c533833d5328745b07517237ed1df08b7f78fb2fd137b7cff3ef6",
+    "size_bytes": 330696,
+    "qa_copy_sha256": "eaa40442835c533833d5328745b07517237ed1df08b7f78fb2fd137b7cff3ef6",
+    "is_original_binary": true
+  },
+  "project_profile": {
+    "sha256": "c4f069ba50d1629d16da8322f976347fd46c154bc3fca541471994b509e6cd96",
+    "path_in_checkout": "projects/corr_dft_v4_1/project_profile.json",
+    "project_id": "corr_dft_v4_1",
+    "compiler": "corr_dft_v4_1",
+    "structure_artifact_field_present": false
+  },
+  "data_analysis": {
+    "artifact_id": null,
+    "artifact_sha256": null,
+    "project_root": null,
+    "api_source": "<REDACTED_LOCAL_PATH> practical<REDACTED_LOCAL_PATH>",
+    "api_source_git_sha": "489ac0da2999e002add50d8181d8cb92274c7d05",
+    "api_callable": true,
+    "identity_status": "NEEDS_OWNER_SELECTION"
+  },
+  "compiler": {
+    "entry": "projects.corr_dft_v4_1.plan_compiler.compile_v41_docx",
+    "cli": "python -m pipeline_contracts.cli project start --compiler corr_dft_v4_1 --plan-version v4.1"
+  },
+  "model_plugin": "1.0.0"
+}
