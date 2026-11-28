@@ -72,7 +72,7 @@ class PaperHarvester:
 
     @staticmethod
     def _valid_zip(data: bytes) -> bool:
-        if not data.startswith((b"PK\\x03\\x04", b"PK\\x05\\x06", b"PK\\x07\\x08")):
+        if not data.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
             return False
         try:
             import io
@@ -159,7 +159,7 @@ class PaperHarvester:
 
     def _write_sidecar(self, path: Path, payload: Mapping[str, Any]) -> None:
         sidecar = path.with_suffix(path.suffix + ".metadata.json")
-        content = json.dumps(dict(payload), ensure_ascii=False, indent=2) + "\\n"
+        content = json.dumps(dict(payload), ensure_ascii=False, indent=2) + "\n"
         descriptor, temporary = tempfile.mkstemp(prefix=f".{sidecar.name}.", suffix=".part", dir=str(sidecar.parent))
         try:
             with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
@@ -212,7 +212,7 @@ class PaperHarvester:
             try:
                 with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                     json.dump(current, handle, ensure_ascii=False, indent=2)
-                    handle.write("\\n")
+                    handle.write("\n")
                     handle.flush()
                     os.fsync(handle.fileno())
                 os.replace(temporary, self._manifest_path)

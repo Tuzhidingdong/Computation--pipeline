@@ -332,23 +332,23 @@ def write_failed_source_package(
     package.pop("failure", None)
     validate_source_package(package)
     (output / "main_analysis.md").write_text(
-        f"# Main Analysis: {title}\\nDOI: {doi}\\n\\nPreprocessing failed.\\n",
+        f"# Main Analysis: {title}\nDOI: {doi}\n\nPreprocessing failed.\n",
         encoding="utf-8",
     )
     (output / "si_analysis.md").write_text(
-        f"# Supporting Information Analysis: {title}\\nDOI: {doi}\\n\\n"
-        "No SI text was asserted as extracted.\\n",
+        f"# Supporting Information Analysis: {title}\nDOI: {doi}\n\n"
+        "No SI text was asserted as extracted.\n",
         encoding="utf-8",
     )
     (output / "evidence_index.json").write_text(
-        json.dumps(package, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+        json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (output / "PREPROCESSING_QC_REPORT.md").write_text(
-        "# Source Preprocessing QC Report\\n\\n"
-        f"- Paper ID: {package_id}\\n- Status: FAILED\\n"
-        f"- MAIN exists: {main_exists}\\n- SI files physically present: {len(si_inventory)}\\n"
-        f"- Failure: {str(error)[:2000]}\\n"
-        "- OCR was not performed; image interpretation was not performed.\\n",
+        "# Source Preprocessing QC Report\n\n"
+        f"- Paper ID: {package_id}\n- Status: FAILED\n"
+        f"- MAIN exists: {main_exists}\n- SI files physically present: {len(si_inventory)}\n"
+        f"- Failure: {str(error)[:2000]}\n"
+        "- OCR was not performed; image interpretation was not performed.\n",
         encoding="utf-8",
     )
     return package
@@ -456,10 +456,10 @@ def build_source_package(
                 else "PARTIAL_SI_UNSUPPORTED"
             )
             with (produced / "PREPROCESSING_QC_REPORT.md").open("a", encoding="utf-8") as handle:
-                handle.write("\\n## SI preprocessing failure — MAIN retained\\n")
-                handle.write(f"- SI inputs supplied: {len(si_paths)}\\n")
-                handle.write(f"- Diagnostic: {si_preprocessing_error[:1500]}\\n")
-                handle.write("- Original SI bytes are preserved; SI text/evidence was not fabricated.\\n")
+                handle.write("\n## SI preprocessing failure — MAIN retained\n")
+                handle.write(f"- SI inputs supplied: {len(si_paths)}\n")
+                handle.write(f"- Diagnostic: {si_preprocessing_error[:1500]}\n")
+                handle.write("- Original SI bytes are preserved; SI text/evidence was not fabricated.\n")
         # Bundle immutable physical copies of original MAIN and SI files so the
         # Source Package remains self-contained; original download paths are retained
         # only as provenance and are never modified by preprocessing.
@@ -570,19 +570,19 @@ def build_source_package(
         from .schemas import validate_source_package
         validate_source_package(package)
         (produced / "evidence_index.json").write_text(
-            json.dumps(package, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+            json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         input_path = produced / "PREPROCESSING_INPUTS.json"
         input_path.write_text(json.dumps({"signature": signature, "inputs": signature_payload},
-                                         ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                                         ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         qc_path = produced / "PREPROCESSING_QC_REPORT.md"
         with qc_path.open("a", encoding="utf-8") as handle:
-            handle.write("\\n## Pipeline acquisition provenance\\n")
-            handle.write(f"- MAIN SHA-256: {input_records[0]['sha256']}\\n")
-            handle.write(f"- Original SI file count: {len(si_paths)}\\n")
+            handle.write("\n## Pipeline acquisition provenance\n")
+            handle.write(f"- MAIN SHA-256: {input_records[0]['sha256']}\n")
+            handle.write(f"- Original SI file count: {len(si_paths)}\n")
             for item in input_records[1:]:
-                handle.write(f"- SI {item['filename']}: SHA-256 {item['sha256']}\\n")
-            handle.write("- OCR was not performed; scanned pages are flagged. Image extraction is not visual interpretation.\\n")
+                handle.write(f"- SI {item['filename']}: SHA-256 {item['sha256']}\n")
+            handle.write("- OCR was not performed; scanned pages are flagged. Image extraction is not visual interpretation.\n")
 
         # Atomic directory promotion: the previous package stays intact until
         # the replacement is fully written. Roll back if promotion fails.
@@ -777,10 +777,10 @@ def preprocess_paired_corpus(
             qc_failure = package_dir / "PREPROCESSING_QC_REPORT.md"
             if not qc_failure.exists():
                 qc_failure.write_text(
-                    "# Source Preprocessing QC Report\\n\\n"
-                    f"- Paper ID: {paper_id}\\n- Status: FAILED\\n"
-                    f"- Error: {type(exc).__name__}: {exc}\\n"
-                    "- No OCR or visual interpretation was performed.\\n",
+                    "# Source Preprocessing QC Report\n\n"
+                    f"- Paper ID: {paper_id}\n- Status: FAILED\n"
+                    f"- Error: {type(exc).__name__}: {exc}\n"
+                    "- No OCR or visual interpretation was performed.\n",
                     encoding="utf-8",
                 )
             record = {
