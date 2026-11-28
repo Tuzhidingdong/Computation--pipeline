@@ -26,6 +26,7 @@ from pipeline_contracts.scientific_planning.literature_engine import (
 )
 from pipeline_contracts.scientific_planning.paperqa2_plugin import query_local_paperqa2
 from pipeline_contracts.project_lifecycle import ProjectLifecycle
+from pipeline_contracts.project_pipeline import ProjectPipeline
 from pipeline_contracts.workflow import WorkflowStore
 from pipeline_contracts.scientific_planning.skills import (
     SkillUnavailable,
@@ -639,6 +640,162 @@ class LiteratureEngineMockEndToEndTests(unittest.TestCase):
             ))
             self.assertEqual(dossier["decisions"][0]["approval_status"], "PENDING")
             self.assertEqual(dossier["decisions"][0]["assessment"]["confidence"], "INSUFFICIENT")
+
+    def test_explicit_approval_creates_child_revision_and_keeps_model_gates_pending(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            pipeline = ProjectPipeline(root / ".pipeline" / "workflow.sqlite", root / "runs")
+            try:
+                frozen_bytes = b"synthetic Frozen DOCX bytes for approval lifecycle test"
+                frozen_sha = hashlib.sha256(frozen_bytes).hexdigest()
+                manifest = {
+                    "source_document": {
+                        "file_name": "synthetic-frozen.docx",
+                        "sha256": frozen_sha,
+                        "size_bytes": len(frozen_bytes),
+                    },
+                    "diagnostics": [{
+                        "code": "UNRELATED_BLOCKER",
+                        "field_path": "model.electronic_state.charge",
+                        "blocks_execution": True,
+                    }],
+                    "unresolved_definitions": [{
+                        "code": "METHOD_PARAMETER_MISSING",
+                        "field_path": "method.spin_resolution",
+                    }],
+                    "evidence": [],
+                    "confirmations": [],
+                }
+                parent_id = pipeline.lifecycle.create("synthetic-approval", manifest)
+                parent_root = pipeline._run_root(parent_id)
+                frozen_path = parent_root / "source" / "synthetic-frozen.docx"
+                frozen_path.parent.mkdir(parents=True, exist_ok=True)
+                frozen_path.write_bytes(frozen_bytes)
+                (parent_root / "manifest.json").write_text(
+                    json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                pipeline.lifecycle.transition(parent_id, "DOCX_INGEST", "COMPLETED", outputs={
+                    "source_docx": str(frozen_path),
+                    "source_sha256": frozen_sha,
+                    "source_size_bytes": len(frozen_bytes),
+                })
+                pipeline.lifecycle.transition(parent_id, "PLAN_COMPILE", "COMPLETED", outputs={
+                    "manifest_path": str(parent_root / "manifest.json"),
+                    "manifest_sha256": _sha(parent_root / "manifest.json"),
+                })
+                pipeline.lifecycle.transition(parent_id, "EVIDENCE_REVIEW", "COMPLETED", outputs={
+                    "reviewed": True,
+                })
+
+                dossier = {
+                    "schema_version": "1.0",
+                    "project_run_id": parent_id,
+                    "created_at": "2026-11-28T00:00:00+00:00",
+                    "status": "PROPOSED",
+                    "issues": [],
+                    "scientific_context": {},
+                    "search": {"queries": [], "databases_selected": [], "retrieval_log": [],
+                               "raw_record_count": 0, "unique_record_count": 0},
+                    "paper_records": [],
+                    "evidence_matrix": [{
+                        "evidence_id": "ev-approval-1",
+                        "title": "Synthetic approval evidence",
+                        "excerpt": "Synthetic evidence excerpt",
+                        "full_text_sha256": None,
+                        "source_urls": ["https://example.org/synthetic-evidence"],
+                        "locator": {"kind": "page", "value": "4"},
+                        "polarity": "SUPPORTS",
+                    }],
+                    "decisions": [{
+                        "decision_id": "decision-approval-1",
+                        "issue_id": "issue-approval-1",
+                        "subject": "method.spin_resolution",
+                        "question": "Which declared method option should be selected?",
+                        "status": "PROPOSED",
+                        "approval_status": "PENDING",
+                        "options": [{
+                            "option_id": "option-a",
+                            "label": "Option A",
+                            "value": "A",
+                            "supporting_evidence_ids": ["ev-approval-1"],
+                            "challenging_evidence_ids": [],
+                        }],
+                        "option_enumeration_status": "DECLARED",
+                        "assessment": {
+                            "status": "PROPOSED_WITH_SUPPORTING_ANALYSIS",
+                            "option_id": "option-a",
+                            "reason": "A synthetic option-specific assessment.",
+                            "evidence_ids": ["ev-approval-1"],
+                            "uncertainties": ["Synthetic test only."],
+                        },
+                        "requires_user_approval": True,
+                        "selected_option_id": None,
+                        "affected_planning_objects": ["ResearchPlan", "MethodPlan"],
+                    }],
+                    "approval_state": "PENDING",
+                    "execution_authority": {
+                        "models_approved": False, "scientific_decisions_approved": False,
+                        "blockers_cleared": False, "calculations_started": False,
+                    },
+                    "limitations": ["Synthetic test only."],
+                    "dossier_id": "dossier-approval-1",
+                }
+                dossier["dossier_sha256"] = canonical_sha256(dossier)
+                dossier_path = parent_root / "scientific_research" / dossier["dossier_id"] / "decision_dossier.json"
+                dossier_path.parent.mkdir(parents=True, exist_ok=True)
+                dossier_path.write_text(json.dumps(dossier, ensure_ascii=False, indent=2) + "\n",
+                                         encoding="utf-8")
+                markdown_path = dossier_path.with_suffix(".md")
+                markdown_path.write_text("# Synthetic approval dossier\n", encoding="utf-8")
+                pipeline.lifecycle.persist_research_dossier(
+                    parent_id, dossier["dossier_id"], dossier["dossier_sha256"],
+                    str(dossier_path), str(markdown_path), {"decision_count": 1, "evidence_count": 1},
+                )
+
+                captured = {}
+                pipeline.plan_scientific = lambda project_run_id, **kwargs: (
+                    captured.update({"project_run_id": project_run_id, **kwargs}) or
+                    {"project_run_id": project_run_id, "planning_status": "BLOCKED"}
+                )
+                result = pipeline.approve_scientific_decision(
+                    parent_id,
+                    decision_id="decision-approval-1",
+                    option_id="option-a",
+                    approved_by="Synthetic Reviewer",
+                    rationale="Explicitly selected for the approval lifecycle test.",
+                )
+                child_id = result["new_project_run_id"]
+                self.assertNotEqual(child_id, parent_id)
+                self.assertEqual(result["decision_status"], "APPROVED")
+                self.assertEqual(result["decision_record"]["status"], "APPROVED")
+                self.assertEqual(result["decision_record"]["decision_record_id"],
+                                 pipeline.lifecycle.approved_scientific_decisions(parent_id)[0]["decision_record_id"])
+                approved = pipeline.lifecycle.approved_scientific_decisions(parent_id)[0]
+                self.assertEqual(approved["option_id"], "option-a")
+                self.assertEqual(approved["evidence_ids"], ["ev-approval-1"])
+                self.assertEqual(approved["new_project_run_id"], child_id)
+                self.assertEqual(captured["decision_overrides"][0]["field_path"], "method.spin_resolution")
+                self.assertEqual(captured["decision_overrides"][0]["value"], "A")
+                self.assertEqual(captured["decision_overrides"][0]["source_evidence_refs"][0]["evidence_id"],
+                                 "ev-approval-1")
+                self.assertEqual(pipeline.lifecycle.manifest(parent_id), manifest)
+                self.assertEqual(pipeline.lifecycle.manifest(child_id), manifest)
+                child_stages = {x["stage"]: x for x in pipeline.lifecycle.stages(child_id)}
+                self.assertEqual(child_stages["EVIDENCE_REVIEW"]["status"], "COMPLETED")
+                self.assertEqual(child_stages["MODEL_APPROVAL"]["status"], "PENDING")
+                self.assertEqual(child_stages["MODEL_ARTIFACT_FREEZE"]["status"], "PENDING")
+                self.assertEqual(child_stages["CALCULATION_PLAN"]["status"], "PENDING")
+                self.assertEqual(child_stages["WORKFLOW_EXECUTION"]["status"], "PENDING")
+                # The unrelated model blocker is not changed by the method decision.
+                self.assertTrue(pipeline.lifecycle.manifest(child_id)["diagnostics"][0]["blocks_execution"])
+                self.assertEqual(_sha(frozen_path), frozen_sha)
+                self.assertEqual(
+                    _sha(pipeline._run_root(child_id) / "source" / "synthetic-frozen.docx"),
+                    frozen_sha,
+                )
+            finally:
+                pipeline.close()
 
 class UpstreamIntegrationSafetyTests(unittest.TestCase):
     def test_local_paperqa2_evidence_is_not_sent_to_host_without_separate_consent(self):
