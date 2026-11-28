@@ -4,8 +4,11 @@ Updated: 2026-11-28
 
 - PR #3 remains Draft, open, unmerged.
 - Base SHA remains 5e6e26fdf94efbac54182f819f4879c1aafb1d4d.
-- Code HEAD verified by Actions run #543: c36b66def19038f0f15578a1222d5ec3e096cafe.
+- Implementation and regression HEAD verified by Actions run #549: 5666a0c98a0f6bb4d660af29de12ea32966285a2.
 - Full report: docs/reports/AGENT_B_GENERAL_LAYER_BOUNDARY_AND_EVIDENCE_REGRESSION_20261128.md.
+
+
+The generic builder is also tested with project_id=corr_dft_v4_1 but without adapter callbacks; its Manifest must match the same input compiled under an unrelated project ID, apart from the project ID field itself. This verifies adapter opt-in is callback-driven, not project-ID-driven.
 
 ## Layer boundary
 
@@ -15,7 +18,7 @@ Conflict detection is label-independent by default and no longer excludes all ou
 
 ## Tests and validation
 
-Actions run #543: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092308085
+Actions run #543: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46092520597
 
 - unittest: 133 total, 131 passed, 2 skipped, 0 failures.
 - pytest: 131 passed, 2 skipped, 108 subtests passed.
