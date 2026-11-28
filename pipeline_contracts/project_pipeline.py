@@ -19,7 +19,7 @@ from .plan_compiler.compiler import (
     CompilationResult, compile_confirmed_manifest, confirm_manifest_claims, write_manifest,
 )
 from .project_lifecycle import ProjectLifecycle
-from .workflow import MockCP2KWorkflowAdapter, WorkflowController, WorkflowStore
+from .workflow import ExecutionResult, MockCP2KWorkflowAdapter, WorkflowController, WorkflowStore
 from projects.corr_dft_v4_1.model_plugin.pipeline import (
     generate_validate_review, approve_candidate,
 )
@@ -101,9 +101,103 @@ class _RegisteredMockAdapter:
         return replace(result, output_artifacts=tuple(output_artifacts))
 
     def analyze(self, task, artifacts):
-        # The existing Mock adapter supplies deterministic mock Analysis Run and
-        # Evidence Package references; no real Data_analysis run is claimed.
-        return self.delegate.analyze(task, artifacts)
+        """Persist explicitly labelled Mock result, Analysis Run and Evidence Package via Data_analysis."""
+        mock = self.delegate.analyze(task, artifacts)
+        if mock.status != "COMPLETED":
+            return mock
+        task_id = str(task["task_id"])
+        mock_dir = self.root / "mock_execution_outputs"
+        mock_dir.mkdir(parents=True, exist_ok=True)
+        result_path = mock_dir / f"{task_id}-analysis-result.json"
+        result_payload = {
+            "schema_version": "1.0.0", "result_type": "mock_energy_execution",
+            "execution_mode": "mock", "not_scientific_result": True,
+            "pipeline_task_id": task_id,
+            "input_artifact_id": str(task.get("input", {}).get("artifact_id", "")),
+            "mock_cp2k_output_artifacts": [dict(item) for item in artifacts],
+            "scientific_qc": "not_assessed",
+        }
+        _write_json(result_path, result_payload)
+        digest = _sha256(result_path)
+        parent_ids = [self.approved_artifact_id]
+        input_id = str(task.get("input", {}).get("artifact_id", ""))
+        if input_id and input_id not in parent_ids:
+            parent_ids.append(input_id)
+        registered = self.api.register_derived_artifact(
+            str(self.root), str(result_path),
+            source_artifact_ids=parent_ids,
+            format_id="json_records",
+            parser_id="pipeline-mock-workflow",
+            parser_version="1",
+            parse_status="parsed",
+            parse_assurance="unverified",
+            quality_status="not_assessed",
+            analysis_eligibility="not_assessed",
+            use_status="undecided",
+            warnings=["Mock execution only; no CP2K calculation or scientific result was produced."],
+            provenance={
+                "operation_id": "pipeline.mock.cp2k.energy",
+                "operation_version": "1",
+                "pipeline_task_id": task_id,
+                "execution_mode": "mock",
+            },
+        )
+        if not isinstance(registered, Mapping):
+            raise TypeError("Data_analysis register_derived_artifact must return a mapping")
+        required = {"artifact_id", "sha256", "format_id", "source_locator", "artifact", "record_path"}
+        missing = required.difference(registered)
+        if missing:
+            raise ValueError("Data_analysis derived Artifact response missing: " + ", ".join(sorted(missing)))
+        if str(registered["sha256"]).lower() != digest.lower():
+            raise ValueError("Data_analysis mock result Artifact SHA-256 does not match persisted bytes")
+        analysis_response = self.api.create_dft_analysis_run_from_project(
+            project_root=str(self.root),
+            input_artifact_ids=[input_id] if input_id else [self.approved_artifact_id],
+            output_artifacts=[dict(registered)],
+            operation_id="pipeline.mock.cp2k.energy",
+            operation_version="1",
+            parameters={
+                "pipeline_task_id": task_id, "execution_mode": "mock",
+                "not_scientific_result": True,
+            },
+            software={"pipeline": "Computation--pipeline", "execution_mode": "mock"},
+            persist=True, status="completed",
+            structure_artifact_id=input_id or self.approved_artifact_id,
+            structure_sha256=str(task.get("input", {}).get("sha256") or
+                                 _sha256(self.approved_structure_path)),
+            approved_model_sha256=_sha256(self.approved_structure_path),
+            upstream_job_reference=None,
+            parser_id="pipeline-mock-workflow", parser_version="1",
+            units={}, assumptions=("No CP2K execution was performed.",),
+            warnings=("Mock result only; no scientific energy value is represented.",),
+            qc_status="not_assessed", environment={"execution_mode": "mock"},
+        )
+        if (not isinstance(analysis_response, Mapping)
+                or not isinstance(analysis_response.get("analysis_run"), Mapping)
+                or not analysis_response.get("record_path")):
+            raise ValueError("Data_analysis did not persist a valid Mock Analysis Run")
+        analysis_run = dict(analysis_response["analysis_run"])
+        analysis_id = str(analysis_run.get("analysis_run_id") or "")
+        if not analysis_id:
+            raise ValueError("Data_analysis Analysis Run has no analysis_run_id")
+        evidence_response = self.api.build_evidence_package(
+            dft_analysis_runs=[analysis_response["record_path"]],
+            question="Mock Pipeline workflow result and provenance (not scientific evidence)",
+        )
+        if not isinstance(evidence_response, Mapping) or not evidence_response.get("evidence_package_id"):
+            raise ValueError("Data_analysis did not build a Mock Evidence Package")
+        evidence_id = str(evidence_response["evidence_package_id"])
+        return replace(
+            mock, output_artifacts=({"artifact_id": str(registered["artifact_id"]),
+                                     "sha256": digest, "kind": "mock_analysis_result",
+                                     "source_system": "Data_analysis", "verified": True,
+                                     "record_path": str(registered["record_path"]),
+                                     "execution_mode": "mock"},),
+            analysis_run_id=analysis_id, evidence_package_id=evidence_id,
+            runtime={**dict(mock.runtime), "analysis_execution_mode": "mock",
+                     "analysis_result_artifact_id": str(registered["artifact_id"]),
+                     "analysis_result_sha256": digest},
+        )
 
 
 class ProjectPipeline:
