@@ -1,3 +1,45 @@
+# Current Development Status — Pipeline End-to-End Orchestration
+
+Updated: 2026-11-28
+
+## PR / baseline
+
+- PR #5: https://github.com/Tuzhidingdong/Computation--pipeline/pull/5
+- Branch: `agent-b/pipeline-e2e-orchestration-20261128`
+- Base branch: `agent-b/plan-compiler-v41-model-plugin-20261127`
+- Base SHA: `58d3b06be63b7d9fd778ae39522908e0df6391a4`
+- Code HEAD validated by Actions #580: `6e3018a3c9f492e3705aa14a85ddb2c09054a12d`
+- PR #5 remains Draft/open/unmerged. PR #3, #1, #2 and #4 remain unchanged.
+
+## Pipeline orchestration delivered
+
+- Added `pipeline_contracts/project_pipeline.py` to sequence existing compiler, Manifest confirmation, model plugin, approval, CalculationPlan and WorkflowController.
+- Extended `ProjectLifecycle` with the evidence review, workflow execution and result delivery stages, retaining the existing WorkflowStore as the single SQLite control ledger.
+- Added `project start/status/review/confirm/approve/resume/report` CLI commands.
+- Model candidate generation requires explicit confirmed Manifest evidence and complete ModelSpecs. Explicit approval is required. CalculationPlan is pinned to the approved Artifact ID/SHA.
+- Mock GEO_OPT/QC gates dynamic ENERGY task creation. Mock optimized/result Artifacts, Analysis Run and Evidence Package use the injected Data_analysis API interface. Mock outputs are expressly labelled non-scientific.
+
+## E2E and CI
+
+- E2E-A passed: run_04 extracted-block fixture preserves both WP1 blockers, Project Run becomes BLOCKED, and no model candidates or Workflow Run are created.
+- E2E-B passed: synthetic DOCX → explicit ModelSpec/topology → validation/review → explicit confirmation/approval → Artifact freeze → CalculationPlan → Mock GEO_OPT → Mock ENERGY → Data_analysis API Fake Artifact/Analysis Run/Evidence Package → final report.
+- Actions #580: https://github.com/Tuzhidingdong/Computation--pipeline/actions/runs/46097107400
+- unittest: 135 total, 133 passed, 2 skipped, 0 failures/errors.
+- pytest: 133 passed, 2 skipped, 108 subtests passed.
+- compileall: passed.
+- Two skipped tests require owner-approved upstream source trees; skipped tests are not counted as passed.
+
+## Acceptance limits
+
+- E2E-A consumes the existing extracted run_04 block fixture, not the original Frozen DOCX binary. E2E-B covers actual synthetic DOCX input/compile.
+- E2E-B uses a test-only fake implementing the existing Data_analysis API calls. Live Data_analysis connection and original production project acceptance have not been run.
+- This delivery executes Mock only; it does not call SSH/SCP/Slurm, HPC or CP2K/production DFT.
+- Both WP1 blockers remain unresolved; no `resolve-v41-planning`, no real CORR topology generation and no project_profile.json scientific value changes.
+
+Full task report: docs/reports/AGENT_B_PIPELINE_E2E_ORCHESTRATION_20261128.md
+
+---
+
 # Current Follow-up — Generic Manifest Boundary and Evidence Regression
 
 Updated: 2026-11-28
