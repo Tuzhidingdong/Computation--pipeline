@@ -573,8 +573,11 @@ def build_source_package(
             json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         input_path = produced / "PREPROCESSING_INPUTS.json"
-        input_path.write_text(json.dumps({"signature": signature, "inputs": signature_payload},
-                                         ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        input_path.write_text(json.dumps({
+            "signature": signature,
+            "inputs": input_records,
+            "settings": {key: value for key, value in signature_payload.items() if key != "inputs"},
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         qc_path = produced / "PREPROCESSING_QC_REPORT.md"
         with qc_path.open("a", encoding="utf-8") as handle:
             handle.write("\n## Pipeline acquisition provenance\n")

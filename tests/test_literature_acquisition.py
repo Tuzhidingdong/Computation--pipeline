@@ -99,12 +99,14 @@ class _FakeVPN:
         self.pdf_bytes = pdf_bytes
         self.si_bytes = si_bytes
         self.visited = []
+        self.fetched = []
 
     def navigate(self, url, wait_secs=0):
         self.visited.append(url)
         return url, "Synthetic publisher article", "article body"
 
     def fetch_binary(self, url, **kwargs):
+        self.fetched.append(url)
         if "downloadSupplement" in url or "supplement" in url:
             return self.si_bytes, "application/zip"
         return self.pdf_bytes, "application/pdf"
@@ -204,7 +206,7 @@ def test_wiley_pdfdirect_and_download_supplement_strategy(tmp_path):
     main, si = harvester.harvest_wiley(vpn, "https://onlinelibrary.wiley.com/", "10.1002/synthetic.1")
     assert main and Path(main).is_file()
     assert si and Path(si).suffix == ".docx"
-    assert any("/doi/pdfdirect/" in item for item in vpn.visited)
+    assert any("/doi/pdfdirect/" in item for item in vpn.fetched)
     assert any("/doi/full/" in item for item in vpn.visited)
     assert PaperHarvester.validate_supplementary(Path(si).read_bytes()) == (True, ".docx", "DOCX")
 
@@ -425,7 +427,7 @@ def test_source_package_pages_tables_and_figures_become_evidence_with_artifactre
     assert page["source_artifact_ids"]
     assert page["artifact_registration_mock_only"] is True
     assert page["evidence_ref"]["contract_id"] == "pipeline-literature-evidence-ref"
-    assert page["evidence_ref"]["source_artifact_ids"] == page["source_artifact_ids"]
+    assert list(page["evidence_ref"]["source_artifact_ids"]) == page["source_artifact_ids"]
 
 
 
@@ -906,7 +908,9 @@ def test_source_package_registration_e2e_marks_mock_artifacts_and_links_evidence
     assert dossier["project_run_id"] == "mock-project-run-01"
     assert dossier["approval_state"] == "PENDING"
     assert dossier["execution_authority"]["scientific_decisions_approved"] is False
-    assert dossier["search"]["literature_acquisition"]["status"] == "COMPLETE"
+    assert dossier["search"]["literature_acquisition"]["status"] == "COMPLETE", (
+        dossier["search"]["literature_acquisition"]
+    )
     assert any(item.get("evidence_type") == "FULL_TEXT_PAGE" for item in dossier["evidence_matrix"])
     assert any(item.get("source_artifact_ids") for item in dossier["evidence_matrix"])
     assert all(
