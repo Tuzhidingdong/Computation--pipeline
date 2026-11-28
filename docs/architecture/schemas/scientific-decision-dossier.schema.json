@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Tuzhidingdong/Computation--pipeline/blob/agent-b/scientific-reasoning-literature-engine-20261128/docs/architecture/schemas/scientific-decision-dossier.schema.json",
+  "title": "Scientific Decision Dossier",
+  "description": "Auditable research proposal. It is not an approval record.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_run_id",
+    "created_at",
+    "status",
+    "issues",
+    "scientific_context",
+    "search",
+    "paper_records",
+    "evidence_matrix",
+    "decisions",
+    "approval_state",
+    "execution_authority",
+    "limitations",
+    "dossier_id",
+    "dossier_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "project_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "PROPOSED",
+        "RESEARCH_COMPLETE_NO_PENDING_SCIENTIFIC_DECISION"
+      ]
+    },
+    "dossier_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dossier_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "issue_id",
+          "source",
+          "affected_fields",
+          "related_planning_objects",
+          "description",
+          "classification",
+          "classification_basis",
+          "current_status",
+          "evidence_ids"
+        ],
+        "properties": {
+          "issue_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object"
+          },
+          "affected_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "related_planning_objects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "SOURCE_RESOLVED",
+              "PIPELINE_INTERPRETATION_ISSUE",
+              "GENUINE_SCIENTIFIC_DECISION"
+            ]
+          },
+          "classification_basis": {
+            "type": "string"
+          },
+          "current_status": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_resolution": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scientific_context": {
+      "type": "object"
+    },
+    "search": {
+      "type": "object",
+      "required": [
+        "queries",
+        "databases_selected",
+        "retrieval_log",
+        "raw_record_count",
+        "unique_record_count"
+      ],
+      "properties": {
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "databases_selected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retrieval_log": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "raw_record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "paperqa2": {
+          "type": "object"
+        },
+        "skill_executor": {
+          "type": "array"
+        },
+        "limits": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "paper_records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "evidence_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "paper_record_id",
+          "databases",
+          "publication_status",
+          "retraction_status",
+          "access_status",
+          "identity_verification",
+          "polarity",
+          "publication_reliability",
+          "study_design",
+          "method_applicability",
+          "direct_applicability",
+          "independence",
+          "limitations"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string"
+          },
+          "paper_record_id": {
+            "type": "string"
+          },
+          "databases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publication_status": {
+            "type": "string"
+          },
+          "retraction_status": {
+            "type": "string"
+          },
+          "correction_status": {
+            "type": "string"
+          },
+          "access_status": {
+            "type": "string"
+          },
+          "identity_verification": {
+            "type": "object"
+          },
+          "identity_verification_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_content_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_content_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "full_text_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "polarity": {
+            "enum": [
+              "UNASSESSED",
+              "SUPPORTS",
+              "CHALLENGES",
+              "MIXED",
+              "NEUTRAL"
+            ]
+          },
+          "publication_reliability": {
+            "type": "string"
+          },
+          "study_design": {
+            "type": "string"
+          },
+          "method_applicability": {
+            "type": "string"
+          },
+          "direct_applicability": {
+            "type": "string"
+          },
+          "independence": {
+            "type": "string"
+          },
+          "conflict_group_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "decision_id",
+          "issue_id",
+          "subject",
+          "question",
+          "status",
+          "approval_status",
+          "options",
+          "option_enumeration_status",
+          "assessment",
+          "requires_user_approval",
+          "selected_option_id",
+          "affected_planning_objects"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": "string"
+          },
+          "issue_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "status": {
+            "const": "PROPOSED"
+          },
+          "approval_status": {
+            "const": "PENDING"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "option_enumeration_status": {
+            "enum": [
+              "DECLARED",
+              "OPTIONS_NOT_ENUMERATED"
+            ]
+          },
+          "assessment": {
+            "type": "object",
+            "required": [
+              "status",
+              "option_id",
+              "reason",
+              "evidence_ids",
+              "uncertainties"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "option_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "confidence": {
+                "enum": [
+                  "LOW",
+                  "MODERATE",
+                  "HIGH",
+                  "INSUFFICIENT"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "uncertainties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "requires_user_approval": {
+            "const": true
+          },
+          "selected_option_id": {
+            "type": "null"
+          },
+          "affected_planning_objects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "approval_state": {
+      "enum": [
+        "PENDING",
+        "NOT_REQUIRED"
+      ]
+    },
+    "execution_authority": {
+      "type": "object",
+      "required": [
+        "models_approved",
+        "scientific_decisions_approved",
+        "blockers_cleared",
+        "calculations_started"
+      ],
+      "properties": {
+        "models_approved": {
+          "const": false
+        },
+        "scientific_decisions_approved": {
+          "const": false
+        },
+        "blockers_cleared": {
+          "const": false
+        },
+        "calculations_started": {
+          "const": false
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

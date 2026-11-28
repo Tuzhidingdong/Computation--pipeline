@@ -450,7 +450,9 @@ class ProjectPipeline:
 
     def plan_scientific(self, run_id: str, *, profile_path: str | Path | None = None,
                         data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
-                        runtime_verified_version: str | None = None) -> dict:
+                        runtime_verified_version: str | None = None,
+                        decision_overrides: list[Mapping[str, Any]] | None = None,
+                        source_resolutions: list[Mapping[str, Any]] | None = None) -> dict:
         """Compile the Scientific Planning Bundle using existing lifecycle and Artifact APIs."""
         from .scientific_planning.planning_orchestrator import plan_project_run
         return plan_project_run(
@@ -458,7 +460,295 @@ class ProjectPipeline:
             data_analysis_api=data_analysis_api,
             data_analysis_project_root=data_analysis_project_root,
             runtime_verified_version=runtime_verified_version,
+            decision_overrides=decision_overrides,
+            source_resolutions=source_resolutions,
         )
+
+    def research_scientific(self, run_id: str, *, profile_path: str | Path | None = None,
+                            skill_executor=None, allow_external_ai: bool = False,
+                            paperqa2_documents=(), paperqa2_consent: bool = False,
+                            allow_local_evidence_to_external_ai: bool = False,
+                            data_analysis_api=None,
+                            data_analysis_project_root: str | Path | None = None,
+                            max_records: int = 100, max_calls: int = 8) -> dict:
+        """Run issue classification and bounded literature research for one Project Run."""
+        from .scientific_planning.literature_engine import ScientificResearchEngine
+        result = ScientificResearchEngine(self, max_records=max_records,
+                                          max_calls=max_calls).run(
+            run_id, profile_path=profile_path, skill_executor=skill_executor,
+            allow_external_ai=allow_external_ai,
+            paperqa2_documents=paperqa2_documents,
+            paperqa2_consent=paperqa2_consent,
+            allow_local_evidence_to_external_ai=allow_local_evidence_to_external_ai,
+        )
+        dossier = self.scientific_decisions(run_id)
+        source_issues = [item for item in dossier.get("issues", [])
+                         if item.get("classification") == "SOURCE_RESOLVED"
+                         and item.get("current_status") == "RESOLVED_AUTOMATICALLY"
+                         and item.get("source_resolution")]
+        if source_issues:
+            result["source_resolution_revision"] = self._create_source_resolution_revision(
+                run_id, source_issues, dossier, profile_path=profile_path,
+                data_analysis_api=data_analysis_api,
+                data_analysis_project_root=data_analysis_project_root,
+            )
+        return result
+
+    def _create_source_resolution_revision(self, run_id: str,
+                                           source_issues: list[Mapping[str, Any]],
+                                           dossier: Mapping[str, Any], *,
+                                           profile_path: str | Path | None = None,
+                                           data_analysis_api=None,
+                                           data_analysis_project_root: str | Path | None = None) -> dict:
+        """Automatically recompile source-resolved issues in a new immutable Project Run."""
+        parent = self.lifecycle.run_info(run_id)
+        stages = {x["stage"]: x for x in self.lifecycle.stages(run_id)}
+        if stages["EVIDENCE_REVIEW"]["status"] != "COMPLETED":
+            return {"status": "DEFERRED_EVIDENCE_REVIEW_INCOMPLETE",
+                    "reason": "Source facts are recorded, but Planning cannot be recompiled before Evidence Review is complete."}
+        source_docx = Path(stages["DOCX_INGEST"]["outputs"].get("source_docx", ""))
+        expected_sha = str((parent["manifest"].get("source_document") or {}).get("sha256") or "")
+        if not source_docx.is_file() or _sha256(source_docx) != expected_sha:
+            raise ValueError("the parent Frozen DOCX is missing or its SHA-256 differs from the Manifest")
+        child_id = self.lifecycle.create(str(parent["project_id"]), parent["manifest"])
+        child_root = self._run_root(child_id)
+        child_root.mkdir(parents=True, exist_ok=False)
+        child_docx = child_root / "source" / source_docx.name
+        child_docx.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_docx, child_docx)
+        if _sha256(child_docx) != expected_sha:
+            raise ValueError("source-resolution revision did not preserve the Frozen DOCX bytes")
+        manifest_path = _write_json(child_root / "manifest.json", parent["manifest"])
+        overrides = []
+        for issue in source_issues:
+            resolution = issue["source_resolution"]
+            references = []
+            for location in resolution.get("evidence_locations", []):
+                evidence_id = str(location.get("evidence_id") or "")
+                source_sha = str(location.get("source_sha256") or "")
+                locator = location.get("locator") or {"kind": "record", "value": evidence_id}
+                if not evidence_id or len(source_sha) != 64:
+                    continue
+                references.append({
+                    "evidence_id": evidence_id, "source_type": "document",
+                    "source_uri": str((parent["manifest"].get("source_document") or {}).get("file_name") or "Frozen DOCX"),
+                    "source_sha256": source_sha,
+                    "locator": {"kind": locator.get("kind", "record"), "value": str(locator.get("value") or evidence_id)},
+                    "captured_at": dossier.get("created_at"),
+                    "scope": str(issue.get("affected_fields", [""])[0]),
+                    "notes": "Unique authoritative source claim; hash-pinned Frozen DOCX evidence.",
+                })
+            overrides.append({
+                "issue_id": issue["issue_id"],
+                "field_path": str(issue.get("affected_fields", [""])[0]),
+                "value": resolution.get("resolved_value"),
+                "source_evidence_refs": references,
+                "dossier_sha256": dossier.get("dossier_sha256"),
+            })
+        _write_json(child_root / "revision.json", {
+            "project_run_id": child_id, "parent_project_run_id": run_id,
+            "revision_type": "AUTOMATIC_SOURCE_RESOLUTION",
+            "dossier_id": dossier.get("dossier_id"),
+            "dossier_sha256": dossier.get("dossier_sha256"),
+            "source_resolutions": overrides, "frozen_source_sha256": expected_sha,
+        })
+        self.lifecycle.transition(child_id, "DOCX_INGEST", "COMPLETED", outputs={
+            "source_docx": str(child_docx), "source_sha256": expected_sha,
+            "source_size_bytes": child_docx.stat().st_size, "parent_project_run_id": run_id,
+        })
+        self.lifecycle.transition(child_id, "PLAN_COMPILE", "COMPLETED", outputs={
+            "manifest_path": str(manifest_path), "manifest_sha256": _sha256(manifest_path),
+            "revision_of": run_id,
+        })
+        self.lifecycle.transition(child_id, "EVIDENCE_REVIEW", "COMPLETED", outputs={
+            "inherited_confirmations": True, "source_project_run_id": run_id,
+            "manifest_sha256": _sha256(manifest_path),
+        })
+        self.store.event(child_id, None, "SOURCE_RESOLUTION_REVISION_CREATED", {
+            "parent_project_run_id": run_id, "dossier_id": dossier.get("dossier_id"),
+            "dossier_sha256": dossier.get("dossier_sha256"),
+            "resolved_issue_ids": [x["issue_id"] for x in source_issues],
+        })
+        if profile_path is None:
+            context_path = stages["MODEL_GENERATE"]["outputs"].get("planner_context_path")
+            if context_path and Path(context_path).is_file():
+                profile_path = _load_json(context_path).get("project_profile_path")
+        planning = self.plan_scientific(
+            child_id, profile_path=profile_path,
+            data_analysis_api=data_analysis_api,
+            data_analysis_project_root=data_analysis_project_root,
+            source_resolutions=overrides,
+        )
+        return {"status": "RECOMPILED", "new_project_run_id": child_id,
+                "parent_project_run_id": run_id, "resolved_issue_ids": [x["issue_id"] for x in source_issues],
+                "planning_revision": planning}
+
+    def scientific_decisions(self, run_id: str) -> dict:
+        """Return the latest immutable Decision Dossier, if one exists."""
+        item = self.lifecycle.latest_research_dossier(run_id)
+        if not item:
+            return {"project_run_id": run_id, "status": "NO_RESEARCH_DOSSIER"}
+        path = Path(item["json_path"])
+        if not path.is_file():
+            raise FileNotFoundError(f"Decision Dossier JSON is missing: {path}")
+        dossier = _load_json(path)
+        from .scientific_planning.bundle import canonical_sha256
+        expected = str(dossier.get("dossier_sha256") or "")
+        actual = canonical_sha256({k: v for k, v in dossier.items() if k != "dossier_sha256"})
+        if expected != actual or expected != item["dossier_sha256"]:
+            raise ValueError("Decision Dossier SHA-256 does not match its immutable ledger reference")
+        return dossier
+
+    def approve_scientific_decision(
+        self, run_id: str, *, decision_id: str, option_id: str, approved_by: str,
+        rationale: str, profile_path: str | Path | None = None,
+        data_analysis_api=None, data_analysis_project_root: str | Path | None = None,
+    ) -> dict:
+        """Persist explicit approval and compile a child Project Run revision."""
+        already_approved = next((
+            item for item in self.lifecycle.approved_scientific_decisions(run_id)
+            if item.get("decision_id") == decision_id
+        ), None)
+        if already_approved:
+            raise RuntimeError(
+                f"scientific decision {decision_id!r} was already approved as "
+                f"{already_approved.get('option_id')!r}; create a new research revision to propose a new decision"
+            )
+        dossier = self.scientific_decisions(run_id)
+        if dossier.get("status") == "NO_RESEARCH_DOSSIER":
+            raise RuntimeError("no Decision Dossier exists for this Project Run")
+        if not approved_by.strip() or not rationale.strip():
+            raise ValueError("approved_by and rationale are required")
+        decision = next((x for x in dossier.get("decisions", [])
+                         if x.get("decision_id") == decision_id), None)
+        if decision is None:
+            raise KeyError(f"unknown scientific decision ID: {decision_id}")
+        if decision.get("status") != "PROPOSED" or decision.get("approval_status") != "PENDING":
+            raise RuntimeError("only a PROPOSED / PENDING decision can be approved")
+        option = next((x for x in decision.get("options", [])
+                       if x.get("option_id") == option_id), None)
+        if option is None:
+            raise ValueError("option_id must match one of the explicitly declared alternatives")
+        if "value" not in option or option.get("value") is None:
+            raise ValueError("the selected scientific option must declare an explicit non-null value")
+        source_run = self.lifecycle.run_info(run_id)
+        evidence_ids = sorted(set(
+            list(option.get("supporting_evidence_ids") or []) +
+            list(option.get("challenging_evidence_ids") or []) +
+            list((decision.get("assessment") or {}).get("evidence_ids") or [])
+        ))
+        dossier_sha = str(dossier["dossier_sha256"])
+        import uuid
+        decision_record_id = "decision-record-" + uuid.uuid4().hex[:16]
+        from .scientific_planning.bundle import canonical_sha256
+        import hashlib
+        evidence_index = {str(x.get("evidence_id")): x for x in dossier.get("evidence_matrix", [])
+                          if isinstance(x, Mapping) and x.get("evidence_id")}
+        source_evidence_refs = []
+        for evidence_id in evidence_ids:
+            item = evidence_index.get(evidence_id)
+            if not item:
+                continue
+            excerpt = str(item.get("excerpt") or "")
+            if not excerpt and not item.get("full_text_sha256"):
+                continue
+            source_sha = item.get("full_text_sha256") or hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+            locator = item.get("locator") or {"kind": "record", "value": str(item.get("title") or evidence_id)}
+            allowed_locator_kinds = {"page", "section", "paragraph", "table", "figure", "record", "file", "uri", "fixture", "other"}
+            locator_kind = locator.get("kind") if locator.get("kind") in allowed_locator_kinds else "record"
+            source_evidence_refs.append({
+                "evidence_id": evidence_id, "source_type": "literature",
+                "source_uri": (item.get("source_urls") or [None])[0],
+                "source_sha256": source_sha,
+                "locator": {"kind": locator_kind, "value": str(locator.get("value") or item.get("title") or evidence_id)},
+                "captured_at": dossier.get("created_at"),
+                "scope": str(decision.get("subject") or "scientific decision"),
+                "notes": str(item.get("polarity") or "UNASSESSED"),
+            })
+
+        # Validate the frozen parent inputs before creating any approval record.
+        # No existing Run, Planning Bundle or CalculationPlan is overwritten.
+        parent_stages = {x["stage"]: x for x in self.lifecycle.stages(run_id)}
+        if parent_stages["EVIDENCE_REVIEW"]["status"] != "COMPLETED":
+            raise RuntimeError("the parent EVIDENCE_REVIEW must be completed before a decision revision can be compiled")
+        source_docx = Path(parent_stages["DOCX_INGEST"]["outputs"].get("source_docx", ""))
+        if not source_docx.is_file():
+            raise FileNotFoundError("the parent Project Run's retained Frozen DOCX is unavailable")
+        expected_source_sha = str((source_run["manifest"].get("source_document") or {}).get("sha256") or "")
+        if _sha256(source_docx) != expected_source_sha:
+            raise ValueError("Frozen DOCX bytes do not match the parent Manifest SHA-256")
+        child_id = self.lifecycle.create(str(source_run["project_id"]), source_run["manifest"])
+        child_root = self._run_root(child_id)
+        child_root.mkdir(parents=True, exist_ok=False)
+        child_docx = child_root / "source" / source_docx.name
+        child_docx.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_docx, child_docx)
+        if _sha256(child_docx) != expected_source_sha:
+            raise ValueError("child Project Run Frozen DOCX copy failed SHA-256 verification")
+        manifest_path = _write_json(child_root / "manifest.json", source_run["manifest"])
+        _write_json(child_root / "revision.json", {
+            "project_run_id": child_id, "parent_project_run_id": run_id,
+            "decision_record_id": decision_record_id,
+            "dossier_id": dossier["dossier_id"], "dossier_sha256": dossier_sha,
+            "frozen_source_sha256": expected_source_sha,
+        })
+        self.lifecycle.transition(child_id, "DOCX_INGEST", "COMPLETED", outputs={
+            "source_docx": str(child_docx), "source_sha256": expected_source_sha,
+            "source_size_bytes": child_docx.stat().st_size, "parent_project_run_id": run_id,
+        })
+        self.lifecycle.transition(child_id, "PLAN_COMPILE", "COMPLETED", outputs={
+            "manifest_path": str(manifest_path), "manifest_sha256": _sha256(manifest_path),
+            "revision_of": run_id,
+        })
+        self.lifecycle.transition(child_id, "EVIDENCE_REVIEW", "COMPLETED", outputs={
+            "inherited_confirmations": True, "source_project_run_id": run_id,
+            "manifest_sha256": _sha256(manifest_path),
+        })
+        self.store.event(child_id, None, "PROJECT_RUN_REVISION_CREATED", {
+            "parent_project_run_id": run_id, "decision_record_id": decision_record_id,
+            "dossier_sha256": dossier_sha, "approved_field_path": decision["subject"],
+            "approved_option_id": option_id,
+        })
+
+        old_gen = parent_stages["MODEL_GENERATE"]["outputs"]
+        context_path = old_gen.get("planner_context_path")
+        if context_path and Path(context_path).is_file():
+            parent_context = _load_json(context_path)
+            if profile_path is None:
+                profile_path = parent_context.get("project_profile_path")
+            if data_analysis_project_root is None:
+                data_analysis_project_root = parent_context.get("data_analysis_project_root")
+        approved_overrides = [{
+            "decision_record_id": decision_record_id, "decision_id": decision_id,
+            "field_path": decision["subject"], "value": option.get("value"),
+            "option_id": option_id, "approved_by": approved_by,
+            "dossier_sha256": dossier_sha, "evidence_ids": evidence_ids,
+            "source_evidence_refs": source_evidence_refs,
+        }]
+        plan_result = self.plan_scientific(
+            child_id, profile_path=profile_path,
+            data_analysis_api=data_analysis_api,
+            data_analysis_project_root=data_analysis_project_root,
+            decision_overrides=approved_overrides,
+        )
+        record = self.lifecycle.create_scientific_decision_record(
+            project_run_id=run_id, decision_id=decision_id,
+            issue_id=str(decision["issue_id"]), field_path=str(decision["subject"]),
+            option_id=option_id, selected_value=option.get("value"),
+            approved_by=approved_by, rationale=rationale,
+            dossier_id=str(dossier["dossier_id"]), dossier_sha256=dossier_sha,
+            evidence_ids=evidence_ids, decision_record_id=decision_record_id,
+        )
+        self.lifecycle.attach_decision_revision(decision_record_id, child_id)
+        return {
+            "project_run_id": run_id, "decision_record": record,
+            "new_project_run_id": child_id, "parent_project_run_id": run_id,
+            "approved_decision": {"decision_id": decision_id, "option_id": option_id,
+                                  "field_path": decision["subject"], "value": option.get("value")},
+            "planning_revision": plan_result,
+            "planning_status": plan_result.get("planning_status"),
+            "decision_status": "APPROVED",
+        }
 
     def approve_model(self, run_id: str, *, candidate_id: str, approver: str,
                       approved: bool, approval_record_path: str | Path | None = None) -> dict:
