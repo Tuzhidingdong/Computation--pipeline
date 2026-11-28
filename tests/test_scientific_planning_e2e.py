@@ -568,14 +568,20 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 "recipe": {
                     "atom_mapping_initial_to_final": [0, 1], "number_of_images": 3,
                     "endpoint_context": {
-                        "initial": {"charge": 0, "spin_multiplicity": 1, "method_fingerprint": "test-method", "constraints": []},
-                        "final": {"charge": 0, "spin_multiplicity": 1, "method_fingerprint": "test-method", "constraints": []},
+                        "initial": {"charge": 0, "spin_multiplicity": 1, "method_fingerprint": {
+                            "engine": "synthetic-no-calculator",
+                            "xc": "PBE", "basis": "TEST_ONLY", "fingerprint_version": 1,
+                        }, "constraints": []},
+                        "final": {"charge": 0, "spin_multiplicity": 1, "method_fingerprint": {
+                            "engine": "synthetic-no-calculator",
+                            "xc": "PBE", "basis": "TEST_ONLY", "fingerprint_version": 1,
+                        }, "constraints": []},
                     },
                     "idpp": {"steps": 5, "fmax_angstrom_per_step": 0.1, "mic": False},
                     "validation": {"minimum_pair_distance_angstrom": 0.5},
                 },
             }, neb_dir)
-            self.assertEqual(neb["status"], "INITIAL_PATH_READY_FOR_REVIEW")
+            self.assertEqual(neb["status"], "INITIAL_PATH_READY_FOR_REVIEW", neb)
             path_artifact = next(item for item in neb["artifacts"]
                                  if item["path"].endswith("initial_path.extxyz"))
             path_file = neb_dir / path_artifact["path"]
