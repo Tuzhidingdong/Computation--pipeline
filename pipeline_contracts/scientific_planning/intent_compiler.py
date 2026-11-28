@@ -261,12 +261,19 @@ def compile_model_recipe(config: Mapping[str, Any], structure_mapping: Mapping[s
     interpolation = result.get("interpolation") if isinstance(result.get("interpolation"), Mapping) else {}
     packmol_record = result.get("packmol") if isinstance(result.get("packmol"), Mapping) else {}
     plugin_provenance = result.get("provenance") if isinstance(result.get("provenance"), Mapping) else {}
+    raw_packmol_version = packmol_record.get("version") or plugin_provenance.get("packmol_version")
+    if isinstance(raw_packmol_version, Mapping):
+        packmol_version = (
+            raw_packmol_version.get("version")
+            or raw_packmol_version.get("package_version")
+        )
+    else:
+        packmol_version = raw_packmol_version
     plugin_version = (
         result.get("plugin_version") or result.get("packmol_version")
-        or packmol_record.get("version") or plugin_provenance.get("packmol_version")
-        or interpolation.get("ase_version") or result.get("ase_version")
-        or plugin_provenance.get("ase_version") or result.get("schema_version")
-        or model_cfg.get("plugin_version") or "1.0.0"
+        or packmol_version or interpolation.get("ase_version")
+        or result.get("ase_version") or plugin_provenance.get("ase_version")
+        or result.get("schema_version") or model_cfg.get("plugin_version") or "1.0.0"
     )
     plugin_id = str(result.get("plugin") or model_cfg.get("plugin_id") or operation or "ase.structure_loader")
     source_inputs = result.get("source_inputs") or result.get("provenance", {}).get("source_artifacts") or {}
