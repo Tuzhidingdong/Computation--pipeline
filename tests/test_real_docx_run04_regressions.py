@@ -306,6 +306,17 @@ class RealDocxRun04RegressionTests(unittest.TestCase):
     def test_corr_v41_extraction_is_opt_in_and_not_part_of_generic_manifest(self):
         blocks = _run04_blocks()
         generic = build_project_manifest(blocks, project_id="unrelated-project")
+        unadapted_corr_id = build_project_manifest(blocks, project_id="corr_dft_v4_1")
+        generic_without_project_id = {
+            **generic,
+            "project": {**generic["project"], "project_id": "comparison"},
+        }
+        unadapted_without_project_id = {
+            **unadapted_corr_id,
+            "project": {**unadapted_corr_id["project"], "project_id": "comparison"},
+        }
+        self.assertEqual(generic_without_project_id, unadapted_without_project_id)
+
         generic_added_mos = [
             claim for claim in generic["claims"]
             if claim.get("field") == "added_mos" and "docx-block-000103" in claim.get("evidence_ids", [])
