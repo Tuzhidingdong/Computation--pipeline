@@ -380,7 +380,7 @@ class RealPackmolEndToEndTests(unittest.TestCase):
             self.assertEqual(packed.get_chemical_symbols().count("Ar"), 2)
             self.assertTrue(packed.pbc.all())
             np.testing.assert_allclose(packed.cell.lengths(), [14, 14, 14], atol=1e-6)
-            self.assertEqual(packed.arrays["molecule_id"].shape, (13,))
+            self.assertEqual(packed.arrays["molecule_id"].shape, (15,))
             molecule_ids = packed.arrays["molecule_id"]
             distance_matrix = packed.get_all_distances(mic=True)
             mask = molecule_ids[:, None] != molecule_ids[None, :]
