@@ -38,8 +38,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scientific-planning-bundle-example
-          path: ${{ runner.temp }}/scientific-planning-example/planning_bundle.json
+          name: scientific-planning-complete-mock-example
+          path: ${{ runner.temp }}/scientific-planning-example/
           if-no-files-found: warn
       - name: Run mock contract tests
         run: python -m unittest discover -s tests -v

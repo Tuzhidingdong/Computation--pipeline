@@ -408,6 +408,59 @@ class ScientificPlanningE2ETests(unittest.TestCase):
                 self.assertEqual(len(api.analysis_runs), 1)
                 self.assertEqual(len(api.evidence_packages), 1)
                 self.assertTrue(api.registered)
+
+                # Export a complete, immutable synthetic E2E example only after
+                # approval, CalculationPlan freeze, Mock execution and final report.
+                # The original pre-approval PlanningBundle is copied unchanged.
+                if example_target:
+                    example_root = Path(example_target).parent
+                    example_root.mkdir(parents=True, exist_ok=True)
+                    object_root = example_root / "planning_objects"
+                    object_root.mkdir(parents=True, exist_ok=True)
+                    for object_name, object_path in planned["files"].items():
+                        source_path = Path(object_path)
+                        self.assertTrue(source_path.is_file(), object_path)
+                        shutil.copy2(source_path, object_root / source_path.name)
+
+                    approval_path = output_root / run_id / "approval" / "approval_record.json"
+                    final_plan_path = output_root / run_id / "calculation_plan.json"
+                    self.assertTrue(approval_path.is_file())
+                    self.assertTrue(final_plan_path.is_file())
+                    example_documents = {
+                        "approval_record.json": json.loads(approval_path.read_text(encoding="utf-8")),
+                        "scientific_calculation_plan.json": frozen_plan,
+                        "calculation_plan.json": calculation_plan,
+                        "mock_resume_result.json": completed,
+                        "final_report.json": report,
+                    }
+                    for name, document in example_documents.items():
+                        (example_root / name).write_text(
+                            json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                            encoding="utf-8",
+                        )
+                    example_manifest = {
+                        "example_type": "SYNTHETIC_E2E_FULL_MOCK_CLOSED_LOOP",
+                        "project_run_id": run_id,
+                        "bundle_id": bundle["bundle_id"],
+                        "planning_bundle_sha256": planned["bundle_sha256"],
+                        "calculation_plan_id": calculation_plan["plan_id"],
+                        "calculation_plan_sha256": runtime_plan_sha,
+                        "frozen_calculation_plan_sha256": frozen_plan["sha256"],
+                        "model_approval_candidate_id": approved["candidate_id"],
+                        "approved_structure_artifact_id": approved["artifact_id"],
+                        "approved_structure_sha256": approved["structure_sha256"],
+                        "workflow_run_id": completed.get("workflow_run_id"),
+                        "workflow_operations": [item["operation"] for item in report["workflow"]["tasks"]],
+                        "project_status": report["project_status"],
+                        "execution_mode": "mock",
+                        "qc_evidence_mode": geo_payload["qc"]["qc_evidence_mode"],
+                        "analysis_run_id": energy_payload["analysis_run_id"],
+                        "evidence_package_id": energy_payload["evidence_package_id"],
+                    }
+                    (example_root / "example_manifest.json").write_text(
+                        json.dumps(example_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8",
+                    )
             finally:
                 _CURRENT_API = None
 
