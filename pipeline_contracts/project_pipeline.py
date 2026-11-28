@@ -569,10 +569,13 @@ class ProjectPipeline:
             "dossier_sha256": dossier.get("dossier_sha256"),
             "resolved_issue_ids": [x["issue_id"] for x in source_issues],
         })
-        if profile_path is None:
-            context_path = stages["MODEL_GENERATE"]["outputs"].get("planner_context_path")
-            if context_path and Path(context_path).is_file():
-                profile_path = _load_json(context_path).get("project_profile_path")
+        context_path = stages["MODEL_GENERATE"]["outputs"].get("planner_context_path")
+        if context_path and Path(context_path).is_file():
+            parent_context = _load_json(context_path)
+            if profile_path is None:
+                profile_path = parent_context.get("project_profile_path")
+            if data_analysis_project_root is None:
+                data_analysis_project_root = parent_context.get("data_analysis_project_root")
         planning = self.plan_scientific(
             child_id, profile_path=profile_path,
             data_analysis_api=data_analysis_api,

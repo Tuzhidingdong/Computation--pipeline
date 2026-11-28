@@ -646,6 +646,95 @@ class LiteratureEngineMockEndToEndTests(unittest.TestCase):
             self.assertEqual(dossier["decisions"][0]["approval_status"], "PENDING")
             self.assertEqual(dossier["decisions"][0]["assessment"]["confidence"], "INSUFFICIENT")
 
+    def test_source_resolution_revision_inherits_parent_profile_and_artifact_root(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            pipeline = ProjectPipeline(root / ".pipeline" / "workflow.sqlite", root / "runs")
+            try:
+                frozen_bytes = b"synthetic Frozen DOCX bytes for source-revision test"
+                frozen_sha = hashlib.sha256(frozen_bytes).hexdigest()
+                manifest = {
+                    "source_document": {
+                        "file_name": "source.docx", "sha256": frozen_sha,
+                        "size_bytes": len(frozen_bytes),
+                    },
+                    "diagnostics": [],
+                    "unresolved_definitions": [{
+                        "code": "FIELD_UNRESOLVED",
+                        "field_path": "scientific_intent.research_goal.research_object",
+                    }],
+                    "evidence": [],
+                }
+                parent_id = pipeline.lifecycle.create("synthetic-source-revision", manifest)
+                parent_root = pipeline._run_root(parent_id)
+                frozen_path = parent_root / "source" / "source.docx"
+                frozen_path.parent.mkdir(parents=True, exist_ok=True)
+                frozen_path.write_bytes(frozen_bytes)
+                manifest_path = parent_root / "manifest.json"
+                manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+                profile_path = root / "profile.json"
+                profile_path.write_text("{}", encoding="utf-8")
+                artifact_root = root / "existing-data-analysis-project"
+                artifact_root.mkdir()
+
+                context_path = parent_root / "scientific_planning" / "planner_context.json"
+                context_path.parent.mkdir(parents=True, exist_ok=True)
+                context_path.write_text(json.dumps({
+                    "project_profile_path": str(profile_path),
+                    "data_analysis_project_root": str(artifact_root),
+                }), encoding="utf-8")
+                pipeline.lifecycle.transition(parent_id, "DOCX_INGEST", "COMPLETED", outputs={
+                    "source_docx": str(frozen_path), "source_sha256": frozen_sha,
+                    "source_size_bytes": len(frozen_bytes),
+                })
+                pipeline.lifecycle.transition(parent_id, "PLAN_COMPILE", "COMPLETED", outputs={
+                    "manifest_path": str(manifest_path),
+                    "manifest_sha256": _sha(manifest_path),
+                })
+                pipeline.lifecycle.transition(parent_id, "EVIDENCE_REVIEW", "COMPLETED", outputs={})
+                pipeline.lifecycle.transition(parent_id, "MODEL_GENERATE", "COMPLETED", outputs={
+                    "planner_context_path": str(context_path),
+                })
+
+                captured = {}
+                pipeline.plan_scientific = lambda child_id, **kwargs: (
+                    captured.update({"project_run_id": child_id, **kwargs}) or
+                    {"project_run_id": child_id, "planning_status": "BLOCKED"}
+                )
+                issue = {
+                    "issue_id": "issue-source-1",
+                    "affected_fields": ["scientific_intent.research_goal.research_object"],
+                    "source_resolution": {
+                        "resolved_value": "source-backed object",
+                        "evidence_locations": [{
+                            "evidence_id": "ev-source-1",
+                            "source_sha256": frozen_sha,
+                            "locator": {"kind": "paragraph", "value": "word/document.xml#paragraph=5"},
+                        }],
+                    },
+                }
+                result = pipeline._create_source_resolution_revision(
+                    parent_id, [issue],
+                    {"dossier_id": "dossier-source-1", "dossier_sha256": "d" * 64},
+                )
+                self.assertEqual(result["status"], "RECOMPILED")
+                self.assertEqual(captured["profile_path"], str(profile_path))
+                self.assertEqual(captured["data_analysis_project_root"], str(artifact_root))
+                self.assertEqual(
+                    captured["source_resolutions"][0]["field_path"],
+                    "scientific_intent.research_goal.research_object",
+                )
+                self.assertEqual(captured["source_resolutions"][0]["source_evidence_refs"][0]["evidence_id"],
+                                 "ev-source-1")
+                self.assertNotEqual(result["new_project_run_id"], parent_id)
+                self.assertEqual(pipeline.lifecycle.manifest(parent_id), manifest)
+                self.assertEqual(
+                    _sha(pipeline._run_root(result["new_project_run_id"]) / "source" / "source.docx"),
+                    frozen_sha,
+                )
+            finally:
+                pipeline.close()
+
     def test_explicit_approval_creates_child_revision_and_keeps_model_gates_pending(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
